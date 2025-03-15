@@ -1,7 +1,7 @@
-const route = (app ) => {
-    app.get("/hello-world", (req, res) => {
-        res.json({ message: "Hello World" });
-    })
-}
+const defaultRouter = require("./default");
+
+const route = (app) => {
+  app.use("/", defaultRouter);
+};
 
 module.exports = route;
