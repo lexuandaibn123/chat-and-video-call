@@ -1,4 +1,8 @@
-@import '../node_modules/@fortawesome/fontawesome-free/css/all.min.css';
+/* npm install @fortawesome/fontawesome-free */
+
+      /* Nếu bộ icon lỗi thì chạy câu lệnh trên và bỏ comment dòng dưới */
+
+/* @import '../node_modules/@fortawesome/fontawesome-free/css/all.min.css'; */
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
