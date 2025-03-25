@@ -6,6 +6,7 @@ const bodyParser = require("body-parser");
 const route = require("./routes");
 const swaggerUi = require("swagger-ui-express");
 const swaggerJsdoc = require("swagger-jsdoc");
+const cors = require("cors");
 
 const PORT = process.env.PORT || 8080;
 
@@ -35,6 +36,14 @@ app.use(
   "/api-docs",
   swaggerUi.serve,
   swaggerUi.setup(specs, { explorer: true })
+);
+
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
 );
 
 app.use(bodyParser.urlencoded({ extended: true }));
