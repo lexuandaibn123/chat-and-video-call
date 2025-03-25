@@ -31,9 +31,9 @@ class AuthService {
       const verificationToken = crypto.randomBytes(20).toString("hex");
       console.log("Verification token: ", verificationToken);
       console.log("Hashed password: ", hashedPassword);
-      const baseUrl = process.env.BASE_URL;
+      const clientUrl = process.env.CLIENT_URL;
 
-      const verificationUrl = `${baseUrl}/auth/verify-email?token=${verificationToken}`;
+      const verificationUrl = `${clientUrl}/auth/verify-email?token=${verificationToken}`;
 
       return res
         .status(200)

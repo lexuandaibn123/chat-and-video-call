@@ -10,6 +10,10 @@ const cors = require("cors");
 
 const PORT = process.env.PORT || 8080;
 
+const serverUrl = process.env.SERVER_URL;
+
+const clientUrl = process.env.CLIENT_URL;
+
 const options = {
   definition: {
     openapi: "3.1.0",
@@ -24,7 +28,7 @@ const options = {
     },
     servers: [
       {
-        url: "http://localhost:8080",
+        url: serverUrl,
       },
     ],
   },
@@ -40,7 +44,7 @@ app.use(
 
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: clientUrl,
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
@@ -54,5 +58,5 @@ app.use(bodyParser.json());
 route(app);
 
 app.listen(PORT, () => {
-  console.log(`Server is running at http://localhost:${PORT}`);
+  console.log(`Server is running at ${serverUrl}`);
 });
