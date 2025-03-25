@@ -81,6 +81,10 @@ form {
   position: relative;
   width: 100%;
 
+  .error-input {
+    border: 1px solid #dc3545; /* Màu đỏ */
+  }
+
   .toggle-password {
     position: absolute;
     right: 10px;
@@ -95,6 +99,13 @@ form {
       color: $primary-color;
     }
   }
+}
+
+.input-error {
+  color: #dc3545; /* Màu đỏ */
+  font-size: 12px;
+  margin-top: 5px;
+  text-align: left;
 }
 
 input {
