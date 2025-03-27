@@ -106,7 +106,7 @@ const AuthForm = () => {
         setRegisterConfirmPassword('');
       } else {
         // Đăng ký thất bại
-        setPopupMessage(data.error || 'Registration failed. Please try again.');
+        setPopupMessage(data.error[0].msg || 'Registration failed. Please try again.');
         setPopupType('error');
         console.error('Đăng ký thất bại:', data);
       }
