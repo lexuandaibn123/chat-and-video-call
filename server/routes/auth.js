@@ -40,7 +40,22 @@ const { check } = require("express-validator"); // For validation
  *                   type: string
  *                   example: Login successful
  *       400:
- *         description: Invalid credentials or validation error
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       msg:
+ *                         type: string
+ *                         example: Invalid email format
+ *       401:
+ *         description: Invalid credentials or email not verified
  *         content:
  *           application/json:
  *             schema:
@@ -48,7 +63,10 @@ const { check } = require("express-validator"); // For validation
  *               properties:
  *                 error:
  *                   type: string
- *                   example: Invalid email or password
+ *                   example: Password incorrect
+ *                   enum:
+ *                     - Password incorrect
+ *                     - Email not verified
  *       404:
  *         description: User not found
  *         content:
@@ -56,12 +74,9 @@ const { check } = require("express-validator"); // For validation
  *             schema:
  *               type: object
  *               properties:
- *                 status:
+ *                 error:
  *                   type: string
- *                   example: Not Found
- *                 code:
- *                   type: integer
- *                   example: 404
+ *                   example: User not found
  *       500:
  *         description: Internal server error
  *         content:
@@ -72,9 +87,7 @@ const { check } = require("express-validator"); // For validation
  *                 error:
  *                   type: string
  *                   example: Internal server error
- *
  */
-
 route.post(
   "/login",
   [
@@ -92,7 +105,7 @@ route.post(
  *   post:
  *     summary: Register endpoint
  *     operationId: register
- *     description: Registers a new user with email, password, and confirmPassword.
+ *     description: Registers a new user with full name, email, and password, and sends a verification email.
  *     requestBody:
  *       required: true
  *       content:
@@ -100,6 +113,9 @@ route.post(
  *           schema:
  *             type: object
  *             properties:
+ *               fullName:
+ *                 type: string
+ *                 example: John Doe
  *               email:
  *                 type: string
  *                 format: email
@@ -127,15 +143,20 @@ route.post(
  *                   type: string
  *                   example: Registration successful
  *       400:
- *         description: Validation error or registration failure
+ *         description: Validation error
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
  *                 error:
- *                   type: string
- *                   example: Email is already taken or passwords do not match
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       msg:
+ *                         type: string
+ *                         example: Invalid email format
  *       500:
  *         description: Internal server error
  *         content:
@@ -146,12 +167,13 @@ route.post(
  *                 error:
  *                   type: string
  *                   example: Internal server error
- *
  */
-
 route.post(
   "/register",
   [
+    check("fullName")
+      .isLength({ min: 3 })
+      .withMessage("Name must be at least 3 characters"),
     check("email").isEmail().withMessage("Invalid email format"),
     check("password")
       .isLength({ min: 6 })
@@ -169,7 +191,7 @@ route.post(
  *   get:
  *     summary: Email verification endpoint
  *     operationId: verifyEmail
- *     description: Verifies the email using the provided token.
+ *     description: Verifies the user's email using the provided token.
  *     parameters:
  *       - in: query
  *         name: token
@@ -201,6 +223,16 @@ route.post(
  *                 error:
  *                   type: string
  *                   example: Invalid token
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: User not found
  *       500:
  *         description: Internal server error
  *         content:
@@ -211,9 +243,7 @@ route.post(
  *                 error:
  *                   type: string
  *                   example: Internal server error
- *
  */
-
 route.get("/verify-email", AuthService.verifyEmail);
 
 /**
@@ -222,7 +252,7 @@ route.get("/verify-email", AuthService.verifyEmail);
  *   post:
  *     summary: Resend email verification endpoint
  *     operationId: resendVerificationEmail
- *     description: Sends a new email verification link to the provided email address.
+ *     description: Resends a verification email to the provided email address if the email is not yet verified.
  *     requestBody:
  *       required: true
  *       content:
@@ -249,7 +279,25 @@ route.get("/verify-email", AuthService.verifyEmail);
  *                   type: string
  *                   example: Verification email sent
  *       400:
- *         description: Invalid email format or error sending email
+ *         description: Validation error or email already verified
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       msg:
+ *                         type: string
+ *                         example: Invalid email format
+ *                   example:
+ *                     - msg: Invalid email format
+ *                     - error: Email already verified
+ *       404:
+ *         description: User not found
  *         content:
  *           application/json:
  *             schema:
@@ -257,7 +305,7 @@ route.get("/verify-email", AuthService.verifyEmail);
  *               properties:
  *                 error:
  *                   type: string
- *                   example: Invalid email format
+ *                   example: User not found
  *       500:
  *         description: Internal server error
  *         content:
@@ -268,9 +316,7 @@ route.get("/verify-email", AuthService.verifyEmail);
  *                 error:
  *                   type: string
  *                   example: Internal server error
- *
  */
-
 route.post(
   "/resend-verification-email",
   [check("email").isEmail().withMessage("Invalid email format")],
@@ -283,7 +329,7 @@ route.post(
  *   post:
  *     summary: Forgot password endpoint
  *     operationId: forgotPassword
- *     description: Initiates password reset by sending a new temporary password to the provided email.
+ *     description: Initiates a password reset by sending a reset link to the provided email.
  *     requestBody:
  *       required: true
  *       content:
@@ -297,7 +343,7 @@ route.post(
  *                 example: user@example.com
  *     responses:
  *       200:
- *         description: Password reset successful, new password sent
+ *         description: Password reset email sent successfully
  *         content:
  *           application/json:
  *             schema:
@@ -310,7 +356,22 @@ route.post(
  *                   type: string
  *                   example: Password reset successful
  *       400:
- *         description: Invalid email format or email not found
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       msg:
+ *                         type: string
+ *                         example: Invalid email format
+ *       404:
+ *         description: User not found
  *         content:
  *           application/json:
  *             schema:
@@ -318,7 +379,7 @@ route.post(
  *               properties:
  *                 error:
  *                   type: string
- *                   example: Email not found
+ *                   example: User not found
  *       500:
  *         description: Internal server error
  *         content:
@@ -329,13 +390,93 @@ route.post(
  *                 error:
  *                   type: string
  *                   example: Internal server error
- *
  */
-
 route.post(
   "/forgot-password",
   [check("email").isEmail().withMessage("Invalid email format")],
   AuthService.forgotPassword
+);
+
+/**
+ * @openapi
+ * /auth/reset-password:
+ *   post:
+ *     summary: Reset password endpoint
+ *     operationId: resetPassword
+ *     description: Resets the user's password using the provided reset token and new password.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               token:
+ *                 type: string
+ *                 example: a1b2c3d4e5f6g7h8i9j0
+ *               password:
+ *                 type: string
+ *                 format: password
+ *                 example: SecureNewPass123!
+ *     responses:
+ *       200:
+ *         description: Password reset successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Password reset successful
+ *       400:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       msg:
+ *                         type: string
+ *                         example: Token is required
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: User not found
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Internal server error
+ */
+route.post(
+  "/reset-password",
+  [
+    check("token").not().isEmpty().withMessage("Token is required"),
+    check("password")
+      .isLength({ min: 6 })
+      .withMessage("Password must be at least 6 characters"),
+  ],
+  AuthService.resetPassword
 );
 
 /**
@@ -379,7 +520,7 @@ route.post(
  *                   type: string
  *                   example: Password change successful
  *       400:
- *         description: Invalid credentials or validation error
+ *         description: Validation error or incorrect old password
  *         content:
  *           application/json:
  *             schema:
@@ -388,6 +529,19 @@ route.post(
  *                 error:
  *                   type: string
  *                   example: Old password is incorrect
+ *                   enum:
+ *                     - Old password is incorrect
+ *                     - Invalid email format
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: User not found
  *       500:
  *         description: Internal server error
  *         content:
@@ -399,7 +553,6 @@ route.post(
  *                   type: string
  *                   example: Internal server error
  */
-
 route.post(
   "/change-password",
   [
@@ -413,4 +566,42 @@ route.post(
   ],
   AuthService.changePassword
 );
+
+/**
+ * @openapi
+ * /auth/logout:
+ *   post:
+ *     summary: Logout endpoint
+ *     operationId: logout
+ *     description: Logs out the current user by destroying their session.
+ *     responses:
+ *       200:
+ *         description: Logout successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Logout successful
+ *       500:
+ *         description: Logout failed or internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Logout failed
+ *                   enum:
+ *                     - Logout failed
+ *                     - Internal server error
+ */
+route.post("/logout", AuthService.logout);
+
 module.exports = route;
