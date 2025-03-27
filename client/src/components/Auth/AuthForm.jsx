@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom'; // Import useNavigate
+import { useNavigate, Link } from 'react-router-dom'; // Import useNavigate và Link
 import PopupNotification from './PopupNotification';
-import ForgotPasswordPopup from './ForgotPasswordPopup';
 import './AuthForm.scss';
 
 const AuthForm = () => {
@@ -9,6 +8,9 @@ const AuthForm = () => {
 
   const [isLogin, setIsLogin] = useState(true);
   const [isTransitionActive, setIsTransitionActive] = useState(false);
+
+  const [isLoginLoading, setIsLoginLoading] = useState(false);
+  const [isRegisterLoading, setIsRegisterLoading] = useState(false);
 
   // State cho đăng ký
   const [registerUsername, setRegisterUsername] = useState('');
@@ -24,20 +26,21 @@ const AuthForm = () => {
   // State cho đăng nhập
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
-  // const [errorMessage, setErrorMessage] = useState(''); // Có thể không cần nữa nếu chỉ dùng popup
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
 
-  // New state for popup
+  // State cho popup thông báo
   const [popupMessage, setPopupMessage] = useState('');
   const [popupType, setPopupType] = useState(''); // 'success' hoặc 'error'
 
-  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  // State để hiển thị nút gửi lại email xác thực
+  const [showResendVerification, setShowResendVerification] = useState(false);
 
   const toggleForm = () => {
     setIsLogin(!isLogin);
     setIsTransitionActive(!isTransitionActive);
-    setConfirmPasswordError(''); // Reset confirm password error
+    setConfirmPasswordError(''); // Reset lỗi confirm password
     setPopupMessage(''); // Đóng popup khi chuyển form
+    setShowResendVerification(false); // Ẩn nút gửi lại khi chuyển form
   };
 
   const togglePasswordVisibility = (field) => {
@@ -53,29 +56,23 @@ const AuthForm = () => {
   const closePopup = () => {
     setPopupMessage('');
     setPopupType('');
-  };
-
-  const openForgotPasswordPopup = () => {
-    setShowForgotPassword(true);
-  };
-
-  const closeForgotPasswordPopup = () => {
-    setShowForgotPassword(false);
+    // Không ẩn nút gửi lại ở đây, chỉ ẩn khi chuyển form hoặc gửi thành công
+    // setShowResendVerification(false);
   };
 
   const handleRegister = async (e) => {
     e.preventDefault();
-    // setErrorMessage(''); // Không cần nữa
     setConfirmPasswordError('');
-    setPopupMessage(''); // Reset popup trước khi gọi API
+    setPopupMessage('');
+    setShowResendVerification(false); // Ẩn nút gửi lại khi bắt đầu đăng ký
 
-    // Kiểm tra xem mật khẩu và xác nhận mật khẩu có khớp nhau hay không
     if (registerPassword !== registerConfirmPassword) {
       setConfirmPasswordError('Mật khẩu và xác nhận mật khẩu không khớp.');
       return;
     }
-
-    console.log("dang dki")
+    
+    setIsRegisterLoading(true); 
+    console.log("Đang thực hiện đăng ký...")
     try {
       const response = await fetch('http://localhost:8080/auth/register', {
         method: 'POST',
@@ -86,40 +83,45 @@ const AuthForm = () => {
           fullName: registerUsername,
           email: registerEmail,
           password: registerPassword,
-          confirmPassword: registerConfirmPassword
+          confirmPassword: registerConfirmPassword // Backend có thể không cần cái này nếu đã check ở client
         }),
       });
 
       const data = await response.json();
 
-      if (response.ok && data.success) { // Kiểm tra cả response.ok và data.success
-        // Đăng ký thành công
-        setPopupMessage(data.message || 'Registration successful');
+      if (response.ok && data.success) {
+        setPopupMessage('Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.');
         setPopupType('success');
         console.log('Đăng ký thành công:', data);
-        // Không chuyển form ngay, để người dùng thấy popup thành công
-        // toggleForm();
-        // Có thể reset form đăng ký ở đây nếu muốn
+        // Reset form
         setRegisterUsername('');
         setRegisterEmail('');
         setRegisterPassword('');
         setRegisterConfirmPassword('');
+        // Không chuyển form ngay để user đọc thông báo
+        // toggleForm();
       } else {
-        // Đăng ký thất bại
-        setPopupMessage(data.error[0].msg || 'Registration failed. Please try again.');
+        // Ưu tiên lỗi từ validation array nếu có
+        const errorMsg = data.error && Array.isArray(data.error) ? data.error[0]?.msg : data.error;
+        setPopupMessage(errorMsg || 'Đăng ký thất bại. Vui lòng thử lại.');
         setPopupType('error');
         console.error('Đăng ký thất bại:', data);
       }
     } catch (error) {
       console.error('Lỗi kết nối:', error);
-      setPopupMessage('Connection error. Please try again.');
+      setPopupMessage('Lỗi kết nối. Vui lòng thử lại.');
       setPopupType('error');
+    } finally {
+      setIsRegisterLoading(false); // --- KẾT THÚC LOADING ---
     }
   };
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setPopupMessage('');
+    setIsLoginLoading(true);
+    setShowResendVerification(false); // Ẩn nút gửi lại khi bắt đầu đăng nhập
+
     try {
       const response = await fetch('http://localhost:8080/auth/login', {
         method: 'POST',
@@ -134,42 +136,87 @@ const AuthForm = () => {
 
       const data = await response.json();
 
-      if (response.ok) {
-        // Đăng nhập thành công
+      // --- XỬ LÝ LOGIN RESPONSE ---
+      if (response.ok && data.success) {
+        // Thành công hoàn toàn (status 200 và success: true)
         console.log('Đăng nhập thành công:', data);
-        // Lưu access token vào localStorage hoặc cookie
-        localStorage.setItem('access_token', data.access_token);
-        // Chuyển hướng người dùng đến trang chính
-        window.location.href = '/home';
+        localStorage.setItem('access_token', data.access_token); // Giả sử API trả về token ở đây
+        navigate('/'); // Chuyển hướng đến trang chủ
       } else {
-        // Đăng nhập thất bại (Code 400, 404, 500, hoặc success: false)
-        console.error('Đăng nhập thất bại:', data);
-        let errorMessageToShow = 'Login failed. Please try again.'; // Lỗi mặc định
-        if (data.error && Array.isArray(data.error) && data.error.length > 0 && data.error[0].msg) {
-          // Nếu có mảng lỗi và có msg trong phần tử đầu tiên
-          errorMessageToShow = data.error[0].msg;
-        } else if (typeof data.error === 'string') {
-          // Nếu data.error là một chuỗi (cho các trường hợp lỗi khác)
-          errorMessageToShow = data.error;
-        } else if (data.status) {
-          // Nếu có data.status (ví dụ: lỗi 404)
-          errorMessageToShow = data.status;
+        // Xử lý các trường hợp thất bại
+        console.error('Đăng nhập thất bại:', response.status, data);
+        let errorMessageToShow = 'Login failed. Please try again.'; // Default error
+        let isVerificationError = false;
+
+        // Kiểm tra lỗi cụ thể "Email not verified"
+        if (response.status === 401 && data.error === "Email not verified") {
+             errorMessageToShow = 'Email chưa được xác thực. Vui lòng kiểm tra hộp thư của bạn.';
+             isVerificationError = true;
+        }
+        // Kiểm tra lỗi validation từ express-validator (nếu có)
+        else if (data.error && Array.isArray(data.error) && data.error.length > 0 && data.error[0].msg) {
+             errorMessageToShow = data.error[0].msg;
+        }
+        // Kiểm tra lỗi dạng chuỗi khác
+        else if (typeof data.error === 'string') {
+             errorMessageToShow = data.error;
+        }
+        // Các trường hợp lỗi khác (vd: 404, 500)
+        else if (data.status) {
+             errorMessageToShow = `Error ${response.status}: ${data.status}`;
         }
 
         setPopupMessage(errorMessageToShow);
         setPopupType('error');
+        setShowResendVerification(isVerificationError); // Chỉ hiện nút gửi lại nếu là lỗi xác thực
       }
+      // --- KẾT THÚC XỬ LÝ LOGIN RESPONSE ---
+
     } catch (error) {
-      // Lỗi kết nối mạng hoặc lỗi không xác định khác
       console.error('Lỗi kết nối:', error);
-      setPopupMessage('Connection error. Please try again.');
+      setPopupMessage('Lỗi kết nối. Vui lòng thử lại.');
       setPopupType('error');
+    } finally {
+      setIsLoginLoading(false); // --- KẾT THÚC LOADING ---
     }
   };
 
+  // --- HÀM GỬI LẠI EMAIL XÁC THỰC ---
+  const handleResendVerification = async () => {
+    if (!loginEmail) { // Cần email người dùng đã nhập
+      setPopupMessage('Vui lòng nhập email của bạn vào ô đăng nhập.');
+      setPopupType('error');
+      return;
+    }
+    setPopupMessage(''); // Xóa popup cũ
+    console.log("Đang gửi lại email xác thực cho:", loginEmail);
+    try {
+      const response = await fetch('http://localhost:8080/auth/resend-verification-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: loginEmail }),
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setPopupMessage(data.message || 'Email xác thực đã được gửi lại. Vui lòng kiểm tra hộp thư.');
+        setPopupType('success');
+        setShowResendVerification(false); // Ẩn nút sau khi gửi thành công
+      } else {
+        // Xử lý lỗi từ server (vd: email đã xác thực, không tìm thấy user)
+         const errorMsg = data.error && Array.isArray(data.error) ? data.error[0]?.msg : data.error;
+        setPopupMessage(errorMsg || 'Gửi lại email thất bại.');
+        setPopupType('error');
+      }
+    } catch (error) {
+      console.error('Lỗi gửi lại email:', error);
+      setPopupMessage('Lỗi kết nối khi gửi lại email.');
+      setPopupType('error');
+    }
+  };
+  // --- KẾT THÚC HÀM GỬI LẠI ---
+
   return (
     <>
-      {/* Render PopupNotification nếu có message */}
       {popupMessage && (
         <PopupNotification
           message={popupMessage}
@@ -178,18 +225,12 @@ const AuthForm = () => {
         />
       )}
 
-      {showForgotPassword && (
-        <ForgotPasswordPopup onClose={closeForgotPasswordPopup} />
-      )}
-
-      {/* Container chính */}
       <div className={`auth-container ${isTransitionActive ? 'right-panel-active' : ''}`}>
         {/* Form đăng nhập */}
         <div className={`form-container sign-in-container ${!isLogin ? 'hide' : ''}`}>
           <form onSubmit={handleLogin}>
             <h1>Sign In</h1>
             <div className="social-container">
-              {/* Social icons */}
               <a href="#" className="social"><i className="fab fa-google"></i></a>
               <a href="#" className="social"><i className="fab fa-github"></i></a>
               <a href="#" className="social"><i className="fab fa-linkedin-in"></i></a>
@@ -200,7 +241,7 @@ const AuthForm = () => {
               placeholder="Email"
               value={loginEmail}
               onChange={(e) => setLoginEmail(e.target.value)}
-              required // Thêm required để trình duyệt kiểm tra
+              required
             />
             <div className="password-container">
               <input
@@ -208,16 +249,23 @@ const AuthForm = () => {
                 placeholder="Password"
                 value={loginPassword}
                 onChange={(e) => setLoginPassword(e.target.value)}
-                required // Thêm required
+                required
               />
               <span className="toggle-password" onClick={() => togglePasswordVisibility('loginPassword')}>
                 {showLoginPassword ? <i className="fas fa-eye"></i> : <i className="fas fa-eye-slash"></i>}
               </span>
             </div>
-            <a href="#" onClick={(e) => { e.preventDefault(); openForgotPasswordPopup(); }}>
-              Forgot Your Password?
-            </a>
-            <button type="submit">Sign In</button> {/* Đảm bảo type="submit" */}
+            <Link to="/forgot-password">Forgot Your Password?</Link>
+            <button type="submit" disabled={isLoginLoading}> {/* Thêm disabled */}
+              {isLoginLoading ? 'Signing In...' : 'Sign In'} {/* Thay đổi text */}
+            </button>
+            {/* --- NÚT GỬI LẠI EMAIL XÁC THỰC --- */}
+            {showResendVerification && (
+              <button type="button" onClick={handleResendVerification} className="resend-button">
+                Gửi lại Email Xác thực
+              </button>
+            )}
+            {/* --------------------------------- */}
           </form>
         </div>
 
@@ -246,6 +294,7 @@ const AuthForm = () => {
                 value={registerPassword}
                 onChange={(e) => setRegisterPassword(e.target.value)}
                 required
+                minLength={6} // Thêm minLength nếu backend yêu cầu
               />
               <span className="toggle-password" onClick={() => togglePasswordVisibility('registerPassword')}>
                 {showRegisterPassword ? <i className="fas fa-eye"></i> : <i className="fas fa-eye-slash"></i>}
@@ -266,19 +315,12 @@ const AuthForm = () => {
                 </span>
               </div>
             </div>
-            {/* Hiển thị lỗi inline cho confirm password */}
             <div>
               {confirmPasswordError && <p className="input-error">{confirmPasswordError}</p>}
             </div>
-            <button type="submit">Sign Up</button> {/* Đảm bảo type="submit" */}
-
-            {/* Xóa đoạn code thừa này
-            {registerResponseMessage && (
-              <div className={`response-message ${registerResponseMessage.includes('successful') ? 'success' : 'error'}`}>
-                {registerResponseMessage}
-              </div>
-            )}
-            */}
+            <button type="submit" disabled={isRegisterLoading}> {/* Thêm disabled */}
+              {isRegisterLoading ? 'Signing Up...' : 'Sign Up'} {/* Thay đổi text */}
+            </button>
           </form>
         </div>
 
@@ -288,12 +330,12 @@ const AuthForm = () => {
             <div className={`overlay-panel overlay-left ${!isLogin ? 'hide' : ''}`}>
               <h1>Welcome Back!</h1>
               <p>Enter your personal details to use all of site features</p>
-              <button type="button" className="ghost" onClick={toggleForm}>Sign In</button> {/* Thêm type="button" */}
+              <button type="button" className="ghost" onClick={toggleForm}>Sign In</button>
             </div>
             <div className={`overlay-panel overlay-right ${isLogin ? 'hide' : ''}`}>
               <h1>Hello, Friend!</h1>
-              <p>Enter your personal details to use all of site features</p>
-              <button type="button" className="ghost" onClick={toggleForm}>Sign Up</button> {/* Thêm type="button" */}
+              <p>Register with your personal details to use all of site features</p>
+              <button type="button" className="ghost" onClick={toggleForm}>Sign Up</button>
             </div>
           </div>
         </div>

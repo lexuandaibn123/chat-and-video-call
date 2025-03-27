@@ -10,7 +10,7 @@ const Home = () => {
 
     // Nếu không có access token, chuyển hướng người dùng đến trang đăng nhập
     if (!accessToken) {
-      navigate('/'); // Sử dụng navigate để chuyển hướng trang
+      navigate('/auth'); // Sử dụng navigate để chuyển hướng trang
     }
   }, [navigate]); // useEffect chỉ chạy một lần khi component mount
 

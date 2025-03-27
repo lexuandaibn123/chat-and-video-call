@@ -64,6 +64,11 @@ button {
     background-color: transparent;
     border-color: $secondary-color;
   }
+
+  &:disabled {
+    opacity: 0.7; // Giảm độ mờ khi bị vô hiệu hóa
+    cursor: not-allowed; // Đổi con trỏ chuột
+  }
 }
 
 form {
@@ -75,6 +80,18 @@ form {
   padding: 0 50px;
   height: 100%;
   text-align: center;
+
+  .resend-button {
+    margin-top: 10px; // Khoảng cách với nút Sign In
+    background-color: #ffc107; // Màu vàng cảnh báo
+    color: #212529; // Màu chữ tối
+    border-color: #ffc107; // Viền cùng màu
+
+    &:hover:not(:disabled) {
+      background-color: #e0a800; // Màu vàng đậm hơn khi hover
+      border-color: #d39e00;
+    }
+  }
 }
 
 .password-container {

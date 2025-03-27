@@ -1,0 +1,240 @@
+// AuthCommon.scss
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap');
+
+// Variables (có thể import từ file variables chung nếu bạn có)
+$primary-color: #0056b3;
+$secondary-color: #FFFFFF;
+$container-bg-color: #f6f5f7;
+$text-color: #333;
+$success-color: #28a745;
+$error-color: #dc3545;
+$font-size-base: 14px; // Tăng nhẹ font base cho dễ đọc
+$border-radius: 5px; // Giảm nhẹ border-radius cho form đơn giản
+
+* {
+  box-sizing: border-box;
+}
+
+// Container bao bọc toàn bộ trang auth (forgot/reset)
+.auth-page-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh; // Chiếm toàn bộ chiều cao
+  min-width: 100vw;
+  background-color: $container-bg-color;
+  font-family: 'Montserrat', sans-serif;
+  padding: 20px;
+}
+
+// Style cho form đơn giản hơn (forgot/reset)
+.auth-form-simple {
+  background: $secondary-color;
+  padding: 40px;
+  border-radius: $border-radius * 2; // Tròn hơn một chút
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  max-width: 450px;
+  width: 100%;
+  text-align: center;
+
+  h2 {
+    font-weight: bold;
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: $text-color;
+  }
+
+  p { // Style chung cho text mô tả
+     margin-bottom: 25px;
+     font-size: $font-size-base;
+     color: #555;
+     line-height: 1.5;
+  }
+
+  form {
+    display: flex;
+    flex-direction: column;
+    align-items: center; // Căn giữa các phần tử form
+  }
+
+  input[type="email"],
+  input[type="password"] {
+    background: #eee;
+    border: 1px solid #ccc;
+    padding: 12px 15px;
+    margin-bottom: 15px; // Khoảng cách giữa các input
+    width: 100%;
+    border-radius: $border-radius;
+    font-size: $font-size-base;
+  }
+
+  // Container cho input password và icon mắt
+ .password-container {
+    width: 100%;
+    position: relative;
+    margin-bottom: 15px; // Khoảng cách dưới mỗi container password
+
+    .password-input-group {
+      position: relative; // Cần thiết cho absolute positioning của icon
+      display: flex;
+      align-items: center;
+    }
+
+    input[type="password"], input[type="text"] { // Áp dụng cho cả text khi hiện pass
+       margin-bottom: 0; // Reset margin bottom cho input trong group
+       padding-right: 40px; // Tạo không gian cho icon
+    }
+
+    .toggle-password {
+       position: absolute;
+       right: 10px;
+       top: 50%;
+       transform: translateY(-50%);
+       cursor: pointer;
+       font-size: 18px;
+       color: #666;
+       transition: color 0.3s ease;
+       padding: 5px; // Tăng vùng click
+
+       &:hover {
+          color: $primary-color;
+       }
+    }
+
+    .error-input {
+      border-color: $error-color;
+    }
+ }
+
+ // Thông báo lỗi inline dưới input confirm password
+ .input-error {
+    color: $error-color;
+    font-size: 12px;
+    margin-top: -10px; // Kéo lên gần input hơn
+    margin-bottom: 10px;
+    text-align: left;
+    width: 100%;
+ }
+
+
+  // Style cho thông báo chung (thành công/lỗi)
+  .auth-message {
+    width: 100%;
+    margin-bottom: 20px;
+    padding: 10px 15px;
+    border-radius: $border-radius;
+    font-size: $font-size-base;
+    text-align: center;
+
+    &.success {
+      color: darken($success-color, 10%);
+      background-color: lighten($success-color, 45%);
+      border: 1px solid lighten($success-color, 30%);
+    }
+
+    &.error {
+      color: darken($error-color, 10%);
+      background-color: lighten($error-color, 35%);
+      border: 1px solid lighten($error-color, 20%);
+    }
+  }
+
+  button[type="submit"] {
+    border-radius: $border-radius * 2; // Tròn hơn
+    background-color: $primary-color;
+    color: $secondary-color;
+    font-size: $font-size-base;
+    font-weight: bold;
+    padding: 12px 45px;
+    margin-top: 10px; // Khoảng cách trên nút
+    margin-bottom: 20px; // Khoảng cách dưới nút
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: background-color 0.3s ease, transform 80ms ease-in;
+    border: none;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background-color: darken($primary-color, 10%);
+    }
+
+    &:active {
+      transform: scale(0.95);
+    }
+
+     &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+     }
+  }
+
+  // Link quay lại đăng nhập
+  .auth-link {
+    margin-top: 15px;
+    font-size: $font-size-base;
+    a {
+      color: $primary-color;
+      text-decoration: none;
+      font-weight: bold;
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
+}
+
+// Styles cho trang Verify Email
+.verification-status {
+  margin: 30px 0;
+  padding: 20px;
+  border-radius: $border-radius;
+  border: 1px solid #eee;
+
+  p {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 500;
+  }
+
+  &.verifying {
+    border-color: #ddd;
+    p {
+      color: #555;
+    }
+    // Style cho spinner (ví dụ)
+    .spinner {
+      border: 4px solid rgba(0, 0, 0, 0.1);
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border-left-color: $primary-color;
+      animation: spin 1s ease infinite;
+      margin: 0 auto 15px auto;
+    }
+  }
+
+  &.success {
+    border-color: lighten($success-color, 30%);
+    background-color: lighten($success-color, 45%);
+    p {
+      color: darken($success-color, 10%);
+    }
+  }
+
+  &.error {
+    border-color: lighten($error-color, 20%);
+    background-color: lighten($error-color, 35%);
+    p {
+      color: darken($error-color, 10%);
+    }
+  }
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
