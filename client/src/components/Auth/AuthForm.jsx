@@ -83,7 +83,7 @@ const AuthForm = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          // username: registerUsername,
+          fullName: registerUsername,
           email: registerEmail,
           password: registerPassword,
           confirmPassword: registerConfirmPassword
