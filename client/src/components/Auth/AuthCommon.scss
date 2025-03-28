@@ -1,4 +1,5 @@
 // AuthCommon.scss
+@use "sass:color";
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap');
 
 // Variables (có thể import từ file variables chung nếu bạn có)
@@ -127,15 +128,15 @@ $border-radius: 5px; // Giảm nhẹ border-radius cho form đơn giản
     text-align: center;
 
     &.success {
-      color: darken($success-color, 10%);
-      background-color: lighten($success-color, 45%);
-      border: 1px solid lighten($success-color, 30%);
+      color: color.adjust($success-color, $lightness: -10%);
+      background-color: color.adjust($success-color, $lightness: 45%);
+      border: 1px solid color.adjust($success-color, $lightness: 30%);
     }
 
     &.error {
-      color: darken($error-color, 10%);
-      background-color: lighten($error-color, 35%);
-      border: 1px solid lighten($error-color, 20%);
+      color: color.adjust($error-color, $lightness: -10%);
+      background-color: color.adjust($error-color, $lightness: 35%);
+      border: 1px solid color.adjust($error-color, $lightness: 20%);
     }
   }
 
@@ -155,7 +156,7 @@ $border-radius: 5px; // Giảm nhẹ border-radius cho form đơn giản
     cursor: pointer;
 
     &:hover:not(:disabled) {
-      background-color: darken($primary-color, 10%);
+      background-color: color.adjust($primary-color, $lightness: -10%);
     }
 
     &:active {
@@ -214,18 +215,20 @@ $border-radius: 5px; // Giảm nhẹ border-radius cho form đơn giản
   }
 
   &.success {
-    border-color: lighten($success-color, 30%);
-    background-color: lighten($success-color, 45%);
+    border-color: color.adjust($success-color, $lightness: 30%);
+    background-color: color.adjust($success-color, $lightness: 45%);
+
     p {
-      color: darken($success-color, 10%);
+      color: color.adjust($success-color, $lightness: -10%);
     }
   }
 
   &.error {
-    border-color: lighten($error-color, 20%);
-    background-color: lighten($error-color, 35%);
+    border-color: color.adjust($error-color, $lightness: 20%);
+    background-color: color.adjust($error-color, $lightness: 35%);
+
     p {
-      color: darken($error-color, 10%);
+      color: color.adjust($error-color, $lightness: -10%);
     }
   }
 }

@@ -99,7 +99,7 @@ const AuthForm = () => {
         setRegisterPassword('');
         setRegisterConfirmPassword('');
         // Không chuyển form ngay để user đọc thông báo
-        // toggleForm();
+        // toggleForm();~
       } else {
         // Ưu tiên lỗi từ validation array nếu có
         const errorMsg = data.error && Array.isArray(data.error) ? data.error[0]?.msg : data.error;
@@ -255,7 +255,7 @@ const AuthForm = () => {
                 {showLoginPassword ? <i className="fas fa-eye"></i> : <i className="fas fa-eye-slash"></i>}
               </span>
             </div>
-            <Link to="/forgot-password">Forgot Your Password?</Link>
+            <Link to="/auth/forgot-password">Forgot Your Password?</Link>
             <button type="submit" disabled={isLoginLoading}> {/* Thêm disabled */}
               {isLoginLoading ? 'Signing In...' : 'Sign In'} {/* Thay đổi text */}
             </button>
