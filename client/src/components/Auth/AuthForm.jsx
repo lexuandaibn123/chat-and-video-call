@@ -1,46 +1,40 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom'; // Import useNavigate và Link
+import { useNavigate, Link } from 'react-router-dom';
 import PopupNotification from './PopupNotification';
 import './AuthForm.scss';
+// --- IMPORT API FUNCTIONS ---
+import { loginApi, registerApi, resendVerificationEmailApi } from '../../api/auth'; // Điều chỉnh đường dẫn nếu cần
 
 const AuthForm = () => {
-  const navigate = useNavigate(); // Khởi tạo useNavigate
+  const navigate = useNavigate();
 
+  // --- Các state giữ nguyên ---
   const [isLogin, setIsLogin] = useState(true);
   const [isTransitionActive, setIsTransitionActive] = useState(false);
-
   const [isLoginLoading, setIsLoginLoading] = useState(false);
   const [isRegisterLoading, setIsRegisterLoading] = useState(false);
-
-  // State cho đăng ký
   const [registerUsername, setRegisterUsername] = useState('');
   const [registerEmail, setRegisterEmail] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
   const [registerConfirmPassword, setRegisterConfirmPassword] = useState('');
-
-  // State cho hiển thị/ẩn mật khẩu
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showLoginPassword, setShowLoginPassword] = useState(false);
-
-  // State cho đăng nhập
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
-
-  // State cho popup thông báo
   const [popupMessage, setPopupMessage] = useState('');
-  const [popupType, setPopupType] = useState(''); // 'success' hoặc 'error'
-
-  // State để hiển thị nút gửi lại email xác thực
+  const [popupType, setPopupType] = useState('');
   const [showResendVerification, setShowResendVerification] = useState(false);
+  // --- Kết thúc state ---
 
+  // --- Các hàm toggle và close giữ nguyên ---
   const toggleForm = () => {
     setIsLogin(!isLogin);
     setIsTransitionActive(!isTransitionActive);
-    setConfirmPasswordError(''); // Reset lỗi confirm password
-    setPopupMessage(''); // Đóng popup khi chuyển form
-    setShowResendVerification(false); // Ẩn nút gửi lại khi chuyển form
+    setConfirmPasswordError('');
+    setPopupMessage('');
+    setShowResendVerification(false);
   };
 
   const togglePasswordVisibility = (field) => {
@@ -56,165 +50,101 @@ const AuthForm = () => {
   const closePopup = () => {
     setPopupMessage('');
     setPopupType('');
-    // Không ẩn nút gửi lại ở đây, chỉ ẩn khi chuyển form hoặc gửi thành công
-    // setShowResendVerification(false);
   };
+  // --- Kết thúc hàm toggle/close ---
 
+
+  // --- handleRegister gọi API ---
   const handleRegister = async (e) => {
     e.preventDefault();
     setConfirmPasswordError('');
     setPopupMessage('');
-    setShowResendVerification(false); // Ẩn nút gửi lại khi bắt đầu đăng ký
+    setShowResendVerification(false);
 
     if (registerPassword !== registerConfirmPassword) {
       setConfirmPasswordError('Mật khẩu và xác nhận mật khẩu không khớp.');
       return;
     }
-    
-    setIsRegisterLoading(true); 
+
+    setIsRegisterLoading(true);
     console.log("Đang thực hiện đăng ký...")
+
     try {
-      const response = await fetch('http://localhost:8080/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          fullName: registerUsername,
-          email: registerEmail,
-          password: registerPassword,
-          confirmPassword: registerConfirmPassword // Backend có thể không cần cái này nếu đã check ở client
-        }),
-      });
+      const userData = {
+        fullName: registerUsername,
+        email: registerEmail,
+        password: registerPassword,
+        confirmPassword: registerConfirmPassword // Gửi đi nếu backend cần
+      };
+      const data = await registerApi(userData); // Gọi hàm API
 
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        setPopupMessage('Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.');
-        setPopupType('success');
-        console.log('Đăng ký thành công:', data);
-        // Reset form
-        setRegisterUsername('');
-        setRegisterEmail('');
-        setRegisterPassword('');
-        setRegisterConfirmPassword('');
-        // Không chuyển form ngay để user đọc thông báo
-        // toggleForm();~
-      } else {
-        // Ưu tiên lỗi từ validation array nếu có
-        const errorMsg = data.error && Array.isArray(data.error) ? data.error[0]?.msg : data.error;
-        setPopupMessage(errorMsg || 'Đăng ký thất bại. Vui lòng thử lại.');
-        setPopupType('error');
-        console.error('Đăng ký thất bại:', data);
-      }
-    } catch (error) {
-      console.error('Lỗi kết nối:', error);
-      setPopupMessage('Lỗi kết nối. Vui lòng thử lại.');
+      setPopupMessage(data.message || 'Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.');
+      setPopupType('success');
+      console.log('Đăng ký thành công:', data);
+      setRegisterUsername('');
+      setRegisterEmail('');
+      setRegisterPassword('');
+      setRegisterConfirmPassword('');
+      // Không chuyển form ngay
+    } catch (error) { // Lỗi đã được ném từ hàm API
+      console.error('Đăng ký thất bại:', error);
+      setPopupMessage(error.message || 'Đăng ký thất bại. Vui lòng thử lại.');
       setPopupType('error');
     } finally {
-      setIsRegisterLoading(false); // --- KẾT THÚC LOADING ---
+      setIsRegisterLoading(false);
     }
   };
 
+  // --- handleLogin gọi API ---
   const handleLogin = async (e) => {
     e.preventDefault();
     setPopupMessage('');
+    setShowResendVerification(false);
     setIsLoginLoading(true);
-    setShowResendVerification(false); // Ẩn nút gửi lại khi bắt đầu đăng nhập
 
     try {
-      const response = await fetch('http://localhost:8080/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: loginEmail,
-          password: loginPassword,
-        }),
-      });
+      const credentials = { email: loginEmail, password: loginPassword };
+      const data = await loginApi(credentials); // Gọi hàm API
 
-      const data = await response.json();
+      console.log('Đăng nhập thành công:', data);
+      // Lưu ý: API login gốc chỉ trả về token khi thành công, không có success:true
+      // Hàm handleApiResponse đã xử lý việc trả về data khi response.ok
+      localStorage.setItem('access_token', data.access_token);
+      navigate('/'); // Chuyển hướng trang chủ
 
-      // --- XỬ LÝ LOGIN RESPONSE ---
-      if (response.ok && data.success) {
-        // Thành công hoàn toàn (status 200 và success: true)
-        console.log('Đăng nhập thành công:', data);
-        localStorage.setItem('access_token', data.access_token); // Giả sử API trả về token ở đây
-        navigate('/'); // Chuyển hướng đến trang chủ
-      } else {
-        // Xử lý các trường hợp thất bại
-        console.error('Đăng nhập thất bại:', response.status, data);
-        let errorMessageToShow = 'Login failed. Please try again.'; // Default error
-        let isVerificationError = false;
-
-        // Kiểm tra lỗi cụ thể "Email not verified"
-        if (response.status === 401 && data.error === "Email not verified") {
-             errorMessageToShow = 'Email chưa được xác thực. Vui lòng kiểm tra hộp thư của bạn.';
-             isVerificationError = true;
-        }
-        // Kiểm tra lỗi validation từ express-validator (nếu có)
-        else if (data.error && Array.isArray(data.error) && data.error.length > 0 && data.error[0].msg) {
-             errorMessageToShow = data.error[0].msg;
-        }
-        // Kiểm tra lỗi dạng chuỗi khác
-        else if (typeof data.error === 'string') {
-             errorMessageToShow = data.error;
-        }
-        // Các trường hợp lỗi khác (vd: 404, 500)
-        else if (data.status) {
-             errorMessageToShow = `Error ${response.status}: ${data.status}`;
-        }
-
-        setPopupMessage(errorMessageToShow);
-        setPopupType('error');
-        setShowResendVerification(isVerificationError); // Chỉ hiện nút gửi lại nếu là lỗi xác thực
-      }
-      // --- KẾT THÚC XỬ LÝ LOGIN RESPONSE ---
-
-    } catch (error) {
-      console.error('Lỗi kết nối:', error);
-      setPopupMessage('Lỗi kết nối. Vui lòng thử lại.');
+    } catch (error) { // Lỗi đã được ném từ hàm API
+      console.error('Đăng nhập thất bại:', error);
+      setPopupMessage(error.message || 'Login failed. Please try again.');
       setPopupType('error');
+      // Hiện nút gửi lại nếu lỗi là do chưa xác thực email
+      setShowResendVerification(error.isVerificationError || false);
     } finally {
-      setIsLoginLoading(false); // --- KẾT THÚC LOADING ---
+      setIsLoginLoading(false);
     }
   };
 
-  // --- HÀM GỬI LẠI EMAIL XÁC THỰC ---
-  const handleResendVerification = async () => {
-    if (!loginEmail) { // Cần email người dùng đã nhập
-      setPopupMessage('Vui lòng nhập email của bạn vào ô đăng nhập.');
+  // --- handleResendVerification gọi API ---
+   const handleResendVerification = async () => {
+    if (!loginEmail) {
+      setPopupMessage('Vui lòng nhập email của bạn vào ô đăng nhập trước.');
       setPopupType('error');
       return;
     }
-    setPopupMessage(''); // Xóa popup cũ
+    setPopupMessage('');
     console.log("Đang gửi lại email xác thực cho:", loginEmail);
     try {
-      const response = await fetch('http://localhost:8080/auth/resend-verification-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: loginEmail }),
-      });
-      const data = await response.json();
-      if (response.ok && data.success) {
-        setPopupMessage(data.message || 'Email xác thực đã được gửi lại. Vui lòng kiểm tra hộp thư.');
-        setPopupType('success');
-        setShowResendVerification(false); // Ẩn nút sau khi gửi thành công
-      } else {
-        // Xử lý lỗi từ server (vd: email đã xác thực, không tìm thấy user)
-         const errorMsg = data.error && Array.isArray(data.error) ? data.error[0]?.msg : data.error;
-        setPopupMessage(errorMsg || 'Gửi lại email thất bại.');
-        setPopupType('error');
-      }
-    } catch (error) {
+      const data = await resendVerificationEmailApi({ email: loginEmail }); // Gọi hàm API
+      setPopupMessage(data.message || 'Email xác thực đã được gửi lại.');
+      setPopupType('success');
+      setShowResendVerification(false);
+    } catch (error) { // Lỗi đã được ném từ hàm API
       console.error('Lỗi gửi lại email:', error);
-      setPopupMessage('Lỗi kết nối khi gửi lại email.');
+      setPopupMessage(error.message || 'Gửi lại email thất bại.');
       setPopupType('error');
     }
   };
-  // --- KẾT THÚC HÀM GỬI LẠI ---
 
+  // --- Phần JSX return giữ nguyên như code trước của bạn ---
   return (
     <>
       {popupMessage && (
@@ -256,16 +186,14 @@ const AuthForm = () => {
               </span>
             </div>
             <Link to="/auth/forgot-password">Forgot Your Password?</Link>
-            <button type="submit" disabled={isLoginLoading}> {/* Thêm disabled */}
-              {isLoginLoading ? 'Signing In...' : 'Sign In'} {/* Thay đổi text */}
+            <button type="submit" disabled={isLoginLoading}>
+              {isLoginLoading ? 'Signing In...' : 'Sign In'}
             </button>
-            {/* --- NÚT GỬI LẠI EMAIL XÁC THỰC --- */}
             {showResendVerification && (
               <button type="button" onClick={handleResendVerification} className="resend-button">
                 Gửi lại Email Xác thực
               </button>
             )}
-            {/* --------------------------------- */}
           </form>
         </div>
 
@@ -294,7 +222,7 @@ const AuthForm = () => {
                 value={registerPassword}
                 onChange={(e) => setRegisterPassword(e.target.value)}
                 required
-                minLength={6} // Thêm minLength nếu backend yêu cầu
+                minLength={6}
               />
               <span className="toggle-password" onClick={() => togglePasswordVisibility('registerPassword')}>
                 {showRegisterPassword ? <i className="fas fa-eye"></i> : <i className="fas fa-eye-slash"></i>}
@@ -318,8 +246,8 @@ const AuthForm = () => {
             <div>
               {confirmPasswordError && <p className="input-error">{confirmPasswordError}</p>}
             </div>
-            <button type="submit" disabled={isRegisterLoading}> {/* Thêm disabled */}
-              {isRegisterLoading ? 'Signing Up...' : 'Sign Up'} {/* Thay đổi text */}
+            <button type="submit" disabled={isRegisterLoading}>
+              {isRegisterLoading ? 'Signing Up...' : 'Sign Up'}
             </button>
           </form>
         </div>
@@ -334,7 +262,7 @@ const AuthForm = () => {
             </div>
             <div className={`overlay-panel overlay-right ${isLogin ? 'hide' : ''}`}>
               <h1>Hello, Friend!</h1>
-              <p>Register with your personal details to use all of site features</p>
+              <p>Enter your personal details to use all of site features</p>
               <button type="button" className="ghost" onClick={toggleForm}>Sign Up</button>
             </div>
           </div>

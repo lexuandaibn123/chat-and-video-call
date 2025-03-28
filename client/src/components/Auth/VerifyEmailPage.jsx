@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
-import './AuthCommon.scss'; // Sử dụng SCSS chung
+import './AuthCommon.scss';
+// --- IMPORT API FUNCTION ---
+import { verifyEmailApi } from '../../api/auth'; // Điều chỉnh đường dẫn
 
 const VerifyEmailPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [verificationStatus, setVerificationStatus] = useState('verifying'); // 'verifying', 'success', 'error'
+  const [verificationStatus, setVerificationStatus] = useState('verifying');
   const [message, setMessage] = useState('Đang xác thực email của bạn...');
 
   useEffect(() => {
@@ -20,43 +22,36 @@ const VerifyEmailPage = () => {
 
     const verifyToken = async () => {
       try {
-        const response = await fetch(`http://localhost:8080/auth/verify-email?token=${token}`, {
-          method: 'GET', // Hoặc POST tùy thuộc vào backend của bạn, nhưng GET thường hợp lý hơn cho link
-        });
+        // --- GỌI HÀM API ---
+        const data = await verifyEmailApi(token);
+        // -------------------
 
-        const data = await response.json();
+        setMessage(data.message || 'Xác thực email thành công!');
+        setVerificationStatus('success');
+        setTimeout(() => navigate('/auth'), 3000); // Chuyển hướng sau thành công
 
-        if (response.ok && data.success) {
-          setMessage(data.message || 'Xác thực email thành công!');
-          setVerificationStatus('success');
-          // Tùy chọn: Tự động chuyển hướng đến trang đăng nhập sau vài giây
-          setTimeout(() => navigate('/auth'), 3000);
-        } else {
-          setMessage(data.error || 'Xác thực email thất bại. Liên kết có thể đã hết hạn hoặc không hợp lệ.');
-          setVerificationStatus('error');
-        }
-      } catch (error) {
+      } catch (error) { // --- Lỗi đã được ném từ hàm API ---
         console.error('Lỗi khi xác thực email:', error);
-        setMessage('Lỗi kết nối khi cố gắng xác thực email.');
+        setMessage(error.message || 'Xác thực email thất bại.');
         setVerificationStatus('error');
+        // --------------------------------------
       }
     };
 
     verifyToken();
-  }, [location.search, navigate]); // Dependency là location.search và navigate
+  }, [location.search, navigate]);
 
+  // --- JSX return giữ nguyên như code trước của bạn ---
   return (
     <div className="auth-page-container">
       <div className="auth-form-simple">
         <h2>Email Verification</h2>
         <div className={`verification-status ${verificationStatus}`}>
           {verificationStatus === 'verifying' && (
-            <div className="spinner"></div> // Thêm spinner CSS nếu muốn
+            <div className="spinner"></div>
           )}
           <p>{message}</p>
         </div>
-
-        {/* Chỉ hiển thị link đăng nhập khi thành công hoặc lỗi */}
         {(verificationStatus === 'success' || verificationStatus === 'error') && (
           <div className="auth-link">
             <Link to="/auth">Đi đến trang Đăng nhập</Link>
