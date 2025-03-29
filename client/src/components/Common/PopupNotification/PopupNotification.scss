@@ -1,0 +1,62 @@
+// src/components/Common/PopupNotification/PopupNotification.scss
+@use "sass:color"; // Để dùng color.adjust
+@use '../../../styles/variables' as *; // Đường dẫn tương đối
+
+.popup-notification {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: $zindex-popup; // Dùng biến
+
+  .popup-content {
+    background-color: $secondary-color;
+    padding: $spacing-xl $spacing-xxl; // Dùng biến
+    border-radius: $border-radius-popup; // Dùng biến
+    text-align: center;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    max-width: 400px;
+    width: 90%;
+
+    p {
+      margin-bottom: $spacing-lg;
+      font-size: 18px;
+      // color: $text-color; // Sẽ bị override bởi .success / .error
+    }
+
+    button { // Style nút close trong popup
+      background-color: $primary-color;
+      color: $secondary-color;
+      border: none;
+      padding: $spacing-sm $spacing-lg;
+      border-radius: $border-radius-button-common; // Dùng biến
+      cursor: pointer;
+      transition: background-color $transition-default;
+
+      &:hover {
+        background-color: color.adjust($primary-color, $lightness: -10%);
+      }
+    }
+  }
+
+  // --- Style theo type ---
+  &.success {
+    .popup-content {
+      border-left: 5px solid $success-color;
+      p { color: $success-color; } // Đặt màu chữ ở đây
+    }
+  }
+
+  &.error {
+    .popup-content {
+      border-left: 5px solid $error-color;
+      p { color: $error-color; } // Đặt màu chữ ở đây
+    }
+  }
+  // --- Kết thúc style theo type ---
+}

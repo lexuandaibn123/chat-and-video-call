@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 // --- IMPORT API FUNCTION ---
-import { logoutApi } from '../../api/auth'; // Điều chỉnh đường dẫn
+import { logoutApi } from '../api/auth'; // Điều chỉnh đường dẫn
 
 const Home = () => {
   const navigate = useNavigate();

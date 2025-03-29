@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import './AuthCommon.scss';
+// import './AuthCommon.scss';
 // --- IMPORT API FUNCTION ---
-import { resetPasswordApi } from '../../api/auth'; // Điều chỉnh đường dẫn nếu cần
+import { resetPasswordApi } from '../api/auth'; // Điều chỉnh đường dẫn nếu cần
 
 const ResetPasswordPage = () => {
   const location = useLocation();

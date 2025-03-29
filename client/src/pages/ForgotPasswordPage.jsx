@@ -1,9 +1,9 @@
 // src/components/Auth/ForgotPasswordPage.jsx (Hoặc src/pages/ForgotPasswordPage.jsx)
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import './AuthCommon.scss';
+// import './AuthCommon.scss';
 // --- IMPORT API FUNCTION ---
-import { forgotPasswordApi } from '../../api/auth'; // Điều chỉnh đường dẫn
+import { forgotPasswordApi } from '../api/auth'; // Điều chỉnh đường dẫn
 
 const ForgotPasswordPage = () => {
   const [email, setEmail] = useState('');

@@ -1,5 +1,5 @@
 import React from 'react';
-import './PopupNotification.scss';
+// import './PopupNotification.scss';
 
 const PopupNotification = ({ message, type, onClose }) => {
   return (

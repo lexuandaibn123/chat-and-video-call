@@ -1,20 +1,22 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import AuthForm from './components/Auth/AuthForm';
-import HomePage from './components/Home/HomePage';
-import ForgotPasswordPage from './components/Auth/ForgotPasswordPage';
-import ResetPasswordPage from './components/Auth/ResetPasswordPage';
-import VerifyEmailPage from './components/Auth/VerifyEmailPage';
+import AuthLayout from './layouts/AuthLayout';
+
+import AuthPage from './pages/AuthPage';
+import HomePage from './pages/HomePage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
+import VerifyEmailPage from './pages/VerifyEmailPage';
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/auth" element={<AuthForm />} />
         <Route path="/" element={<HomePage />} />
-        <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
-        <Route path="/auth/verify-email" element={<VerifyEmailPage />} />
+        <Route path="/auth" element={<AuthLayout><AuthPage /></AuthLayout>} />
+        <Route path="/auth/forgot-password" element={<AuthLayout><ForgotPasswordPage /></AuthLayout>} />
+        <Route path="/auth/reset-password" element={<AuthLayout><ResetPasswordPage /></AuthLayout>} />
+        <Route path="/auth/verify-email" element={<AuthLayout><VerifyEmailPage /></AuthLayout>} />
       </Routes>
     </BrowserRouter>
   );

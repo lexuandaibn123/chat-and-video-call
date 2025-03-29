@@ -1,0 +1,25 @@
+// src/styles/main.scss
+
+// 1. Variables & Mixins
+@use 'variables' as *;
+// @import 'mixins'; // Nếu có
+
+// 2. Base styles
+@use 'base' as *;
+
+// 3. Common Components
+@use '../components/Common/PopupNotification/PopupNotification' as *;
+@use '../components/Common/PasswordInput/PasswordInput' as *;
+
+// 4. Auth Styles
+// Import style chung cho các trang auth đơn giản trước
+@use '../components/Auth/AuthCommon' as *;
+// Import style riêng cho component AuthForm chính (login/signup)
+@use '../components/Auth/AuthFormUI' as *; // Hoặc AuthForm.scss nếu chưa đổi tên
+
+// 5. Layouts (Nếu có)
+// @import '../layouts/AuthLayout';
+// @import '../layouts/MainLayout';
+
+// 6. Page Specific (Nếu có style riêng cho từng trang)
+// @import '../pages/HomePage';

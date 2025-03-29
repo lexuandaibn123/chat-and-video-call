@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import PopupNotification from './PopupNotification';
-import './AuthForm.scss';
+import PopupNotification from '../components/Auth/PopupNotification';
+// import './AuthForm.scss';
 // --- IMPORT API FUNCTIONS ---
-import { loginApi, registerApi, resendVerificationEmailApi } from '../../api/auth'; // Điều chỉnh đường dẫn nếu cần
+import { loginApi, registerApi, resendVerificationEmailApi } from '../api/auth'; // Điều chỉnh đường dẫn nếu cần
 
 const AuthForm = () => {
   const navigate = useNavigate();

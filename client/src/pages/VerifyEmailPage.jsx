@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
-import './AuthCommon.scss';
+// import './AuthCommon.scss';
 // --- IMPORT API FUNCTION ---
-import { verifyEmailApi } from '../../api/auth'; // Điều chỉnh đường dẫn
+import { verifyEmailApi } from '../api/auth'; // Điều chỉnh đường dẫn
 
 const VerifyEmailPage = () => {
   const location = useLocation();
