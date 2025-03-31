@@ -31,11 +31,11 @@ const CheckEmailPage = () => {
 
     try {
       const data = await resendVerificationEmailApi({ email });
-      setPopupMessage(data.message || 'Email xác thực đã được gửi lại.');
+      setPopupMessage(data.message || 'Verification email has been resent.');
       setPopupType('success');
     } catch (error) {
       console.error('Lỗi gửi lại email:', error);
-      setPopupMessage(error.message || 'Gửi lại email thất bại.');
+      setPopupMessage(error.message || 'Resending email failed.');
       setPopupType('error');
     } finally {
       setIsResending(false);
@@ -66,11 +66,11 @@ const CheckEmailPage = () => {
         <div className="auth-form-simple"> {/* Sử dụng style form đơn giản */}
           <h2>Check Your Email</h2>
           <p>
-            Đăng ký gần như hoàn tất! Chúng tôi đã gửi một email xác thực đến{' '}
+            Registration almost complete! We have sent a verification email to{' '}
             <strong>{email}</strong>.
           </p>
           <p>
-            Vui lòng kiểm tra hộp thư đến (và cả thư mục spam) và nhấp vào liên kết để kích hoạt tài khoản của bạn.
+            Please check your inbox (and spam folder) and click the link to activate your account.
           </p>
           <div style={{ marginTop: '30px' }}> {/* Thêm khoảng cách */}
             <button
@@ -78,11 +78,11 @@ const CheckEmailPage = () => {
               disabled={isResending}
               className="resend-button-page" // Class riêng cho nút này nếu cần style khác
             >
-              {isResending ? 'Đang gửi lại...' : 'Gửi lại Email Xác thực'}
+              {isResending ? "Resending..." : "Resend Verification Email"}
             </button>
           </div>
           <div className="auth-link">
-            <Link to="/auth">Quay lại Đăng nhập</Link>
+            <Link to="/auth">Back to Login Page</Link>
           </div>
         </div>
       </div>

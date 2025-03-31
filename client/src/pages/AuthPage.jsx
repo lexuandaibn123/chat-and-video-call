@@ -61,7 +61,7 @@ const AuthPage = () => {
     setPopupMessage('');
 
     if (registerPassword !== registerConfirmPassword) {
-      setConfirmPasswordError('Mật khẩu và xác nhận mật khẩu không khớp.');
+      setConfirmPasswordError('Password and confirmation password don\'t match');
       return;
     }
 
@@ -77,13 +77,13 @@ const AuthPage = () => {
       };
       const data = await registerApi(userData); // Gọi hàm API
 
-      setPopupMessage('Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.');
+      setPopupMessage('Registration successful! Please check your email to verify your account.');
       setPopupType('success');
       console.log('Đăng ký thành công:', data);
       navigate('/auth/check-email', { state: { email: registerEmail } });
     } catch (error) { // Lỗi đã được ném từ hàm API
       console.error('Đăng ký thất bại:', error);
-      setPopupMessage(error.message || 'Đăng ký thất bại. Vui lòng thử lại.');
+      setPopupMessage(error.message|| 'Registration failed. Please try again.');
       setPopupType('error');
     } finally {
       setIsRegisterLoading(false);
@@ -120,7 +120,7 @@ const AuthPage = () => {
   const handleResendFromPopup = async () => {
     if (!loginEmail) {
       // Trường hợp hiếm nhưng nên kiểm tra
-      setPopupMessage('Không tìm thấy email để gửi lại.');
+      setPopupMessage('Email not found for resending.');
       setPopupType('error');
       return;
     }
@@ -135,7 +135,7 @@ const AuthPage = () => {
     } catch (error) {
       // Gửi thất bại, hiển thị lại popup lỗi
       console.error('Lỗi gửi lại email từ popup:', error);
-      setPopupMessage(error.message || 'Gửi lại email thất bại.');
+      setPopupMessage(error.message || 'Failed to resend email.');
       setPopupType('error');
       setShowResendInPopup(true);
     } finally {
@@ -160,12 +160,12 @@ const AuthPage = () => {
         <div className={`form-container sign-in-container ${!isLogin ? 'hide' : ''}`}>
           <form onSubmit={handleLogin}>
             <h1>Sign In</h1>
-            <div className="social-container">
+            {/* <div className="social-container">
               <a href="#" className="social"><i className="fab fa-google"></i></a>
               <a href="#" className="social"><i className="fab fa-github"></i></a>
               <a href="#" className="social"><i className="fab fa-linkedin-in"></i></a>
-            </div>
-            <span>or use your email password</span>
+            </div> */}
+            {/* <span>or use your email password</span> */}
             <input
               type="email"
               placeholder="Email"

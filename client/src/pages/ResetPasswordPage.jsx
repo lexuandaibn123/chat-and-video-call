@@ -25,7 +25,7 @@ const ResetPasswordPage = () => {
       console.log("Token from URL:", tokenFromUrl);
     } else {
       console.error("No token found in URL query parameters.");
-      setMessage('Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.');
+      setMessage('The password reset link is invalid or has expired.');
       setMessageType('error');
     }
   }, [location.search]);
@@ -46,12 +46,12 @@ const ResetPasswordPage = () => {
     setIsLoading(true);
 
     if (password !== confirmPassword) {
-      setConfirmPasswordError('Mật khẩu và xác nhận mật khẩu không khớp.');
+      setConfirmPasswordError('Password and confirmation password do not match.');
       setIsLoading(false);
       return;
     }
     if (!token) {
-      setMessage('Token đặt lại mật khẩu không hợp lệ hoặc không tìm thấy.');
+      setMessage('The password reset token is invalid or not found.');
       setMessageType('error');
       setIsLoading(false);
       return;
@@ -63,13 +63,13 @@ const ResetPasswordPage = () => {
       const data = await resetPasswordApi(resetData);
       // -------------------
 
-      setMessage(data.message || 'Đặt lại mật khẩu thành công!');
+      setMessage(data.message || 'Password reset successful!');
       setMessageType('success');
       setTimeout(() => navigate('/auth'), 3000); // Chuyển hướng sau thành công
 
     } catch (error) { // --- Lỗi đã được ném từ hàm API ---
       console.error('Lỗi khi đặt lại mật khẩu:', error);
-      setMessage(error.message || 'Đặt lại mật khẩu thất bại. Vui lòng thử lại.');
+      setMessage(error.message || 'Password reset failed. Please try again.');
       setMessageType('error');
       // --------------------------------------
     } finally {
@@ -126,10 +126,10 @@ const ResetPasswordPage = () => {
             <p className={`auth-message ${messageType}`}>{message}</p>
           )}
           <button type="submit" disabled={isLoading || !token || (messageType === 'success')}>
-            {isLoading ? 'Đang xử lý...' : 'Đặt lại mật khẩu'}
+            {isLoading ? "Processing..." : "Reset Password"}
           </button>
            <div className="auth-link">
-             {(messageType !== 'success') && <Link to="/auth">Quay lại Đăng nhập</Link>}
+             {(messageType !== 'success') && <Link to="/auth">Back to Login Page</Link>}
           </div>
         </form>
       </div>

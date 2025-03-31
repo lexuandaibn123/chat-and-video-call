@@ -8,14 +8,14 @@ const VerifyEmailPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [verificationStatus, setVerificationStatus] = useState('verifying');
-  const [message, setMessage] = useState('Đang xác thực email của bạn...');
+  const [message, setMessage] = useState('Verifying your email...');
 
   useEffect(() => {
     const queryParams = new URLSearchParams(location.search);
     const token = queryParams.get('token');
 
     if (!token) {
-      setMessage('Liên kết xác thực không hợp lệ hoặc bị thiếu.');
+      setMessage('The verification link is invalid or missing.');
       setVerificationStatus('error');
       return;
     }
@@ -26,13 +26,13 @@ const VerifyEmailPage = () => {
         const data = await verifyEmailApi(token);
         // -------------------
 
-        setMessage(data.message || 'Xác thực email thành công!');
+        setMessage(data.message || 'Email verification successful!');
         setVerificationStatus('success');
         setTimeout(() => navigate('/auth'), 3000); // Chuyển hướng sau thành công
 
       } catch (error) { // --- Lỗi đã được ném từ hàm API ---
         console.error('Lỗi khi xác thực email:', error);
-        setMessage(error.message || 'Xác thực email thất bại.');
+        setMessage(error.message || 'Email verification failed.');
         setVerificationStatus('error');
         // --------------------------------------
       }
@@ -54,7 +54,7 @@ const VerifyEmailPage = () => {
         </div>
         {(verificationStatus === 'success' || verificationStatus === 'error') && (
           <div className="auth-link">
-            <Link to="/auth">Đi đến trang Đăng nhập</Link>
+            <Link to="/auth">Go to Login Page</Link>
           </div>
         )}
       </div>

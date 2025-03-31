@@ -21,12 +21,11 @@ const ForgotPasswordPage = () => {
       // --- GỌI HÀM API ---
       const data = await forgotPasswordApi({ email });
       // -------------------
-      setMessage(data.message || 'Nếu email tồn tại, một liên kết đặt lại mật khẩu đã được gửi.');
+      setMessage('If the email exists, a password reset link has been sent. Check your mail!');
       setMessageType('success');
-      setEmail('');
     } catch (error) { // --- Lỗi đã được ném từ hàm API ---
       console.error('Lỗi khi gửi yêu cầu quên mật khẩu:', error);
-      setMessage(error.message || 'Yêu cầu thất bại. Vui lòng thử lại.');
+      setMessage(error.message || 'Request failed. Please try again.');
       setMessageType('error');
       // --------------------------------------
     } finally {
@@ -39,7 +38,7 @@ const ForgotPasswordPage = () => {
     <div className="auth-page-container">
       <div className="auth-form-simple">
         <h2>Forgot Password</h2>
-        <p>Nhập email của bạn để nhận liên kết đặt lại mật khẩu.</p>
+        <p>Enter your email to receive a password reset link.</p>
         <form onSubmit={handleSubmit}>
           <input
             type="email"
@@ -52,10 +51,10 @@ const ForgotPasswordPage = () => {
             <p className={`auth-message ${messageType}`}>{message}</p>
           )}
           <button type="submit" disabled={isLoading}>
-            {isLoading ? 'Đang gửi...' : 'Gửi liên kết'}
+            {isLoading ? "Sending..." : "Send Link"}
           </button>
           <div className="auth-link">
-            <Link to="/auth">Quay lại Đăng nhập</Link> {/* Đảm bảo link đúng */}
+            <Link to="/auth">Back to Login Page</Link>
           </div>
         </form>
       </div>
