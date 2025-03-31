@@ -107,6 +107,27 @@
       // hover kế thừa từ _base.scss
     }
   }
+
+  .resend-button-page {
+    background-color: $warning-color;
+    color: $warning-text-color;
+    border-color: $warning-color;
+    border-radius: $border-radius-button-main;
+    font-size: $font-size-small;
+    font-weight: $font-weight-bold;
+    padding: 10px 20px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border: 1px solid $warning-color;
+    // ... các style khác tương tự nút resend trong AuthForm
+    margin-top: 0; // Reset margin-top nếu button base có
+    margin-bottom: $spacing-lg;
+
+    &:hover:not(:disabled) {
+      background-color: color.adjust($warning-color, $lightness: -10%);
+      border-color: color.adjust($warning-color, $lightness: -10%);
+    }
+ }
 }
 
 // Styles cho trang Verify Email

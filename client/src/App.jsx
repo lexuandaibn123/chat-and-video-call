@@ -7,6 +7,7 @@ import HomePage from './pages/HomePage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
+import CheckEmailPage from './pages/CheckEmailPage';
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
         <Route path="/auth/forgot-password" element={<AuthLayout><ForgotPasswordPage /></AuthLayout>} />
         <Route path="/auth/reset-password" element={<AuthLayout><ResetPasswordPage /></AuthLayout>} />
         <Route path="/auth/verify-email" element={<AuthLayout><VerifyEmailPage /></AuthLayout>} />
+        <Route path="/auth/check-email" element={<AuthLayout><CheckEmailPage /></AuthLayout>} />
       </Routes>
     </BrowserRouter>
   );

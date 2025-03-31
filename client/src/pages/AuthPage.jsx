@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import PopupNotification from '../components/Auth/PopupNotification';
-// import './AuthForm.scss';
+import PopupNotification from '../components/Common/PopupNotification/PopupNotification';
 // --- IMPORT API FUNCTIONS ---
 import { loginApi, registerApi, resendVerificationEmailApi } from '../api/auth'; // Điều chỉnh đường dẫn nếu cần
 
-const AuthForm = () => {
+const AuthPage = () => {
   const navigate = useNavigate();
 
   // --- Các state giữ nguyên ---
@@ -25,7 +24,8 @@ const AuthForm = () => {
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
   const [popupMessage, setPopupMessage] = useState('');
   const [popupType, setPopupType] = useState('');
-  const [showResendVerification, setShowResendVerification] = useState(false);
+  const [isResendingFromPopup, setIsResendingFromPopup] = useState(false);
+  const [showResendInPopup, setShowResendInPopup] = useState(false);
   // --- Kết thúc state ---
 
   // --- Các hàm toggle và close giữ nguyên ---
@@ -59,7 +59,6 @@ const AuthForm = () => {
     e.preventDefault();
     setConfirmPasswordError('');
     setPopupMessage('');
-    setShowResendVerification(false);
 
     if (registerPassword !== registerConfirmPassword) {
       setConfirmPasswordError('Mật khẩu và xác nhận mật khẩu không khớp.');
@@ -74,18 +73,14 @@ const AuthForm = () => {
         fullName: registerUsername,
         email: registerEmail,
         password: registerPassword,
-        confirmPassword: registerConfirmPassword // Gửi đi nếu backend cần
+        confirmPassword: registerConfirmPassword 
       };
       const data = await registerApi(userData); // Gọi hàm API
 
-      setPopupMessage(data.message || 'Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.');
+      setPopupMessage('Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.');
       setPopupType('success');
       console.log('Đăng ký thành công:', data);
-      setRegisterUsername('');
-      setRegisterEmail('');
-      setRegisterPassword('');
-      setRegisterConfirmPassword('');
-      // Không chuyển form ngay
+      navigate('/auth/check-email', { state: { email: registerEmail } });
     } catch (error) { // Lỗi đã được ném từ hàm API
       console.error('Đăng ký thất bại:', error);
       setPopupMessage(error.message || 'Đăng ký thất bại. Vui lòng thử lại.');
@@ -99,7 +94,6 @@ const AuthForm = () => {
   const handleLogin = async (e) => {
     e.preventDefault();
     setPopupMessage('');
-    setShowResendVerification(false);
     setIsLoginLoading(true);
 
     try {
@@ -114,37 +108,41 @@ const AuthForm = () => {
 
     } catch (error) { // Lỗi đã được ném từ hàm API
       console.error('Đăng nhập thất bại:', error);
-      setPopupMessage(error.message || 'Login failed. Please try again.');
+      let errorMessageToShow = error.message || 'Login failed. Please try again.';
+      setPopupMessage(errorMessageToShow);
       setPopupType('error');
-      // Hiện nút gửi lại nếu lỗi là do chưa xác thực email
-      setShowResendVerification(error.isVerificationError || false);
+      setShowResendInPopup(error.isVerificationError || false);
     } finally {
       setIsLoginLoading(false);
     }
   };
 
-  // --- handleResendVerification gọi API ---
-   const handleResendVerification = async () => {
+  const handleResendFromPopup = async () => {
     if (!loginEmail) {
-      setPopupMessage('Vui lòng nhập email của bạn vào ô đăng nhập trước.');
+      // Trường hợp hiếm nhưng nên kiểm tra
+      setPopupMessage('Không tìm thấy email để gửi lại.');
       setPopupType('error');
       return;
     }
-    setPopupMessage('');
-    console.log("Đang gửi lại email xác thực cho:", loginEmail);
+    setIsResendingFromPopup(true); // Bắt đầu loading cho nút popup
+
+    console.log("Đang gửi lại email xác thực từ popup cho:", loginEmail);
     try {
-      const data = await resendVerificationEmailApi({ email: loginEmail }); // Gọi hàm API
-      setPopupMessage(data.message || 'Email xác thực đã được gửi lại.');
-      setPopupType('success');
-      setShowResendVerification(false);
-    } catch (error) { // Lỗi đã được ném từ hàm API
-      console.error('Lỗi gửi lại email:', error);
+      const data = await resendVerificationEmailApi({ email: loginEmail });
+      // Gửi thành công, chuyển hướng đến trang CheckEmail
+      navigate('/auth/check-email', { state: { email: loginEmail, message: data.message || 'Email xác thực đã được gửi lại.' } });
+      // Không cần set popup ở đây nữa vì đã chuyển trang
+    } catch (error) {
+      // Gửi thất bại, hiển thị lại popup lỗi
+      console.error('Lỗi gửi lại email từ popup:', error);
       setPopupMessage(error.message || 'Gửi lại email thất bại.');
       setPopupType('error');
+      setShowResendInPopup(true);
+    } finally {
+      setIsResendingFromPopup(false); // Kết thúc loading
     }
   };
 
-  // --- Phần JSX return giữ nguyên như code trước của bạn ---
   return (
     <>
       {popupMessage && (
@@ -152,6 +150,8 @@ const AuthForm = () => {
           message={popupMessage}
           type={popupType}
           onClose={closePopup}
+          onResend={showResendInPopup ? handleResendFromPopup : null}
+          isResending={isResendingFromPopup}
         />
       )}
 
@@ -189,11 +189,6 @@ const AuthForm = () => {
             <button type="submit" disabled={isLoginLoading}>
               {isLoginLoading ? 'Signing In...' : 'Sign In'}
             </button>
-            {showResendVerification && (
-              <button type="button" onClick={handleResendVerification} className="resend-button">
-                Gửi lại Email Xác thực
-              </button>
-            )}
           </form>
         </div>
 
@@ -272,4 +267,4 @@ const AuthForm = () => {
   );
 };
 
-export default AuthForm;
+export default AuthPage;

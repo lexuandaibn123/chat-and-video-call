@@ -29,17 +29,41 @@
       // color: $text-color; // Sẽ bị override bởi .success / .error
     }
 
-    button { // Style nút close trong popup
-      background-color: $primary-color;
-      color: $secondary-color;
+    .popup-buttons {
+      display: flex;
+      justify-content: center; // Căn giữa các nút
+      gap: $spacing-md;        // Khoảng cách giữa các nút
+      margin-top: $spacing-lg; // Khoảng cách với message
+    }
+
+    button {
       border: none;
       padding: $spacing-sm $spacing-lg;
-      border-radius: $border-radius-button-common; // Dùng biến
+      border-radius: $border-radius-button-common;
       cursor: pointer;
-      transition: background-color $transition-default;
+      transition: background-color $transition-default, opacity 0.2s ease;
+      font-weight: $font-weight-bold;
+      font-size: $font-size-base; // Có thể chỉnh lại
 
+      &:disabled { // Style khi nút bị disable (nếu cần)
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+    }
+
+    .close-button-popup {
+      background-color: $primary-color;
+      color: $secondary-color;
       &:hover {
         background-color: color.adjust($primary-color, $lightness: -10%);
+      }
+    }
+
+    .resend-button-popup {
+      background-color: $warning-color; // Màu vàng
+      color: $warning-text-color;    // Màu chữ tối
+      &:hover {
+        background-color: darken($warning-color, 10%);
       }
     }
   }
