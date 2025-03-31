@@ -63,7 +63,7 @@
       background-color: $warning-color; // Màu vàng
       color: $warning-text-color;    // Màu chữ tối
       &:hover {
-        background-color: darken($warning-color, 10%);
+        background-color: color.adjust($warning-color, $lightness: -10%);
       }
     }
   }
