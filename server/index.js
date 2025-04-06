@@ -9,6 +9,9 @@ const swaggerJsdoc = require("swagger-jsdoc");
 const cors = require("cors");
 const db = require("./config/db");
 const session = require("express-session");
+const http = require("http");
+
+const socketIO = require("socket.io");
 
 const PORT = process.env.PORT || 8080;
 
@@ -16,7 +19,7 @@ const serverUrl = process.env.SERVER_URL;
 
 const clientUrl = process.env.CLIENT_URL;
 
-db.connect()
+db.connect();
 
 const options = {
   definition: {
@@ -70,6 +73,25 @@ app.use(bodyParser.json());
 
 route(app);
 
-app.listen(PORT, () => {
+const server = http.createServer(app);
+
+const io = socketIO(server, {
+  cors: {
+    origin: clientUrl,
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  },
+});
+
+io.on("connection", (client) => {
+  client.on("event", (data) => {
+    /* … */
+  });
+  client.on("disconnect", () => {
+    /* … */
+  });
+});
+
+server.listen(PORT, () => {
   console.log(`Server is running at ${serverUrl}`);
 });
