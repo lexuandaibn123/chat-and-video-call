@@ -10,6 +10,7 @@ const cors = require("cors");
 const db = require("./config/db");
 const session = require("express-session");
 const http = require("http");
+const path = require("path");
 
 const socketIO = require("socket.io");
 
@@ -71,6 +72,14 @@ app.use(bodyParser.urlencoded({ extended: true }));
 // Parses the text as json
 app.use(bodyParser.json());
 
+// Setup test
+app.use(express.static(path.join(__dirname, "public")));
+app.set("view engine", "ejs");
+
+app.get("/", (req, res) => {
+  res.render("index.ejs");
+});
+
 route(app);
 
 const server = http.createServer(app);
@@ -83,7 +92,16 @@ const io = socketIO(server, {
   },
 });
 
-io.on("connection", (client) => {
+io.sockets.on("connection", (client) => {
+  client.on("join", (roomId) => {
+    // roomId = userId or groupId
+    /* handle before join */
+    io.sockets.in(room).emit("join", room);
+
+    client.join(room);
+
+    client.emit("joined", room, socket.id);
+  });
   client.on("event", (data) => {
     /* … */
   });
