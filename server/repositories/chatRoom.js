@@ -1,56 +1,44 @@
 const ChatRoom = require("../models/chatRoom");
 
 class ChatRoomRepository {
-  async createChatRoom(data) {
+  async create(data) {
     return await ChatRoom.create(data);
   }
 
-  async getChatRoomById(id) {
-    return await ChatRoom.findById(id);
+  async findById(id) {
+    return await ChatRoom.findById(id).populate("members");
   }
 
-  async getChatRoomsByUser(userId) {
+  async findRoomsByName(name) {
+    return await ChatRoom.find({
+      name: { $regex: name, $options: "i" },
+    });
+  }
+
+  async getRoomByUserId(userId) {
     return await ChatRoom.find({ members: userId });
   }
 
-  async findByName(name) {
-    return await ChatRoom.find({ name: { $regex: name, $options: "i" } });
+  // async changeLeader(roomId, newLeaderId) {
+  //   return await ChatRoom.findByIdAndUpdate(
+  //     roomId,
+  //     { leader: newLeaderId },
+  //     { new: true }
+  //   );
+  // }
+  async addMember(roomId, userId) {
+    return await ChatRoom.findByIdAndUpdate(
+      roomId,
+      { $addToSet: { members: userId } },
+      { new: true }
+    );
   }
-
-  async addUserToChatRoom(chatRoomId, userId) {
-    const chatRoom = await ChatRoom.findById(chatRoomId);
-    if (chatRoom) {
-      if (!chatRoom.members.includes(userId)) {
-        chatRoom.members.push(userId);
-        await chatRoom.save();
-      }
-      return chatRoom;
-    }
-    throw new Error("Chat room not found");
-  }
-
-  async removeUserFromChatRoom(chatRoomId, userId) {
-    const chatRoom = await ChatRoom.findById(chatRoomId);
-    if (chatRoom) {
-      chatRoom.members = chatRoom.members.filter(
-        (member) => member.toString() !== userId
-      );
-      await chatRoom.save();
-      return chatRoom;
-    }
-    throw new Error("Chat room not found");
-  }
-
-  async isUserInChatRoom(chatRoomId, userId) {
-    const chatRoom = await ChatRoom.findById(chatRoomId);
-    if (chatRoom) {
-      return chatRoom.members.includes(userId);
-    }
-    return false;
-  }
-
-  async getChatRoomsByUserId(userId) {
-    return await ChatRoom.find({ members: userId });
+  async removeMember(roomId, userId) {
+    return await ChatRoom.findByIdAndUpdate(
+      roomId,
+      { $pull: { members: userId } },
+      { new: true }
+    );
   }
 }
 
