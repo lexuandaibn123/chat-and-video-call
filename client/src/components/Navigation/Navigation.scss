@@ -1,0 +1,230 @@
+// src/components/Navigation/Navigation.scss
+@use '../../styles/variables' as *;
+
+.navigation-container {
+  display: flex;
+  flex-direction: column;
+  // align-items: center; // Bỏ căn giữa ngang để text căn trái
+  background-color: $primary-color; // Giữ màu nền chính
+  color: $secondary-color;
+  padding: $spacing-lg 0; // Padding trên dưới, không cần padding ngang nhiều
+  height: 100vh;
+  width: 180px;  // <<<--- TĂNG ĐỘ RỘNG SIDEBAR
+  position: fixed;
+  left: 0;
+  top: 0;
+  // border-top-right-radius: $border-radius-md; // Có thể bỏ bo góc hoặc giữ lại
+  // border-bottom-right-radius: $border-radius-md;
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+  transition: width $transition-default, background-color $transition-default;
+  justify-content: space-between; // Đẩy logout xuống dưới
+
+  // --- THÊM PHẦN LOGO ---
+  .nav-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center; // Hoặc căn trái tùy thiết kế logo
+    padding: 0 $spacing-lg $spacing-xl $spacing-lg; // Padding xung quanh logo
+    // Thêm style cho logo của bạn ở đây
+    img { // Ví dụ nếu dùng ảnh logo
+      height: 40px;
+      // filter: brightness(0) invert(1); // Đổi màu logo thành trắng nếu cần
+    }
+     // Hoặc style cho text logo
+     // span { font-size: 24px; font-weight: bold; }
+  }
+  // --------------------
+
+  // Bỏ .nav-profile nếu không dùng avatar ở đây nữa
+  // .nav-profile { ... }
+
+  .nav-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    // flex-grow: 1; // Không cần nếu dùng space-between ở container
+
+    li {
+      width: 100%;
+      padding: 0 $spacing-md; // Thêm padding ngang cho mục li
+
+      .nav-link {
+        display: flex;
+        // flex-direction: column; // <<<--- ĐỔI THÀNH ROW
+        flex-direction: row;
+        align-items: center; // Căn giữa icon và text theo chiều dọc
+        // justify-content: center; // <<<--- BỎ CĂN GIỮA NGANG
+        padding: $spacing-sm $spacing-lg; // Padding trên dưới, trái phải cho link
+        color: rgba($secondary-color, 0.8); // Màu nhạt hơn chút
+        text-decoration: none;
+        border-radius: $border-radius-sm; // Bo góc nhẹ cho link
+        transition: background-color $transition-default, color $transition-default;
+        gap: $spacing-md; // <<<--- Khoảng cách giữa icon và text
+
+        i, svg { // Style icon
+          font-size: 18px; // Có thể chỉnh lại size
+          // margin-bottom: $spacing-xs; // <<<--- BỎ MARGIN BOTTOM
+          width: 20px; // Đặt width cố định để căn chỉnh text dễ hơn
+          text-align: center; // Căn giữa icon nếu cần
+        }
+
+        .nav-text {
+          font-size: $font-size-common; // Font chữ to hơn
+          display: inline-block; // <<<--- LUÔN HIỂN THỊ TEXT TRÊN DESKTOP
+          font-weight: 500; // Hơi đậm hơn
+        }
+      }
+
+      // --- STYLE ACTIVE MỚI ---
+      &.active {
+        .nav-link {
+          background-color: lighten($primary-color, 10%); // Nền sáng hơn
+          color: $secondary-color; // Màu chữ/icon trắng rõ
+          font-weight: $font-weight-bold; // In đậm text khi active
+          // Bỏ thanh ::before
+          // &::before { display: none; }
+        }
+      }
+      // -----------------------
+
+      &:hover:not(.active) { // Hiệu ứng hover khi không active
+        .nav-link {
+          background-color: rgba($secondary-color, 0.1);
+          color: $secondary-color;
+        }
+      }
+    }
+  }
+
+  .nav-logout {
+    // margin-top: auto; // Không cần nếu dùng space-between ở container
+    padding: 0 $spacing-md; // Cùng padding ngang với nav-list li
+    margin-bottom: $spacing-lg; // Khoảng cách dưới cùng
+
+    .logout-button {
+      display: flex;
+      // flex-direction: column; // <<<--- ĐỔI THÀNH ROW
+      flex-direction: row;
+      align-items: center;
+      width: 100%;
+      padding: $spacing-sm $spacing-lg; // Giống nav-link
+      background-color: transparent;
+      border: none;
+      color: rgba($secondary-color, 0.8);
+      cursor: pointer;
+      border-radius: $border-radius-sm; // Giống nav-link
+      transition: background-color $transition-default, color $transition-default;
+      gap: $spacing-md; // <<<--- Khoảng cách giữa icon và text
+
+      i, svg {
+        font-size: 18px; // Giống nav-link icon
+        // margin-bottom: $spacing-xs; // <<<--- BỎ
+        width: 20px; // Giống nav-link icon
+        text-align: center;
+      }
+      .nav-text {
+        font-size: $font-size-common; // Giống nav-link text
+        display: inline-block; // <<<--- HIỂN THỊ TEXT
+        font-weight: 500; // Giống nav-link text
+      }
+
+      &:hover:not(:disabled) {
+        background-color: rgba($secondary-color, 0.1);
+        color: $secondary-color;
+      }
+      &:disabled {
+         opacity: 0.6;
+         cursor: not-allowed;
+       }
+    }
+  }
+
+  // --- Responsive cho Mobile ---
+  @media (max-width: $breakpoint-medium) {
+    // <<<--- GIỮ NGUYÊN PHẦN MEDIA QUERY NÀY NHƯ TRƯỚC ĐỂ CÓ BOTTOM BAR ---
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-around;
+    height: 65px;
+    width: 100vw;
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    top: auto;
+    border-top-left-radius: $border-radius-md;
+    border-top-right-radius: $border-radius-md;
+    border-bottom-right-radius: 0;
+    padding: $spacing-xs $spacing-sm;
+
+    .nav-logo { display: none; } // Ẩn logo trên mobile bottom bar
+
+    .nav-list {
+      display: flex;
+      flex-direction: row;
+      flex-grow: 1;
+      justify-content: space-evenly;
+      align-items: center;
+      height: 100%;
+
+      li {
+        margin-bottom: 0;
+        flex: 1;
+        height: 100%;
+        padding: 0; // Reset padding li
+
+        .nav-link {
+          flex-direction: column; // Icon trên text dưới trên mobile
+          padding: $spacing-xs 0;
+          height: 100%;
+          gap: 0; // Reset gap
+
+          i, svg {
+            margin-bottom: 2px;
+            font-size: 18px;
+            width: auto; // Reset width
+          }
+
+          .nav-text {
+            display: block;
+            font-size: 10px;
+            font-weight: normal; // Reset font-weight
+          }
+        }
+
+        &.active .nav-link {
+           background-color: transparent;
+           color: $secondary-color;
+           border-top: 3px solid $secondary-color; // Giữ lại border top active
+           border-radius: 0;
+           margin-top: -3px;
+           font-weight: normal; // Reset font-weight active
+        }
+      }
+    }
+
+    .nav-logout {
+      margin-top: 0;
+      width: auto;
+      height: 100%;
+      padding: 0; // Reset padding logout container
+
+      .logout-button {
+         flex-direction: column;
+         padding: $spacing-xs $spacing-sm;
+         height: 100%;
+         gap: 0; // Reset gap
+
+         i, svg {
+            margin-bottom: 2px;
+            font-size: 18px;
+            width: auto;
+         }
+         .nav-text {
+            display: block;
+            font-size: 10px;
+         }
+      }
+    }
+  }
+}
