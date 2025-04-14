@@ -1,5 +1,3 @@
-// src/devApp.js
-
 require("dotenv").config();
 
 const nodemon = require("nodemon");
