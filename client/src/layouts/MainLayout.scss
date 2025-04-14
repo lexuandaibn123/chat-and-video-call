@@ -1,22 +1,32 @@
-// src/layouts/MainLayout.scss
-@use '../styles/variables' as *; // Import biến
+@use '../styles/variables' as *;
+@use "sass:math";
 
 .main-layout-container {
-  display: flex; // Sử dụng flex để xếp sidebar và content
-  min-height: 100vh;
+  display: flex;
+  min-height: 100vh; // Đảm bảo container ít nhất cao bằng màn hình
+  background-color: $container-bg-color; 
 }
 
 .main-content {
-  flex-grow: 1; // Content chiếm phần không gian còn lại
-  padding: $spacing-xl;
-  margin-left: 150px; // Margin cho sidebar desktop (cập nhật nếu độ rộng sidebar thay đổi)
+  flex-grow: 1;
+  height: 100vh; // <<< Quan trọng: Chiếm đúng 100% chiều cao viewport
+  overflow: hidden; // <<< QUAN TRỌNG: Ngăn .main-content cuộn
+  transition: margin-left $transition-default, padding-bottom $transition-default;
 
-  // Responsive cho Mobile (khi Navigation thành bottom bar)
-  @media (max-width: $breakpoint-medium) {
-    margin-left: 0;      // Reset margin
-    padding-bottom: 85px; // Padding dưới để tránh bottom bar
-     padding-top: $spacing-lg; // Giữ padding trên
-     padding-left: $spacing-lg;
-     padding-right: $spacing-lg;
+  // --- Mobile Styles (Mặc định) ---
+  margin-left: 0;
+  padding: 0;
+  // <<< Padding bottom vẫn cần cho bottom nav >>>
+  padding-bottom: $navbar-height-mobile;
+  // <<< Cần box-sizing để padding-bottom không làm tăng chiều cao tổng >>>
+  box-sizing: border-box;
+
+
+  // --- Desktop Styles ---
+  @media (min-width: $breakpoint-medium) {
+    margin-left: math.div($sidebar-width-desktop, 0.8);
+    padding-bottom: $spacing-lg;
+    padding-top: $spacing-lg;
+    padding-right: $spacing-lg;
   }
 }

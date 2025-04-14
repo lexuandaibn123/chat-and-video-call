@@ -3,7 +3,7 @@
 // Colors
 $primary-color: #0056b3;
 $secondary-color: #FFFFFF;
-$container-bg-color: #f6f5f7;
+$container-bg-color: #EFF6FC;
 $text-color: #333;
 $text-muted-color: #555; // Thêm màu cho text phụ
 $input-bg-color: #eee;
@@ -55,6 +55,7 @@ $spacing-md: 15px;
 $spacing-lg: 20px;
 $spacing-xl: 30px;
 $spacing-xxl: 40px;
+$spacing-n-xs: 10px;
 
 // Breakpoints (Ví dụ)
 $breakpoint-medium: 768px;
@@ -65,3 +66,7 @@ $zindex-overlay: 100;
 $zindex-form-active: 5;
 $zindex-form-inactive: 1;
 $zindex-form-base: 2; // Cho sign-in ban đầu
+
+$navbar-height-mobile: 50px;
+$sidebar-width-desktop: 96px;
+$navbar-height-mobile: 65px;
