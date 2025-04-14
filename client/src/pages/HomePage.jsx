@@ -1,72 +1,20 @@
-import React, { useState, useEffect } from 'react';
+// src/pages/HomePage.jsx
+import React, { useEffect } from 'react'; // Bỏ useState nếu không dùng logout ở đây
 import { useNavigate } from 'react-router-dom';
-// --- IMPORT API FUNCTION ---
-import { logoutApi } from '../api/auth'; // Điều chỉnh đường dẫn
 
-const Home = () => {
+const HomePage = () => {
   const navigate = useNavigate();
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [logoutError, setLogoutError] = useState('');
 
-  useEffect(() => {
-    const accessToken = localStorage.getItem('access_token');
-    if (!accessToken) {
-      navigate('/auth');
-    }
-  }, [navigate]);
-
-  const handleLogout = async () => {
-    setIsLoggingOut(true);
-    setLogoutError('');
-
-    try {
-      // --- GỌI HÀM API ---
-      await logoutApi();
-      // -------------------
-      console.log('Logout successful on server');
-      // Các bước logout client sẽ nằm trong finally
-    } catch (error) { // --- Lỗi đã được ném từ hàm API ---
-      console.error('Server logout error:', error);
-      setLogoutError(error.message || 'Logout failed on server.');
-      // Dù lỗi server, vẫn logout client trong finally
-      // --------------------------------------
-    } finally {
-      // Luôn logout client
-      localStorage.removeItem('access_token');
-      setIsLoggingOut(false);
-      navigate('/auth');
-    }
-  };
-
-  // Kiểm tra token trước khi render
-  const accessToken = localStorage.getItem('access_token');
-   if (!accessToken && !isLoggingOut) {
-      return null;
-   }
-
-  // --- JSX return giữ nguyên như code trước của bạn ---
   return (
-    <div style={{ padding: '50px', textAlign: 'center' }}>
-      <h1>Home</h1>
-      <p>Welcome to your homepage!</p>
-      {logoutError && <p style={{ color: 'red' }}>{logoutError}</p>}
-      <button onClick={handleLogout} disabled={isLoggingOut} style={buttonStyle}>
-        {isLoggingOut ? 'Logging Out...' : 'Logout'}
-      </button>
-    </div>
+    // Không cần div bao ngoài .home-page-container nữa vì đã có .main-content từ layout
+    // Chỉ render nội dung chính của trang
+    <> {/* Hoặc dùng div với class="page-content" nếu đã định nghĩa */}
+      <h1>Welcome to Home Page</h1>
+      <p>This is the main content area.</p>
+      <p>It will be displayed next to the sidebar on desktop and above the bottom bar on mobile.</p>
+      {/* Nút logout đã chuyển vào Navigation */}
+    </>
   );
 };
 
-// --- Style giữ nguyên ---
-const buttonStyle = {
-  padding: '10px 20px',
-  fontSize: '16px',
-  cursor: 'pointer',
-  backgroundColor: '#dc3545',
-  color: 'white',
-  border: 'none',
-  borderRadius: '5px',
-  marginTop: '20px',
-};
-
-export default Home;
+export default HomePage;

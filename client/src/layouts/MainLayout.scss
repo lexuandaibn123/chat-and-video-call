@@ -1,0 +1,22 @@
+// src/layouts/MainLayout.scss
+@import '../styles/variables'; // Import biến
+
+.main-layout-container {
+  display: flex; // Sử dụng flex để xếp sidebar và content
+  min-height: 100vh;
+}
+
+.main-content {
+  flex-grow: 1; // Content chiếm phần không gian còn lại
+  padding: $spacing-xl;
+  margin-left: 240px; // Margin cho sidebar desktop (cập nhật nếu độ rộng sidebar thay đổi)
+
+  // Responsive cho Mobile (khi Navigation thành bottom bar)
+  @media (max-width: $breakpoint-medium) {
+    margin-left: 0;      // Reset margin
+    padding-bottom: 85px; // Padding dưới để tránh bottom bar
+     padding-top: $spacing-lg; // Giữ padding trên
+     padding-left: $spacing-lg;
+     padding-right: $spacing-lg;
+  }
+}
