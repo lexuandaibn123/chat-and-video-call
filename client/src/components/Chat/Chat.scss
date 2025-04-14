@@ -1,0 +1,434 @@
+// src/pages/ChatPage.scss
+@use '../../styles/variables' as *; // Đảm bảo import biến
+@use "sass:color";
+@use "sass:math";
+
+.chat-page-container {
+  display: flex;
+  height: 100%; // <<< Chiếm hết chiều cao của .main-content
+  width: 100%;
+  gap: $spacing-lg; // Khoảng cách giữa 2 cột
+  padding: 0; // MainLayout đã có padding, bỏ padding ở đây
+  box-sizing: border-box;
+  background-color: transparent; // Nền sẽ do các panel con quyết định
+}
+
+// ===== CỘT BÊN TRÁI: DANH SÁCH CUỘC TRÒ CHUYỆN =====
+.conversation-list-panel {
+  display: flex;
+  flex-direction: column;
+  flex-basis: 320px; // Chiều rộng cố định hoặc dùng %
+  flex-shrink: 0; // Không co lại
+  height: 100%;
+  background-color: $secondary-color; // Nền trắng
+  border-radius: $border-radius-lg; // Bo góc lớn theo thiết kế
+  padding: $spacing-lg;
+  box-sizing: border-box;
+  overflow: hidden; // Ngăn nội dung tràn ra
+
+  .search-bar-container {
+    display: flex;
+    align-items: center;
+    background-color: $container-bg-color; // Nền xám nhạt cho search bar
+    border-radius: $border-radius-md;
+    padding: $spacing-sm $spacing-md;
+    margin-bottom: $spacing-lg;
+
+    .search-icon {
+      color: $text-muted-color;
+      margin-right: $spacing-sm;
+      font-size: $font-size-large;
+    }
+
+    .search-input {
+      flex-grow: 1;
+      border: none;
+      outline: none;
+      background-color: transparent;
+      font-size: $font-size-base;
+      color: $text-color;
+      &::placeholder {
+        color: $text-muted-color;
+      }
+    }
+  }
+
+  .conversation-section {
+    margin-bottom: $spacing-lg;
+    // Cho phép section cuối cùng giãn ra nếu cần
+    &:last-child {
+      flex-grow: 1; // Cho phép phần Friends giãn ra
+      overflow: hidden; // Ngăn list tràn section
+      display: flex;
+      flex-direction: column;
+    }
+
+    .section-title {
+      font-size: $font-size-large;
+      font-weight: $font-weight-bold;
+      color: $text-color;
+      margin-bottom: $spacing-md;
+      padding-left: $spacing-xs; // Căn lề nhẹ
+    }
+
+    .conversation-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      overflow-y: auto; // Cho phép cuộn list
+      flex-grow: 1; // Cho list trong section cuối giãn ra
+
+      // --- Custom scrollbar (optional) ---
+      &::-webkit-scrollbar { width: 6px; }
+      &::-webkit-scrollbar-track { background: transparent; }
+      &::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+      &::-webkit-scrollbar-thumb:hover { background: #aaa; }
+
+      .conversation-list-item {
+        display: flex;
+        align-items: center;
+        padding: $spacing-sm $spacing-xs; // Padding nhẹ
+        border-radius: $border-radius-sm;
+        margin-bottom: $spacing-xs;
+        cursor: pointer;
+        transition: background-color $transition-fast ease-out;
+
+        &:hover {
+          background-color: $container-bg-color; // Nền hover nhẹ
+        }
+        // &.active { // Style khi item được chọn
+        //   background-color: color.adjust($primary-color, $alpha: -0.9); // Nền xanh rất nhạt
+        // }
+
+        .avatar {
+          width: 45px;
+          height: 45px;
+          border-radius: 50%;
+          object-fit: cover;
+          margin-right: $spacing-md;
+          flex-shrink: 0;
+        }
+
+        .conversation-details {
+          flex-grow: 1;
+          overflow: hidden; // Ngăn text dài tràn ra
+          margin-right: $spacing-sm;
+
+          .conversation-name {
+            display: block;
+            font-weight: $font-weight-bold;
+            color: $text-color;
+            font-size: $font-size-base;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          .last-message {
+            display: block;
+            font-size: $font-size-small;
+            color: $text-muted-color;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+        }
+
+        .conversation-meta {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
+          font-size: $font-size-small;
+          color: $text-muted-color;
+          flex-shrink: 0;
+
+          .timestamp {
+            margin-bottom: 3px;
+            white-space: nowrap;
+          }
+
+          .unread-badge {
+            background-color: $error-color; // Màu đỏ cho badge
+            color: $secondary-color; // Chữ trắng
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+          }
+
+          .message-status-icon {
+            font-size: 12px;
+            color: $primary-color; // Màu xanh cho tick
+          }
+        }
+      }
+    }
+  }
+}
+
+
+// ===== CỘT BÊN PHẢI: CỬA SỔ CHAT ĐANG HOẠT ĐỘNG =====
+.active-chat-panel {
+  flex-grow: 1; // Chiếm hết không gian còn lại
+  height: 100%;
+  background-color: $secondary-color; // Nền trắng
+  border-radius: $border-radius-lg;
+  display: flex;
+  justify-content: center;
+  text-align: center;
+  flex-direction: column;
+  overflow: hidden; // Quan trọng: ngăn các phần tử con tràn ra ngoài
+
+  // --- Header ---
+  .chat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: $spacing-md $spacing-lg;
+    border-bottom: 1px solid $input-border-color; // Đường kẻ phân cách
+    flex-shrink: 0; // Không co lại
+
+    .contact-info {
+      display: flex;
+      align-items: center;
+
+      .avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        object-fit: cover;
+        margin-right: $spacing-md;
+      }
+
+      .name-status {
+        display: flex;
+        flex-direction: column;
+
+        .contact-name {
+          font-weight: $font-weight-bold;
+          color: $text-color;
+          font-size: $font-size-large;
+        }
+        .contact-status {
+          font-size: $font-size-small;
+          color: $text-muted-color;
+        }
+      }
+    }
+
+    .chat-actions {
+      display: flex;
+      gap: $spacing-sm;
+
+      .icon-button {
+        background: none;
+        border: none;
+        color: $text-muted-color;
+        font-size: 18px;
+        cursor: pointer;
+        padding: $spacing-xs;
+        border-radius: 50%;
+        transition: background-color $transition-fast ease-out, color $transition-fast ease-out;
+
+        &:hover {
+          color: $primary-color;
+          background-color: $container-bg-color;
+        }
+      }
+    }
+  }
+
+  // --- Khu vực tin nhắn ---
+  .message-list-container {
+    flex-grow: 1; // Chiếm hết không gian dọc còn lại
+    overflow-y: auto; // Cho phép cuộn tin nhắn
+    padding: $spacing-lg;
+    display: flex;
+    flex-direction: column; // Tin nhắn xếp chồng lên nhau
+
+    // --- Custom scrollbar (optional) ---
+    &::-webkit-scrollbar { width: 8px; }
+    &::-webkit-scrollbar-track { background: transparent; }
+    &::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+    &::-webkit-scrollbar-thumb:hover { background: #aaa; }
+
+
+    .message-bubble-wrapper {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: $spacing-lg;
+      max-width: 65%; // Giới hạn chiều rộng bubble
+      position: relative; // Cho timestamp và status dot
+
+      // Bubble tin nhắn nhận (bên trái)
+      &.received {
+        align-self: flex-start;
+        .message-bubble {
+          background-color: $container-bg-color; // Màu xám nhạt
+          color: $text-color;
+          border-radius: $border-radius-md $border-radius-md $border-radius-md $border-radius-sm; // Bo góc khác ở dưới trái
+          margin-bottom: 4px;
+        }
+        .message-timestamp {
+          text-align: left;
+          margin-left: $spacing-sm;
+        }
+      }
+
+      // Bubble tin nhắn gửi (bên phải)
+      &.sent {
+        align-self: flex-end; // Căn phải
+        flex-direction: row-reverse; // Đảo ngược thứ tự bubble và dot
+
+        .message-bubble {
+          background-color: $primary-color; // Màu tím theo thiết kế
+          color: $secondary-color; // Chữ trắng
+          border-radius: $border-radius-md $border-radius-md $border-radius-sm $border-radius-md; // Bo góc khác ở dưới phải
+          margin-bottom: 4px;
+        }
+        .message-timestamp {
+          text-align: right; // Đặt timestamp bên trái bubble
+          margin-right: $spacing-sm;
+        }
+        .message-status-dot {
+          background-color: $primary-color; // Màu tím giống bubble
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          align-self: flex-end; // Căn dưới cùng của wrapper
+          margin-left: $spacing-xs; // Khoảng cách với bubble
+          margin-bottom: 5px; // Điều chỉnh vị trí dọc
+        }
+      }
+
+      .message-bubble {
+        padding: $spacing-sm $spacing-md;
+        word-wrap: break-word; // Tự động xuống dòng
+
+        .message-text {
+          margin: 0;
+          line-height: $line-height-base;
+          font-size: $font-size-base;
+           // Style cho các dòng tin nhắn trong cùng bubble
+           &:not(:last-child) {
+              margin-bottom: math.div($spacing-xs, 2) ;
+           }
+        }
+      }
+
+      .message-timestamp {
+         position: absolute; // Đặt timestamp tương đối với wrapper
+         bottom: -(math.div($spacing-lg, 1.5)); // Đặt dưới bubble một chút
+         font-size: 10px;
+         color: $text-muted-color;
+         white-space: nowrap;
+      }
+    }
+  }
+
+  // --- Khu vực nhập liệu ---
+  .chat-input-area {
+    display: flex;
+    align-items: center;
+    padding: $spacing-sm $spacing-lg;
+    border-top: 1px solid $input-border-color;
+    background-color: $secondary-color; // Có thể cần màu nền riêng nếu khác
+    flex-shrink: 0; // Không co lại
+
+    .icon-button {
+      background: none;
+      border: none;
+      color: $text-muted-color;
+      font-size: 20px; // Icon to hơn chút
+      cursor: pointer;
+      padding: $spacing-sm; // Vùng bấm lớn hơn
+      border-radius: 50%;
+      transition: background-color $transition-fast ease-out, color $transition-fast ease-out;
+       flex-shrink: 0;
+
+      &:hover {
+        color: $primary-color;
+        background-color: $container-bg-color;
+      }
+
+      &.attach-button {
+         margin-right: $spacing-xs;
+         transform: rotate(45deg); // Xoay icon kẹp giấy
+      }
+      // Nút mic/send cuối cùng
+      &.mic-button {
+         background-color: $primary-color; // Nền tím
+         color: $secondary-color; // Icon trắng
+         margin-left: $spacing-sm;
+         &:hover {
+            background-color: color.adjust($primary-color, $lightness: -5%);
+         }
+      }
+    }
+
+    .message-input {
+      flex-grow: 1;
+      border: none;
+      outline: none;
+      background-color: transparent; // Hoặc $container-bg-color nếu muốn có nền riêng
+      padding: $spacing-sm $spacing-md;
+      font-size: $font-size-base;
+      color: $text-color;
+      margin: 0 $spacing-xs;
+      // border-radius: $border-radius-button-main; // Bo tròn input nếu muốn
+      // background-color: $container-bg-color;
+      &::placeholder {
+        color: $text-muted-color;
+      }
+    }
+  }
+}
+
+// --- Responsive Anpassungen (Beispiel) ---
+@media (max-width: $breakpoint-medium) {
+  .chat-page-container {
+    flex-direction: column; // Chuyển thành cột nếu cần trên mobile?
+  }
+  .conversation-list-panel {
+    flex-basis: 100%; // Chiếm toàn bộ chiều rộng nếu chỉ hiện list
+    // Hoặc ẩn đi nếu chỉ hiện chat window
+  }
+  .chat-page-container {
+    flex-direction: column; padding: 0; gap: 0; background-color: $secondary-color;
+    // <<< Quan trọng: đảm bảo container chiếm đúng không gian còn lại >>>
+    // height: 100%; // Đã được set bởi .main-content
+
+    > aside, > section { border-radius: 0; box-shadow: none; height: 100%; width: 100%; } // Chiếm toàn bộ container
+
+    // --- State mặc định: chỉ hiện list ---
+    .conversation-list-panel {
+       display: flex; // <<< HIỆN mặc định
+       // ... (các style khác của list panel mobile)
+    }
+    .active-chat-panel {
+       display: none; // <<< ẨN mặc định
+    }
+
+    // --- State khi chat active (class được thêm bởi JS) ---
+    &.chat-active-mobile {
+      .conversation-list-panel {
+         display: none; // <<< ẨN list khi chat active
+      }
+      .active-chat-panel {
+        display: flex; // <<< HIỆN chat window khi chat active
+        // ... (các style khác của chat panel mobile, bao gồm nút back)
+        .chat-header .back-button {
+            display: inline-flex; // Đảm bảo nút back hiển thị
+            // ... (các style định vị khác của nút back)
+        }
+        .chat-header {
+          padding: math.div($spacing-md, 2) math.div($spacing-lg, 2);
+        }
+      }
+    }
+  }
+}

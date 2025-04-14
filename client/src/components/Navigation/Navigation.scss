@@ -168,7 +168,7 @@ $icon-size-nav-mobile: 20px;               // Giữ kích thước icon mobile c
     flex-direction: row;
     align-items: stretch;
     justify-content: space-evenly;
-    height: 65px; // Giữ chiều cao cụ thể cho mobile bar
+    height: $navbar-height-mobile; // Giữ chiều cao cụ thể cho mobile bar
     width: 100vw;
     position: fixed;
     left: 0;
