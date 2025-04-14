@@ -1,76 +1,93 @@
 // src/components/Navigation/Navigation.jsx
-import React, { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom'; // Thêm useLocation
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { logoutApi } from '../../api/auth';
 import './Navigation.scss';
-// import logoImage from '../../assets/logo.png'; // Import logo của bạn
+
+// --- BỎ IMPORT FONT AWESOME ---
+// import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+// import {
+//   faHome,
+//   faComments,
+//   faBell,
+//   faCog,
+//   faSignOutAlt
+// } from '@fortawesome/free-solid-svg-icons';
+// -----------------------------
+
+// --- Import ảnh avatar mẫu hoặc lấy từ state/props ---
+import avatarPlaceholder from '../../assets/images/avatar_placeholder.jpg'; // Thay bằng đường dẫn đúng
 
 const Navigation = () => {
   const navigate = useNavigate();
-  const location = useLocation(); // Lấy location để xác định active link
-  // Xác định active link dựa trên pathname hiện tại
-  const [activeLink, setActiveLink] = useState(location.pathname === '/' ? 'home' : location.pathname.substring(1));
+  const location = useLocation();
+  const [activeLink, setActiveLink] = useState('');
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const currentUser = {
+    // Sử dụng placeholder trực tiếp
+    avatar: avatarPlaceholder
+  };
 
   const handleLogout = async () => {
-    // ... (Giữ nguyên hàm logout) ...
     setIsLoggingOut(true);
     try {
       await logoutApi();
-      localStorage.removeItem('access_token');
-      navigate('/auth');
     } catch (error) {
-      console.error("Logout failed:", error);
-      localStorage.removeItem('access_token');
-      navigate('/auth');
+      console.error("Logout API failed:", error);
     } finally {
+      localStorage.removeItem('access_token');
       setIsLoggingOut(false);
+      navigate('/auth', { replace: true });
     }
   };
 
-  // Cập nhật lại navItems với đúng path và icon class
+  // --- CẬP NHẬT LẠI navItems VỚI iconClass ---
   const navItems = [
-    { name: 'home', iconClass: 'fas fa-home', path: '/' }, // Đổi path thành /home nếu đó là trang chủ chính
-    { name: 'chat', iconClass: 'fas fa-comments', path: '/chat' },
-    { name: 'notifications', iconClass: 'fas fa-bell', path: '/notifications' },
-    { name: 'settings', iconClass: 'fas fa-cog', path: '/settings' },
+    { name: 'home', iconClass: 'fas fa-home', path: '/' }, // <<< Sử dụng class CSS
+    { name: 'chat', iconClass: 'fas fa-comments', path: '/chat' }, // <<< Sử dụng class CSS
+    { name: 'notifications', iconClass: 'fas fa-bell', path: '/notifications' }, // <<< Sử dụng class CSS
+    { name: 'settings', iconClass: 'fas fa-cog', path: '/settings' }, // <<< Sử dụng class CSS
   ];
+  // -----------------------------------------
 
-  // Cập nhật active link khi location thay đổi
-  React.useEffect(() => {
-       const currentPath = location.pathname === '/' ? 'home' : location.pathname.substring(1).split('/')[0]; // Lấy phần đầu của path
-       setActiveLink(currentPath);
+  useEffect(() => {
+    const currentBaseRoute = location.pathname === '/' ? 'home' : location.pathname.substring(1).split('/')[0];
+    setActiveLink(currentBaseRoute);
   }, [location.pathname]);
 
 
   return (
-    <nav className="navigation-container">
-      {/* --- PHẦN LOGO MỚI --- */}
-      <div className="nav-logo">
-        {/* Thay bằng logo thực tế */}
-        {/* <img src={logoImage} alt="App Logo" /> */}
-         <i className="fas fa-atom fa-2x"></i> {/* Ví dụ dùng icon */}
+    <nav className="navigation-container modern-sidebar">
+
+      <div className="nav-avatar">
+        <img
+          src={currentUser.avatar} // Sử dụng trực tiếp từ currentUser đã sửa
+          alt="User Avatar"
+          className="avatar-image"
+        />
       </div>
-      {/* -------------------- */}
 
       <ul className="nav-list">
         {navItems.map((item) => (
           <li key={item.name} className={activeLink === item.name ? 'active' : ''}>
-            {/* Sử dụng Link để điều hướng */}
-            <Link to={item.path} className="nav-link">
-              <i className={item.iconClass}></i>
-              <span className="nav-text">{item.name.charAt(0).toUpperCase() + item.name.slice(1)}</span>
+            <Link to={item.path} className="nav-link" title={item.name.charAt(0).toUpperCase() + item.name.slice(1)}>
+              {/* --- ĐỔI LẠI THÀNH THẺ <i> --- */}
+              <i className={`${item.iconClass} nav-icon`}></i> {/* <<< Thêm class nav-icon */}
+              {/* --------------------------- */}
             </Link>
           </li>
         ))}
       </ul>
 
-      <div className="nav-logout">
-        <button onClick={handleLogout} disabled={isLoggingOut} className="logout-button">
-          <i className="fas fa-sign-out-alt"></i>
-          <span className="nav-text">{isLoggingOut ? 'Logging out...' : 'Logout'}</span>
-        </button>
-      </div>
+      <ul className="nav-list logout-section">
+         <li className="nav-logout-item">
+           <button onClick={handleLogout} disabled={isLoggingOut} className="logout-button" title="Logout">
+             {/* --- ĐỔI LẠI THÀNH THẺ <i> --- */}
+             <i className="fas fa-sign-out-alt nav-icon"></i> {/* <<< Thêm class nav-icon */}
+             {/* --------------------------- */}
+           </button>
+         </li>
+       </ul>
     </nav>
   );
 };

@@ -1,231 +1,235 @@
 // src/components/Navigation/Navigation.scss
 @use "sass:color";
+// <<< Đảm bảo bạn import file variables >>>
 @use '../../styles/variables' as *;
 
-.navigation-container {
+// --- Biến kích thước CỤ THỂ cho Navigation (có thể đặt ở đây hoặc trong _variables.scss) ---
+// $sidebar-width-desktop: 80px; // Hoặc dùng $spacing-xxl * 2 nếu nó = 80px
+$sidebar-width-desktop: $spacing-xxl * 2.5; // = 80px nếu $spacing-xxl = 40px
+$avatar-size: ($spacing-xl + $spacing-lg) * 1.5;   // = 50px nếu xl=30, lg=20
+$icon-size-nav-desktop: 32px;              // Giữ kích thước icon lớn cụ thể
+$icon-size-nav-mobile: 20px;               // Giữ kích thước icon mobile cụ thể
+
+// --- Style cho Sidebar sử dụng Variables ---
+.navigation-container.modern-sidebar {
+  // --- DESKTOP STYLES ---
   display: flex;
   flex-direction: column;
-  // align-items: center; // Bỏ căn giữa ngang để text căn trái
-  background-color: $primary-color; // Giữ màu nền chính
+  align-items: center;
+  // <<< Sử dụng biến màu nền chính >>>
+  background-color: $primary-color;
+  // <<< Sử dụng biến màu chữ/icon phụ >>>
   color: $secondary-color;
-  padding: $spacing-lg 0; // Padding trên dưới, không cần padding ngang nhiều
   height: 100vh;
-  width: 180px;  // <<<--- TĂNG ĐỘ RỘNG SIDEBAR
+  width: $sidebar-width-desktop; // <<< Sử dụng biến chiều rộng
   position: fixed;
   left: 0;
   top: 0;
-  // border-top-right-radius: $border-radius-md; // Có thể bỏ bo góc hoặc giữ lại
-  // border-bottom-right-radius: $border-radius-md;
-  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
-  transition: width $transition-default, background-color $transition-default;
-  justify-content: space-between; // Đẩy logout xuống dưới
+  box-shadow: 4px 0 12px rgba(0, 0, 0, 0.2); // Giữ shadow cụ thể hoặc tạo biến $shadow-sidebar
+  // <<< Sử dụng biến transition mặc định >>>
+  padding: $spacing-lg 0; // <<< Sử dụng biến spacing
+  transition: width $transition-default;
+  overflow: hidden;
 
-  // --- THÊM PHẦN LOGO ---
-  .nav-logo {
-    display: flex;
-    align-items: center;
-    justify-content: center; // Hoặc căn trái tùy thiết kế logo
-    padding: 0 $spacing-lg $spacing-xl $spacing-lg; // Padding xung quanh logo
-    // Thêm style cho logo của bạn ở đây
-    img { // Ví dụ nếu dùng ảnh logo
-      height: 40px;
-      // filter: brightness(0) invert(1); // Đổi màu logo thành trắng nếu cần
+  .nav-avatar {
+    padding: $spacing-sm 0; // <<< Sử dụng biến spacing
+    margin-bottom: $spacing-xl; // <<< Sử dụng biến spacing
+    flex-shrink: 0;
+
+    .avatar-image {
+      width: $avatar-size; // <<< Sử dụng biến kích thước avatar
+      height: $avatar-size; // <<< Sử dụng biến kích thước avatar
+      border-radius: 50%; // Giữ 50% cho hình tròn
+      object-fit: cover;
+      display: block;
+      // <<< Viền dùng màu phụ với độ mờ >>>
+      border: 2px solid rgba($secondary-color, 0.5);
+      cursor: pointer;
+      // <<< Sử dụng biến transition nhanh >>>
+      transition: transform $transition-fast ease-out;
+       &:hover {
+         transform: scale(1.05);
+       }
     }
-     // Hoặc style cho text logo
-     // span { font-size: 24px; font-weight: bold; }
   }
-  // --------------------
-
-  // Bỏ .nav-profile nếu không dùng avatar ở đây nữa
-  // .nav-profile { ... }
 
   .nav-list {
     list-style: none;
     padding: 0;
     margin: 0;
     width: 100%;
-    // flex-grow: 1; // Không cần nếu dùng space-between ở container
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-md; // <<< Sử dụng biến spacing
 
     li {
       width: 100%;
-      padding: 0 $spacing-md; // Thêm padding ngang cho mục li
-
-      .nav-link {
-        display: flex;
-        // flex-direction: column; // <<<--- ĐỔI THÀNH ROW
-        flex-direction: row;
-        align-items: center; // Căn giữa icon và text theo chiều dọc
-        // justify-content: center; // <<<--- BỎ CĂN GIỮA NGANG
-        padding: $spacing-sm $spacing-lg; // Padding trên dưới, trái phải cho link
-        color: rgba($secondary-color, 0.8); // Màu nhạt hơn chút
-        text-decoration: none;
-        border-radius: $border-radius-sm; // Bo góc nhẹ cho link
-        transition: background-color $transition-default, color $transition-default;
-        gap: $spacing-md; // <<<--- Khoảng cách giữa icon và text
-
-        i, svg { // Style icon
-          font-size: 18px; // Có thể chỉnh lại size
-          // margin-bottom: $spacing-xs; // <<<--- BỎ MARGIN BOTTOM
-          width: 20px; // Đặt width cố định để căn chỉnh text dễ hơn
-          text-align: center; // Căn giữa icon nếu cần
-        }
-
-        .nav-text {
-          font-size: $font-size-common; // Font chữ to hơn
-          display: inline-block; // <<<--- LUÔN HIỂN THỊ TEXT TRÊN DESKTOP
-          font-weight: 500; // Hơi đậm hơn
-        }
-      }
-
-      // --- STYLE ACTIVE MỚI ---
-      &.active {
-        .nav-link {
-          background-color: color.adjust($primary-color, $lightness: 10%);; // Nền sáng hơn
-          color: $secondary-color; // Màu chữ/icon trắng rõ
-          font-weight: $font-weight-bold; // In đậm text khi active
-          // Bỏ thanh ::before
-          // &::before { display: none; }
-        }
-      }
-      // -----------------------
-
-      &:hover:not(.active) { // Hiệu ứng hover khi không active
-        .nav-link {
-          background-color: rgba($secondary-color, 0.1);
-          color: $secondary-color;
-        }
-      }
-    }
-  }
-
-  .nav-logout {
-    // margin-top: auto; // Không cần nếu dùng space-between ở container
-    padding: 0 $spacing-md; // Cùng padding ngang với nav-list li
-    margin-bottom: $spacing-lg; // Khoảng cách dưới cùng
-
-    .logout-button {
       display: flex;
-      // flex-direction: column; // <<<--- ĐỔI THÀNH ROW
-      flex-direction: row;
-      align-items: center;
-      width: 100%;
-      padding: $spacing-sm $spacing-lg; // Giống nav-link
-      background-color: transparent;
-      border: none;
-      color: rgba($secondary-color, 0.8);
-      cursor: pointer;
-      border-radius: $border-radius-sm; // Giống nav-link
-      transition: background-color $transition-default, color $transition-default;
-      gap: $spacing-md; // <<<--- Khoảng cách giữa icon và text
+      justify-content: center;
+      position: relative;
 
-      i, svg {
-        font-size: 18px; // Giống nav-link icon
-        // margin-bottom: $spacing-xs; // <<<--- BỎ
-        width: 20px; // Giống nav-link icon
-        text-align: center;
-      }
-      .nav-text {
-        font-size: $font-size-common; // Giống nav-link text
-        display: inline-block; // <<<--- HIỂN THỊ TEXT
-        font-weight: 500; // Giống nav-link text
+      > a, > button {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 65%; // Giữ % cụ thể
+        aspect-ratio: 1 / 1;
+        padding: 0;
+        // <<< Màu icon không active hơi mờ đi, dựa trên màu phụ >>>
+        color: rgba($secondary-color, 0.7);
+        text-decoration: none;
+        background-color: transparent;
+        border: none;
+        // <<< Sử dụng biến bo góc trung bình >>>
+        border-radius: $border-radius-md;
+        cursor: pointer;
+        outline: none;
+        // <<< Sử dụng biến transition nhanh >>>
+        transition: background-color $transition-fast ease-out, color $transition-fast ease-out;
+
+        .nav-icon {
+          font-size: $icon-size-nav-desktop; // <<< Sử dụng biến icon size desktop
+          line-height: 1;
+        }
       }
 
-      &:hover:not(:disabled) {
-        background-color: rgba($secondary-color, 0.1);
-        color: $secondary-color;
+      // --- Hover State ---
+      &:hover > a,
+      &:hover > button:not(:disabled) {
+         // <<< Nền hover rất nhẹ, dựa trên màu phụ >>>
+         background-color: rgba($secondary-color, 0.08);
+         // <<< Màu icon sáng rõ khi hover >>>
+         color: $secondary-color;
       }
-      &:disabled {
-         opacity: 0.6;
+
+      // --- Active state: Indicator bên phải ---
+      &.active > a {
+        color: $secondary-color; // <<< Màu icon sáng rõ khi active
+        // background-color: rgba($secondary-color, 0.08); // Tùy chọn: thêm nền nhẹ khi active
+
+        &::after {
+          content: '';
+          position: absolute;
+          right: 0;
+          top: 50%;
+          transform: translateY(-50%);
+          height: 60%; // Giữ % cụ thể
+          // <<< Độ dày indicator dùng biến spacing nhỏ nhất >>>
+          width: $spacing-xs;
+          // <<< Màu indicator dùng màu phụ (trắng) >>>
+          background-color: $secondary-color;
+          // <<< Bo góc dùng biến bo góc nhỏ >>>
+          border-radius: $border-radius-sm 0 0 $border-radius-sm;
+          transition: height $transition-fast ease-out;
+        }
+      }
+
+       // --- Disabled state cho Button Logout ---
+       > button:disabled {
+         opacity: 0.4;
          cursor: not-allowed;
+         background-color: transparent !important;
+         color: rgba($secondary-color, 0.4) !important;
        }
     }
   }
 
+  // --- Phần Logout ---
+  .logout-section {
+     margin-top: auto;
+     padding: 0;
+     width: 100%;
+     display: flex;
+     justify-content: center;
+     padding-bottom: $spacing-md; // <<< Sử dụng biến spacing
+
+     .nav-logout-item {
+       width: 100%;
+       display: flex;
+       justify-content: center;
+       margin: 0;
+
+       > button {
+         // <<< Màu giống icon thường không active >>>
+         color: rgba($secondary-color, 0.7);
+       }
+       &:hover > button:not(:disabled) {
+         // Thừa hưởng hover chung
+         color: $secondary-color; // Đảm bảo màu sáng lên khi hover
+         background-color: rgba($secondary-color, 0.08);
+       }
+     }
+  }
+
+
   // --- Responsive cho Mobile ---
-  @media (max-width: $breakpoint-medium) {
-    // <<<--- GIỮ NGUYÊN PHẦN MEDIA QUERY NÀY NHƯ TRƯỚC ĐỂ CÓ BOTTOM BAR ---
+  @media (max-width: $breakpoint-medium) { // <<< Sử dụng biến breakpoint
     flex-direction: row;
-    align-items: center;
-    justify-content: space-around;
-    height: 65px;
+    align-items: stretch;
+    justify-content: space-evenly;
+    height: 65px; // Giữ chiều cao cụ thể cho mobile bar
     width: 100vw;
     position: fixed;
     left: 0;
     bottom: 0;
     top: auto;
-    border-top-left-radius: $border-radius-md;
-    border-top-right-radius: $border-radius-md;
-    border-bottom-right-radius: 0;
-    padding: $spacing-xs $spacing-sm;
+    padding: 0;
+    background-color: $primary-color; // <<< Dùng màu nền chính
+    border-top: 1px solid rgba(0, 0, 0, 0.1); // Giữ border cụ thể hoặc tạo biến
+    box-shadow: 0 -1px 4px rgba(0, 0, 0, 0.05); // Giữ shadow cụ thể hoặc tạo biến
+    // <<< Sử dụng biến bo góc trung bình >>>
 
-    .nav-logo { display: none; } // Ẩn logo trên mobile bottom bar
+    .nav-avatar { display: none; }
 
     .nav-list {
-      display: flex;
       flex-direction: row;
-      flex-grow: 1;
-      justify-content: space-evenly;
-      align-items: center;
+      align-items: stretch;
+      width: 100%;
       height: 100%;
+      gap: 0;
 
       li {
-        margin-bottom: 0;
         flex: 1;
-        height: 100%;
-        padding: 0; // Reset padding li
+        margin: 0;
+        padding: 0;
 
-        .nav-link {
-          flex-direction: column; // Icon trên text dưới trên mobile
-          padding: $spacing-xs 0;
+        > a {
+          width: 100%;
           height: 100%;
-          gap: 0; // Reset gap
+          aspect-ratio: unset;
+          flex-direction: column;
+          padding: 4px 0; // Giữ padding cụ thể mobile
+          gap: 2px; // Giữ gap cụ thể mobile
+          // <<< Màu icon không active >>>
+          color: rgba($secondary-color, 0.8);
+          border-radius: 0;
+          border-top: 3px solid transparent; // Giữ border cụ thể mobile
+          // <<< Sử dụng biến transition mặc định >>>
+          transition: color $transition-default, border-color $transition-default;
 
-          i, svg {
-            margin-bottom: 2px;
-            font-size: 18px;
-            width: auto; // Reset width
+          .nav-icon {
+            font-size: $icon-size-nav-mobile; // <<< Sử dụng biến icon size mobile
           }
-
-          .nav-text {
-            display: block;
-            font-size: 10px;
-            font-weight: normal; // Reset font-weight
-          }
+          // .nav-text {
+          //   font-size: $font-size-small; // <<< Dùng font nhỏ nếu hiện text
+          // }
         }
 
-        &.active .nav-link {
+        &:hover:not(.active) > a {
            background-color: transparent;
-           color: $secondary-color;
-           border-top: 3px solid $secondary-color; // Giữ lại border top active
-           border-radius: 0;
-           margin-top: -3px;
-           font-weight: normal; // Reset font-weight active
+           color: $secondary-color; // <<< Dùng màu phụ
+        }
+        &.active > a {
+           color: $secondary-color; // <<< Dùng màu phụ
+           border-top-color: $secondary-color; // <<< Indicator dùng màu phụ
+           &::after { display: none; }
         }
       }
     }
 
-    .nav-logout {
-      margin-top: 0;
-      width: auto;
-      height: 100%;
-      padding: 0; // Reset padding logout container
-
-      .logout-button {
-         flex-direction: column;
-         padding: $spacing-xs $spacing-sm;
-         height: 100%;
-         gap: 0; // Reset gap
-
-         i, svg {
-            margin-bottom: 2px;
-            font-size: 18px;
-            width: auto;
-         }
-         .nav-text {
-            display: block;
-            font-size: 10px;
-         }
-      }
+    .logout-section {
+       display: none;
     }
   }
 }

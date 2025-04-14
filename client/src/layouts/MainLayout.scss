@@ -9,7 +9,7 @@
 .main-content {
   flex-grow: 1; // Content chiếm phần không gian còn lại
   padding: $spacing-xl;
-  margin-left: 240px; // Margin cho sidebar desktop (cập nhật nếu độ rộng sidebar thay đổi)
+  margin-left: 150px; // Margin cho sidebar desktop (cập nhật nếu độ rộng sidebar thay đổi)
 
   // Responsive cho Mobile (khi Navigation thành bottom bar)
   @media (max-width: $breakpoint-medium) {
