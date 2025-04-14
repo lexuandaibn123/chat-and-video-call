@@ -1,4 +1,5 @@
 // src/components/Navigation/Navigation.scss
+@use "sass:color";
 @use '../../styles/variables' as *;
 
 .navigation-container {
@@ -79,7 +80,7 @@
       // --- STYLE ACTIVE MỚI ---
       &.active {
         .nav-link {
-          background-color: lighten($primary-color, 10%); // Nền sáng hơn
+          background-color: color.adjust($primary-color, $lightness: 10%);; // Nền sáng hơn
           color: $secondary-color; // Màu chữ/icon trắng rõ
           font-weight: $font-weight-bold; // In đậm text khi active
           // Bỏ thanh ::before

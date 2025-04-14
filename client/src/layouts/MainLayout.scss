@@ -1,5 +1,5 @@
 // src/layouts/MainLayout.scss
-@import '../styles/variables'; // Import biến
+@use '../styles/variables' as *; // Import biến
 
 .main-layout-container {
   display: flex; // Sử dụng flex để xếp sidebar và content
