@@ -1,3 +1,8 @@
+/* npm install @fortawesome/fontawesome-free */
+
+      /* Nếu bộ icon lỗi thì chạy câu lệnh trên và bỏ comment dòng dưới */
+
+/* @import '../node_modules/@fortawesome/fontawesome-free/css/all.min.css'; */
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
@@ -25,9 +30,10 @@ a:hover {
 body {
   margin: 0;
   display: flex;
-  place-items: center;
+  justify-content: center; /* Căn giữa theo chiều ngang */
+  align-items: center; /* Căn giữa theo chiều dọc */
   min-width: 320px;
-  min-height: 100vh;
+  min-height: 100vh; /* Đảm bảo chiếm toàn bộ chiều cao màn hình */
 }
 
 h1 {
