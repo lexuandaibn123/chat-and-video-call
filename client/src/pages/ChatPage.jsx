@@ -1,156 +1,249 @@
 // src/pages/ChatPage.jsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react'; // Thêm useRef
 import ConversationListPanel from '../components/Chat/ConversationListPanel';
 import ChatWindow from '../components/Chat/ChatWindow';
-// <<< Đổi đường dẫn import SCSS cho đúng vị trí file >>>
+import { sendMessageApi, getMessagesByRoomIdApi, getLastMessagesApi } from '../api/messages'; // <<< Import API messages
+import { getMyRoomsApi } from '../api/rooms'; // <<< Import API rooms
 import '../components/Chat/Chat.scss';
 
-// --- Dữ liệu mẫu (NÊN thay thế bằng API calls) ---
-// <<< Đã cập nhật: avatar là null để test placeholder >>>
-const sampleGroups = [
-    { id: 'g1', name: 'Friends Forever', lastMessage: 'Hahahahah!', time: 'Today, 9:52pm', unread: 4, avatar: null },
-    { id: 'g2', name: 'Mera Gang', lastMessage: 'Kyuuuuu???', time: 'Yesterday, 12:31pm', unread: 0, avatar: null },
-    { id: 'g3', name: 'Hiking', lastMessage: 'It\'s not going to happen', time: 'Wednesday, 9:12am', unread: 0, avatar: null },
-];
-
-const sampleFriends = [
-    { id: 'f1', name: 'Anil', lastMessage: 'April fool\'s day', time: 'Today, 9:52pm', status: 'sent-read', avatar: null },
-    { id: 'f2', name: 'Chuuthiya', lastMessage: 'Baag', time: 'Today, 12:11pm', unread: 1, avatar: null },
-    { id: 'f3', name: 'Mary ma\'am', lastMessage: 'You have to report it...', time: 'Today, 2:40pm', unread: 1, avatar: null },
-    { id: 'f4', name: 'Bill Gates', lastMessage: 'Nevermind bro', time: 'Yesterday, 12:31pm', unread: 5, avatar: null },
-    { id: 'f5', name: 'Victoria H', lastMessage: 'Okay, brother. let\'s see...', time: 'Wednesday, 11:12am', status: 'sent-read', avatar: null },
-];
-
-const sampleMessagesData = {
-    'f1': [
-        { id: 'm1', sender: 'other', text: ['Hey There!', 'How are you?'], time: '8:30pm' },
-        { id: 'm2', sender: 'self', text: ['Hello!'], time: '8:33pm' },
-        { id: 'm3', sender: 'self', text: ['I am fine and how are you?'], time: '8:34pm' },
-        { id: 'm4', sender: 'other', text: ['I am doing well, Can we meet tomorrow?'], time: '8:36pm' },
-        { id: 'm5', sender: 'self', text: ['Yes Sure!'], time: '8:58pm' },
-         // Thêm nhiều tin nhắn để test cuộn
-        { id: 'm6', sender: 'other', text: ['Great! See you then.'], time: '9:02pm' },
-        { id: 'm7', sender: 'self', text: ['Okay, looking forward to it.'], time: '9:05pm' },
-        { id: 'm8', sender: 'other', text: ['Remember to bring the documents.'], time: '9:10pm' },
-        { id: 'm9', sender: 'self', text: ['Sure, I won\'t forget.'], time: '9:11pm' },
-        { id: 'm10', sender: 'other', text: ['Perfect!'], time: '9:12pm' },
-        { id: 'm11', sender: 'self', text: ['Have a good night!'], time: '9:15pm' },
-        { id: 'm12', sender: 'other', text: ['You too! Bye.'], time: '9:16pm' },
-    ],
-    'f2': [ { id: 'm_f2_1', sender: 'other', text: ['Hi!'], time: '1:00pm' } ],
-    'f3': [ { id: 'm_f3_1', sender: 'self', text: ['Regarding the report...'], time: '2:30pm' } ],
-    'g1': [
-        { id: 'm_g1_1', sender: 'other', senderName: 'Anil', text: ['Party tonight? 🎉'], time: '9:00pm' },
-        { id: 'm_g1_2', sender: 'other', senderName: 'Mary', text: ['I\'m in!'], time: '9:01pm' },
-        { id: 'm_g1_3', sender: 'self', text: ['Let\'s do it! Where?'], time: '9:05pm' }
-    ],
-};
-
-// <<< Đã cập nhật: avatar là null để test placeholder >>>
-const sampleContactData = {
-    'f1': { id: 'f1', type:'friend', name: 'Anil', statusText: 'Online - Last seen, 2.02pm', avatar: null },
-    'f2': { id: 'f2', type:'friend', name: 'Chuuthiya', statusText: 'Offline', avatar: null },
-    'f3': { id: 'f3', type:'friend', name: 'Mary ma\'am', statusText: 'Typing...', avatar: null },
-    'f4': { id: 'f4', type:'friend', name: 'Bill Gates', statusText: 'Last seen yesterday', avatar: null },
-    'f5': { id: 'f5', type:'friend', name: 'Victoria H', statusText: 'Online', avatar: null },
-    'g1': { id: 'g1', type:'group', name: 'Friends Forever', statusText: 'Anil, Mary, You', avatar: null },
-    'g2': { id: 'g2', type:'group', name: 'Mera Gang', statusText: 'You added John', avatar: null },
-    'g3': { id: 'g3', type:'group', name: 'Hiking', statusText: 'Archived', avatar: null },
-};
-// --------------------------------------------------
+// --- Dữ liệu mẫu (giữ nguyên) ---
+const sampleGroups = [/* ... */];
+const sampleFriends = [/* ... */];
+const sampleMessagesData = {/* ... */};
+const sampleContactData = {/* ... */};
 
 const ChatPage = () => {
+  // --- State ---
   const [groups, setGroups] = useState([]);
   const [friends, setFriends] = useState([]);
-  const [activeChat, setActiveChat] = useState(null);
+  const [conversations, setConversations] = useState([]); // State chính cho danh sách
+  const [activeChat, setActiveChat] = useState(null); // { id, type, name, avatar, statusText }
   const [messages, setMessages] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isMobileChatActive, setIsMobileChatActive] = useState(false);
+  const [isLoadingConversations, setIsLoadingConversations] = useState(true);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [error, setError] = useState(null);
+  // const { isMobileChatActive, setIsMobileChatActive } = useLayout(); // Nếu dùng context
+  const [isMobileChatActive, setIsMobileChatActive] = useState(false); // State cục bộ (nếu không dùng context)
 
-  // --- Load dữ liệu ban đầu ---
+
+  // <<< Lấy và lưu trữ User ID (QUAN TRỌNG) >>>
+  const currentUserIdRef = useRef(null);
   useEffect(() => {
-    console.log("Fetching initial data...");
-    setGroups(sampleGroups);
-    setFriends(sampleFriends);
+    // Lấy user ID khi component mount (thay bằng cách của bạn)
+    const userId = localStorage.getItem('user_id');
+    if (!userId) {
+      console.error("User ID not found! Please login.");
+      // Có thể chuyển hướng về trang login ở đây
+    }
+    currentUserIdRef.current = userId;
+    console.log("Current User ID:", currentUserIdRef.current); // Kiểm tra
   }, []);
 
-  // --- Load tin nhắn và quản lý view mobile khi activeChat thay đổi ---
-   useEffect(() => {
-     if (activeChat && activeChat.id) {
-       console.log("Loading messages for:", activeChat);
-       const chatMessages = sampleMessagesData[activeChat.id] || [];
-       setMessages(chatMessages);
 
-       // <<< Chỉ tự động chuyển view trên màn hình nhỏ >>>
-       const isMobileView = window.innerWidth <= 768; // Sử dụng breakpoint của bạn
-       if (isMobileView) {
-           setIsMobileChatActive(true);
+  // --- Hàm Fetch dữ liệu ban đầu ---
+  const fetchInitialData = useCallback(async () => {
+    if (!currentUserIdRef.current) return; // Đảm bảo có user ID
+
+    setIsLoadingConversations(true);
+    setError(null);
+    try {
+      console.log("Fetching initial rooms...");
+      const myRooms = await getMyRoomsApi(); // Lấy list phòng chat
+      console.log("Fetched rooms:", myRooms);
+
+      if (myRooms && myRooms.length > 0) {
+         const roomIds = myRooms.map(room => room.id || room._id); // Lấy ID phòng (_id hoặc id tùy backend)
+         console.log("Fetching last messages for rooms:", roomIds);
+         const lastMessagesData = await getLastMessagesApi(roomIds); // Lấy tin nhắn cuối
+         console.log("Fetched last messages:", lastMessagesData);
+
+         // --- Gộp dữ liệu ---
+         const conversationsData = myRooms.map(room => {
+           const roomId = room.id || room._id; // ID của phòng
+           const lastMsg = lastMessagesData.find(msg => msg.room === roomId);
+           const contactInfo = sampleContactData[roomId] || {}; // Lấy thêm statusText từ sample (tạm thời)
+
+           return {
+             id: roomId,
+             type: room.type || (room.members && room.members.length > 2 ? 'group' : 'friend'), // Suy đoán type nếu API không trả về
+             name: room.name || 'Unknown',
+             avatar: room.avatar || null,
+             lastMessage: lastMsg?.content || '',
+             time: lastMsg?.createdAt ? new Date(lastMsg.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase() : '',
+             // --- Logic Unread/Status cần API riêng hoặc WebSocket ---
+             unread: 0, // Tạm thời
+             status: null, // Tạm thời
+             statusText: contactInfo.statusText || (room.type === 'group' ? `${room.members?.length || 0} members` : 'Offline') // Tạm thời
+           };
+         });
+         // Sắp xếp lại theo thời gian tin nhắn cuối (tùy chọn)
+         conversationsData.sort((a, b) => new Date(b.time || 0) - new Date(a.time || 0));
+
+         setConversations(conversationsData);
+         console.log("Processed conversations:", conversationsData);
+
+      } else {
+         setConversations([]);
+      }
+
+    } catch (err) {
+      console.error("Error fetching initial chat data:", err);
+      setError(err.message || 'Failed to load conversations.');
+    } finally {
+      setIsLoadingConversations(false);
+    }
+  }, []); // Chỉ phụ thuộc vào fetchInitialData (không thay đổi)
+
+  // --- Fetch dữ liệu ban đầu khi component mount ---
+  useEffect(() => {
+    fetchInitialData();
+    // Logic dispatch event 'toggleMobileNav' hoặc set state nếu không dùng context (giữ nguyên)
+    const toggleMobileNavVisibility = (hide) => { window.dispatchEvent(new CustomEvent('toggleMobileNav', { detail: { hideNav: hide } })); };
+    toggleMobileNavVisibility(false);
+    return () => toggleMobileNavVisibility(false);
+  }, [fetchInitialData]);
+
+  // --- Load tin nhắn chi tiết khi activeChat thay đổi ---
+   useEffect(() => {
+     const fetchMessages = async () => {
+       if (activeChat && activeChat.id && currentUserIdRef.current) { // Đảm bảo có cả activeChat.id và userId
+         console.log("Fetching messages for room:", activeChat.id);
+         setIsLoadingMessages(true);
+         setError(null);
+         const isMobileView = window.innerWidth <= 768;
+         if(isMobileView) setIsMobileChatActive(true);
+
+         try {
+           const fetchedMessages = await getMessagesByRoomIdApi(activeChat.id); // Gọi API lấy tin nhắn
+           console.log("Fetched messages:", fetchedMessages);
+           const formattedMessages = fetchedMessages.map(msg => ({
+              id: msg._id,
+              // <<< So sánh sender với currentUserId để xác định self/other >>>
+              sender: msg.sender === currentUserIdRef.current ? 'self' : 'other',
+              text: [msg.content],
+              time: new Date(msg.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase(),
+              // senderName: ... // Lấy tên người gửi nếu là group
+           }));
+           setMessages(formattedMessages);
+           console.log("Formatted messages:", formattedMessages);
+         } catch (err) {
+           console.error(`Error fetching messages for ${activeChat.id}:`, err);
+           setError(err.message || `Failed to load messages.`);
+           setMessages([]);
+         } finally {
+           setIsLoadingMessages(false);
+         }
+       } else {
+         setMessages([]);
+         if(activeChat === null) setIsMobileChatActive(false); // Chỉ tắt view mobile khi activeChat là null (nhấn back)
        }
-     } else {
-       setMessages([]);
-       // Nếu không còn active chat nào (ví dụ khi nhấn back), đảm bảo view mobile quay lại list
-       setIsMobileChatActive(false);
      }
-     // <<< Thêm isMobileChatActive vào dependency nếu bạn muốn logic phức tạp hơn,
-     // nhưng hiện tại chỉ dựa vào activeChat là đủ >>>
-   }, [activeChat]);
+     fetchMessages();
+   }, [activeChat, setIsMobileChatActive]); // Dependency là activeChat
 
   // --- Callback để xử lý click item ---
   const handleConversationClick = useCallback((type, id) => {
-    // Chỉ cần set activeChat, useEffect sẽ xử lý phần còn lại
-    setActiveChat({ type, id });
-  }, []);
+     const clickedConv = conversations.find(c => c.id === id);
+     if (clickedConv) {
+         // <<< Set activeChat đầy đủ thông tin >>>
+         setActiveChat({
+             id: clickedConv.id,
+             type: clickedConv.type,
+             name: clickedConv.name,
+             avatar: clickedConv.avatar,
+             statusText: clickedConv.statusText // Lấy statusText đã có từ list
+         });
+     }
+  }, [conversations]);
 
   // --- Callback để xử lý nút back mobile ---
   const handleMobileBack = useCallback(() => {
-    // Khi nhấn back, xóa active chat và tắt view mobile chat
-    setActiveChat(null); // <<<< Quan trọng: useEffect sẽ chạy lại và set isMobileChatActive = false
-    // setIsMobileChatActive(false); // Không cần set trực tiếp ở đây nữa
+    setActiveChat(null); // useEffect [activeChat] sẽ xử lý isMobileChatActive
   }, []);
 
   // --- Callback xử lý gửi tin nhắn ---
-  const handleSendMessage = useCallback((newMessageText) => {
-      if (!activeChat || !activeChat.id) return;
+  const handleSendMessage = useCallback(async (newMessageText) => {
+      // Đảm bảo có activeChat, id và user id
+      if (!activeChat || !activeChat.id || !currentUserIdRef.current || sendingMessage) return;
 
-      console.log(`Sending message to ${activeChat.type} ${activeChat.id}:`, newMessageText);
-      const newMessage = {
-        id: `m${Date.now()}`,
-        sender: 'self',
+      setSendingMessage(true);
+      setError(null);
+      const tempId = `temp-${Date.now()}`;
+
+      // --- Optimistic Update ---
+      const newMessageOptimistic = {
+        id: tempId,
+        sender: 'self', // Luôn là self khi gửi từ client này
         text: [newMessageText],
-        time: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase()
+        time: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase(),
+        status: 'sending'
       };
+      setMessages(prevMessages => [...prevMessages, newMessageOptimistic]);
+      // ------------------------
 
-      setMessages(prevMessages => [...prevMessages, newMessage]);
+      try {
+        // <<< Gọi API gửi tin nhắn >>>
+        const sentMessage = await sendMessageApi(activeChat.id, newMessageText);
+        console.log("Message sent successfully:", sentMessage);
 
-      // TODO: Gọi API để gửi tin nhắn lên server
-      // TODO: Cập nhật lastMessage trong danh sách (optional)
+        // --- Cập nhật tin nhắn với dữ liệu thật từ server ---
+        setMessages(prevMessages => prevMessages.map(msg =>
+          msg.id === tempId
+            ? {
+                ...newMessageOptimistic,
+                id: sentMessage._id, // <<< ID thật từ server
+                status: 'sent',    // <<< Trạng thái đã gửi
+                time: new Date(sentMessage.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase() // <<< Thời gian thật
+              }
+            : msg
+        ));
+        // --------------------------------------------------
 
-  }, [activeChat]);
+        // <<< Cập nhật Last Message trong list (Cách đơn giản: fetch lại) >>>
+        // Tốt hơn là cập nhật cục bộ hoặc dùng WebSocket
+         fetchInitialData(); // Gọi lại để cập nhật last message và thứ tự
 
-  // --- Xử lý tìm kiếm ---
-  const handleSearchChange = (event) => {
-    setSearchTerm(event.target.value.toLowerCase());
-  };
+      } catch (err) {
+        console.error("Failed to send message:", err);
+        setError(err.message || 'Failed to send message.');
+        // --- Đánh dấu tin nhắn gửi lỗi ---
+        setMessages(prevMessages => prevMessages.map(msg =>
+          msg.id === tempId ? { ...newMessageOptimistic, status: 'failed' } : msg
+        ));
+        // ----------------------------------
+      } finally {
+        setSendingMessage(false);
+      }
+  }, [activeChat, sendingMessage, fetchInitialData]); // Thêm fetchInitialData vào dependency
 
-  const filteredGroups = groups.filter(group =>
-    group.name.toLowerCase().includes(searchTerm) ||
-    group.lastMessage?.toLowerCase().includes(searchTerm)
-  );
-  const filteredFriends = friends.filter(friend =>
-    friend.name.toLowerCase().includes(searchTerm) ||
-    friend.lastMessage?.toLowerCase().includes(searchTerm)
-  );
+  // --- Xử lý tìm kiếm (giữ nguyên) ---
+  const handleSearchChange = (event) => { /* ... */ };
+  const filteredGroups = groups.filter(group => {
+    // Kiểm tra group và các thuộc tính tồn tại trước khi gọi hàm
+    const nameMatch = group?.name && typeof group.name === 'string' && group.name.toLowerCase().includes(searchTerm);
+    const messageMatch = group?.lastMessage && typeof group.lastMessage === 'string' && group.lastMessage.toLowerCase().includes(searchTerm);
+    return nameMatch || messageMatch;
+  });
 
-  // Lấy thông tin contact đang active
+  const filteredFriends = friends.filter(friend => {
+    // Kiểm tra friend và các thuộc tính tồn tại trước khi gọi hàm
+    const nameMatch = friend?.name && typeof friend.name === 'string' && friend.name.toLowerCase().includes(searchTerm);
+    const messageMatch = friend?.lastMessage && typeof friend.lastMessage === 'string' && friend.lastMessage.toLowerCase().includes(searchTerm);
+    return nameMatch || messageMatch;
+  });
+  // const filteredGroups = filteredConversations.filter(c => c.type === 'group'); // Không cần tách nữa nếu ConversationListPanel dùng conversations
+  // const filteredFriends = filteredConversations.filter(c => c.type === 'friend');
   const currentActiveContact = activeChat ? sampleContactData[activeChat.id] : null;
 
 
+  // --- Render ---
   return (
-    // Thêm class động vào container chính dựa trên state mobile
     <div className={`chat-page-container ${isMobileChatActive ? 'chat-active-mobile' : ''}`}>
       <ConversationListPanel
-        groups={filteredGroups}
-        friends={filteredFriends}
+        groups={filteredGroups} // <<< Truyền mảng đã lọc (hoặc rỗng)
+        friends={filteredFriends} // <<< Truyền mảng đã lọc (hoặc rỗng)
         onSearchChange={handleSearchChange}
         onItemClick={handleConversationClick}
         activeChat={activeChat}
@@ -159,7 +252,6 @@ const ChatPage = () => {
          activeContact={currentActiveContact}
          messages={messages}
          onMobileBack={handleMobileBack}
-         // <<< Truyền thẳng isMobileChatActive vào prop isMobile >>>
          isMobile={isMobileChatActive}
          onSendMessage={handleSendMessage}
       />

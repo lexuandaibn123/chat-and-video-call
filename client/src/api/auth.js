@@ -49,6 +49,7 @@ export const registerApi = async (userData) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(userData),
+      // credentials: 'include',
     });
     return handleApiResponse(response);
   } catch (error) {
@@ -66,6 +67,7 @@ export const loginApi = async (credentials) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(credentials),
+      // credentials: 'include',
     });
     // Login có thể trả lỗi 401 mà không có success:false, handleApiResponse đã xử lý
     return handleApiResponse(response);
@@ -169,3 +171,94 @@ export const logoutApi = async () => {
     throw error;
   }
 };
+
+
+// src/api/auth.js
+// import axiosClient from './axiosClient.js';
+
+// // Xử lý lỗi chung cho axios
+// export const handleApiError = error => {
+//   if (!error.response) throw new Error('Connection error.');
+//   const { status, data } = error.response;
+//   let msg = 'An unknown error occurred.';
+//   if (data) {
+//     if (data.error) {
+//       if (Array.isArray(data.error) && data.error[0]?.msg) msg = data.error[0].msg;
+//       else if (typeof data.error === 'string') msg = data.error;
+//     } else if (data.message) {
+//       msg = data.message;
+//     }
+//   }
+//   const err = new Error(msg);
+//   err.status = status;
+//   // cờ xác thực email
+//   if (status === 401 && data === 'Email not verified') err.isVerificationError = true;
+//   throw err;
+// };
+
+// export const registerApi = async userData => {
+//   try {
+//     const { data } = await axiosClient.post('/auth/register', userData);
+//     return data;
+//   } catch (e) {
+//     handleApiError(e);
+//   }
+// };
+
+// export const loginApi = async ({ email, password }) => {
+//   try {
+//     const { data } = await axiosClient.post('/auth/login', { email, password });
+//     if (data.token) localStorage.setItem('access_token', data.token);
+//     return data;
+//   } catch (e) {
+//     handleApiError(e);
+//   }
+// };
+
+// export const logoutApi = async () => {
+//   try {
+//     await axiosClient.post('/auth/logout');
+//     localStorage.removeItem('access_token');
+//     return { success: true };
+//   } catch (e) {
+//     handleApiError(e);
+//   }
+// };
+
+// export const forgotPasswordApi = async emailData => {
+//   try {
+//     const { data } = await axiosClient.post('/auth/forgot-password', emailData);
+//     return data;
+//   } catch (e) {
+//     handleApiError(e);
+//   }
+// };
+
+// export const resetPasswordApi = async resetData => {
+//   try {
+//     const { data } = await axiosClient.post('/auth/reset-password', resetData);
+//     return data;
+//   } catch (e) {
+//     handleApiError(e);
+//   }
+// };
+
+// export const verifyEmailApi = async token => {
+//   try {
+//     const { data } = await axiosClient.get('/auth/verify-email', { params: { token } });
+//     return data;
+//   } catch (e) {
+//     handleApiError(e);
+//   }
+// };
+
+// export const resendVerificationEmailApi = async emailData => {
+//   try {
+//     const { data } = await axiosClient.post('/auth/resend-verification-email', emailData);
+//     return data;
+//   } catch (e) {
+//     handleApiError(e);
+//   }
+// };
+
+
