@@ -26,7 +26,11 @@ class AuthService {
         return res.status(401).json({ error: "Password incorrect" });
       }
 
-      req.session.userInfo = user;
+      req.session.userInfo = {
+        id: user._id,
+        fullName: user.fullName,
+        email: user.email,
+      };
 
       if (!user.emailVerified)
         return res.status(401).json({ error: "Email not verified" });
@@ -66,8 +70,6 @@ class AuthService {
         html: `<p>Click <a href="${verificationUrl}">here</a> to verify your email.</p>`,
       };
 
-      req.session.userInfo = user;
-
       await sendMail(message);
 
       return res
@@ -93,6 +95,12 @@ class AuthService {
       }
 
       await UserRepository.updateById(user._id, { emailVerified: true });
+
+      req.session.userInfo = {
+        id: user._id,
+        fullName: user.fullName,
+        email: user.email,
+      };
 
       return res
         .status(200)
@@ -242,8 +250,21 @@ class AuthService {
           console.log(err);
           return res.status(500).json({ error: "Logout failed" });
         }
-        return res.status(200).json({ success: true, message: "Logout successful" }); 
-      })
+        return res
+          .status(200)
+          .json({ success: true, message: "Logout successful" });
+      });
+    } catch (error) {
+      console.log(error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+
+  async info(req, res) {
+    try {
+      return res
+        .status(200)
+        .json({ success: true, userInfo: req.session.userInfo });
     } catch (error) {
       console.log(error);
       return res.status(500).json({ error: "Internal server error" });

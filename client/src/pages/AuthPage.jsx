@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import PopupNotification from '../components/Common/PopupNotification/PopupNotification';
 // --- IMPORT API FUNCTIONS ---
-import { loginApi, registerApi, resendVerificationEmailApi } from '../api/auth'; // Điều chỉnh đường dẫn nếu cần
+import { loginApi, registerApi, resendVerificationEmailApi, infoApi } from '../api/auth';
 
 const AuthPage = () => {
   const navigate = useNavigate();
@@ -98,12 +98,15 @@ const AuthPage = () => {
 
     try {
       const credentials = { email: loginEmail, password: loginPassword };
-      const data = await loginApi(credentials); // Gọi hàm API
+      const data = await loginApi(credentials);
 
       console.log('Đăng nhập thành công:', data);
-      // Lưu ý: API login gốc chỉ trả về token khi thành công, không có success:true
-      // Hàm handleApiResponse đã xử lý việc trả về data khi response.ok
-      localStorage.setItem('access_token', data.access_token);
+      // XÓA: Không lưu token vào localStorage với session auth
+      // localStorage.setItem('access_token', data.access_token);
+
+      // Session cookie đã được backend thiết lập và trình duyệt sẽ tự lưu
+      // và gửi trong các request tiếp theo.
+      // Bây giờ có thể chuyển hướng người dùng về trang chủ
       navigate('/'); // Chuyển hướng trang chủ
 
     } catch (error) { // Lỗi đã được ném từ hàm API
