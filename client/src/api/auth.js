@@ -3,40 +3,42 @@ const API_BASE_URL = 'http://localhost:8080'; // Hoặc lấy từ file config
 
 // --- Hàm xử lý response chung ---
 const handleApiResponse = async (response) => {
-  const data = await response.json(); // Luôn cố gắng parse JSON
+  let data = {};
+  try {
+    data = await response.json();
+  } catch (e) {
+    data = { message: response.statusText || 'An unknown error occurred.' };
+  }
 
   if (!response.ok) {
-    // Ném lỗi để khối catch trong component xử lý
     let errorMessage = 'An unknown error occurred.';
     if (data.error) {
       if (Array.isArray(data.error) && data.error.length > 0 && data.error[0].msg) {
-        errorMessage = data.error[0].msg; // Lỗi từ express-validator
+        errorMessage = data.error[0].msg;
       } else if (typeof data.error === 'string') {
-        errorMessage = data.error; // Lỗi dạng chuỗi
+        errorMessage = data.error;
+      } else if (data.error.message) {
+        errorMessage = data.error.message;
       }
-    } else if (data.message) { // Một số API có thể trả về lỗi trong message
+    } else if (data.message) {
       errorMessage = data.message;
-    } else if (data.status) { // Lỗi 404 có thể có status
-       errorMessage = data.status;
+    } else if (response.statusText) {
+       errorMessage = response.statusText;
+    } else {
+        errorMessage = `Error: ${response.status}`;
     }
 
     const error = new Error(errorMessage);
-    error.status = response.status; // Gắn status code vào lỗi
-    error.data = data; // Gắn thêm data gốc nếu cần xử lý thêm
-    // Gắn cờ đặc biệt cho lỗi chưa xác thực email
+    error.status = response.status;
+    error.data = data;
+
     if (response.status === 401 && data.error === "Email not verified") {
         error.isVerificationError = true;
     }
     throw error;
   }
 
-  // Thêm kiểm tra data.success nếu backend luôn trả về trường này khi thành công
-  // (API Login của bạn dường như không trả về success, chỉ trả token khi ok)
-  // if (data.success === false && response.ok) {
-  //      throw new Error(data.message || data.error || 'Operation reported failure');
-  // }
-
-  return data; // Trả về dữ liệu nếu response ok
+  return data;
 };
 // --- Kết thúc hàm xử lý response ---
 
@@ -49,12 +51,13 @@ export const registerApi = async (userData) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(userData),
+      // credentials: 'include' KHÔNG cần thiết cho đăng ký nếu không cần gửi cookie nào
     });
     return handleApiResponse(response);
   } catch (error) {
     console.error("API Register Error:", error);
-    if (error instanceof TypeError) {
-        throw new Error('Connection error. Please check your network.');
+     if (error instanceof TypeError) {
+        throw new Error('Connection error. Please check your network and CORS settings.');
     }
     throw error;
   }
@@ -66,17 +69,36 @@ export const loginApi = async (credentials) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(credentials),
+      credentials: 'include', // <<<--- THÊM: Để trình duyệt nhận và lưu session cookie từ response
     });
-    // Login có thể trả lỗi 401 mà không có success:false, handleApiResponse đã xử lý
     return handleApiResponse(response);
   } catch (error) {
     console.error("API Login Error:", error);
      if (error instanceof TypeError) {
-        throw new Error('Connection error. Please check your network.');
+        throw new Error('Connection error. Please check your network and CORS settings.');
     }
     throw error;
   }
 };
+
+// Hàm để lấy thông tin người dùng đã đăng nhập
+export const infoApi = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/info`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', // <<<--- THÊM: Để trình duyệt gửi session cookie
+    });
+    return handleApiResponse(response);
+  } catch (error) {
+    console.error("API Info Error:", error);
+     if (error instanceof TypeError) {
+        throw new Error('Connection error. Please check your network and CORS settings.');
+    }
+     throw error;
+  }
+};
+
 
 export const forgotPasswordApi = async (emailData) => {
   try {
@@ -84,6 +106,7 @@ export const forgotPasswordApi = async (emailData) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(emailData),
+      // credentials: 'include' KHÔNG cần thiết ở đây
     });
     return handleApiResponse(response);
   } catch (error) {
@@ -100,7 +123,8 @@ export const resetPasswordApi = async (resetData) => {
     const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(resetData), // Gửi { token, password }
+      body: JSON.stringify(resetData),
+      // credentials: 'include' KHÔNG cần thiết ở đây
     });
     return handleApiResponse(response);
   } catch (error) {
@@ -115,7 +139,9 @@ export const resetPasswordApi = async (resetData) => {
 export const verifyEmailApi = async (token) => {
   try {
     const response = await fetch(`${API_BASE_URL}/auth/verify-email?token=${token}`, {
-      method: 'GET', // Giả sử backend dùng GET
+      method: 'GET',
+      credentials: 'include', // <<<--- THÊM: Sau khi verify email, backend có thể thiết lập session, nên cần nhận cookie
+      //headers: { 'Content-Type': 'application/json' }, // Không cần headers cho GET request không body
     });
     return handleApiResponse(response);
   } catch (error) {
@@ -133,6 +159,7 @@ export const resendVerificationEmailApi = async (emailData) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(emailData),
+      // credentials: 'include' KHÔNG cần thiết ở đây
     });
     return handleApiResponse(response);
   } catch (error) {
@@ -144,23 +171,33 @@ export const resendVerificationEmailApi = async (emailData) => {
   }
 };
 
+export const changePasswordApi = async (passwordData) => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/auth/change-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(passwordData),
+            credentials: 'include', // <<<--- THÊM: Cần gửi session cookie để xác định người dùng
+        });
+        return handleApiResponse(response);
+    } catch (error) {
+        console.error("API Change Password Error:", error);
+        if (error instanceof TypeError) {
+            throw new Error('Connection error. Please check your network.');
+        }
+        throw error;
+    }
+};
+
+
 export const logoutApi = async () => {
   try {
     const response = await fetch(`${API_BASE_URL}/auth/logout`, {
-      method: 'POST', // Dùng POST theo logic session.destroy của backend
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      // Không cần body hoặc token vì dựa vào session
+      credentials: 'include', // <<<--- THÊM: Cần gửi session cookie để biết session nào cần hủy
     });
-    // Logout thành công chỉ cần status 200, không cần parse body
-    if (!response.ok) {
-         const error = new Error(`Logout failed: ${response.status}`);
-         error.status = response.status;
-         try {
-             error.data = await response.json(); // Cố gắng đọc lỗi chi tiết
-         } catch (e) { /* Bỏ qua */ }
-         throw error;
-      }
-    return { success: true, message: 'Logout successful' }; // Trả về thành công
+    return handleApiResponse(response);
   } catch (error) {
     console.error("API Logout Error:", error);
      if (error instanceof TypeError) {
