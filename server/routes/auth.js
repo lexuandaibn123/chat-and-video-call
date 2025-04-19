@@ -604,4 +604,47 @@ route.post(
  */
 route.post("/logout", AuthService.logout);
 
+/**
+ * @openapi
+ * /auth/info:
+ *   get:
+ *     summary: User info endpoint
+ *     operationId: info
+ *     description: Retrieves information about the current user.
+ *     responses:
+ *       200:
+ *         description: User info successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 userInfo:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       example: 1234567890
+ *                     fullName:
+ *                       type: string
+ *                       example: John Doe
+ *                     email:
+ *                       type: string
+ *                       example: user@example.com
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Internal server error
+ */
+route.get("/info", AuthService.info);
+
 module.exports = route;
