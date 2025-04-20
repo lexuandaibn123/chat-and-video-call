@@ -1,6 +1,6 @@
-const ChatRoomRepository = require("../repositories/chatRoom");
+const ConversationRepository = require("../repositories/conversation");
 
-class ChatRoomService {
+class ConversationService {
   async createRoom(req, res) {
     try {
       const { name, isGroup, members } = req.body;
@@ -14,7 +14,7 @@ class ChatRoomService {
 
       const allMembers = [...new Set([...members, creatorId])];
 
-      const newRoom = await ChatRoomRepository.create({
+      const newRoom = await ConversationRepository.create({
         name: isGroup ? name : null,
         isGroup,
         members: allMembers,
@@ -33,7 +33,7 @@ class ChatRoomService {
     try {
       const userId = req.session.userInfo._id;
 
-      const rooms = await ChatRoomRepository.getRoomByUserId(userId);
+      const rooms = await ConversationRepository.getRoomByUserId(userId);
 
       return res.status(200).json({ success: true, rooms });
     } catch (error) {
@@ -45,7 +45,7 @@ class ChatRoomService {
   async findRoomById(req, res) {
     try {
       const roomId = req.params.id;
-      const room = await ChatRoomRepository.findById(roomId);
+      const room = await ConversationRepository.findById(roomId);
 
       if (!room) {
         return res.status(404).json({ error: "Room not found" });
@@ -65,7 +65,7 @@ class ChatRoomService {
         return res.status(400).json({ error: "Name is required" });
       }
 
-      const rooms = await ChatRoomRepository.findRoomsByName(name);
+      const rooms = await ConversationRepository.findRoomsByName(name);
       return res.status(200).json({ success: true, rooms });
     } catch (error) {
       console.log(error);
@@ -78,7 +78,7 @@ class ChatRoomService {
       const { roomId, userIdToAdd } = req.body;
       const requesterId = req.session.userInfo._id;
 
-      const room = await ChatRoomRepository.findById(roomId);
+      const room = await ConversationRepository.findById(roomId);
 
       if (!room) {
         return res.status(404).json({ error: "Room not found" });
@@ -107,7 +107,7 @@ class ChatRoomService {
       const { roomId, userIdToRemove } = req.body;
       const requesterId = req.session.userInfo._id;
 
-      const room = await ChatRoomRepository.findById(roomId);
+      const room = await ConversationRepository.findById(roomId);
 
       if (!room) {
         return res.status(404).json({ error: "Room not found" });
@@ -146,7 +146,7 @@ class ChatRoomService {
       const { roomId, newLeaderId } = req.body;
       const requesterId = req.session.userInfo._id;
 
-      const room = await ChatRoomRepository.findById(roomId);
+      const room = await ConversationRepository.findById(roomId);
 
       if (!room) {
         return res.status(404).json({ error: "Room not found" });
@@ -173,6 +173,7 @@ class ChatRoomService {
       return res.status(500).json({ error: "Internal server error" });
     }
   }
+  
 }
 
-module.exports = new ChatRoomService();
+module.exports = new ConversationService();

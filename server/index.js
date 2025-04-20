@@ -73,4 +73,3 @@ route(app);
 app.listen(PORT, () => {
   console.log(`Server is running at ${serverUrl}`);
 });
-console.log(process.env.DATABASE_URL)

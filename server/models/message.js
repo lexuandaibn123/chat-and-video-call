@@ -5,7 +5,7 @@ const MessageSchema = new mongoose.Schema({
   sender: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   room: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "ChatRoom",
+    ref: "Conversation",
     required: true,
   },
   content: { type: String, required: true },
