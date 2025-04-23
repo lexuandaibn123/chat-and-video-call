@@ -1,42 +1,60 @@
-const Message = require("../models/message");
+const Message = require("../models/message.model");
 
-const MessageRepository = {
-  // Tạo tin nhắn mới
-  async create(messageData) {
-    const message = new Message(messageData);
-    return await message.save();
-  },
+class MessageRepository {
+  // Tạo mới một message
+  async createMessage(data) {
+    try {
+      const message = new Message(data);
+      return await message.save();
+    } catch (error) {
+      throw new Error("Error creating message: " + error.message);
+    }
+  }
 
-  // Lấy tất cả tin nhắn của một phòng
-  async findByRoomId(roomId) {
-    return await Message.find({ room: roomId }).sort({ timestamp: 1 });
-  },
+  // Lấy tất cả message của một cuộc trò chuyện (theo conversationId)
+  async getMessagesByConversation(conversationId, limit = 20, skip = 0) {
+    try {
+      return await Message.find({ conversationId })
+        .skip(skip)
+        .limit(limit)
+        .sort({ createdAt: -1 }); // Lấy message mới nhất trước
+    } catch (error) {
+      throw new Error("Error fetching messages: " + error.message);
+    }
+  }
 
-  // Lấy 1 tin nhắn theo ID
-  async findById(messageId) {
-    return await Message.findById(messageId);
-  },
+  // Cập nhật message (ví dụ: sửa nội dung, đánh dấu đã xem, ...)
+  async updateMessage(messageId, updateData) {
+    try {
+      return await Message.findByIdAndUpdate(messageId, updateData, {
+        new: true, // Trả về message đã cập nhật
+      });
+    } catch (error) {
+      throw new Error("Error updating message: " + error.message);
+    }
+  }
 
-  // Xoá tin nhắn
-  async delete(messageId) {
-    return await Message.findByIdAndDelete(messageId);
-  },
+  // Xóa message (soft delete, thay vì xóa thật sự)
+  async deleteMessage(messageId) {
+    try {
+      return await Message.findByIdAndUpdate(
+        messageId,
+        { isDeleted: true },
+        { new: true }
+      );
+    } catch (error) {
+      throw new Error("Error deleting message: " + error.message);
+    }
+  }
 
-  // Sửa nội dung tin nhắn
-  async update(messageId, updatedData) {
-    return await Message.findByIdAndUpdate(messageId, updatedData, {
-      new: true,
-    });
-  },
+  // Lấy message theo ID
+  async getMessageById(messageId) {
+    try {
+      return await Message.findById(messageId);
+    } catch (error) {
+      throw new Error("Error fetching message by ID: " + error.message);
+    }
+  }
+}
 
-  // Lấy tin nhắn mới nhất trong phòng
-  async getLastMessagesByRooms(roomIds) {
-    return await Message.aggregate([
-      { $match: { room: { $in: roomIds } } },
-      { $group: { _id: "$room", lastMessage: { $last: "$$ROOT" } } },
-      { $project: { roomId: "$_id", message: "$lastMessage", _id: 0 } },
-    ]);
-  },
-};
-
-module.exports = MessageRepository;
+module.exports = new MessageRepository();

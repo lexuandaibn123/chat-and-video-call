@@ -3,7 +3,7 @@ const router = express.Router();
 const MessageService = require("../services/message");
 
 // Gửi tin nhắn mới
-router.post("/", (req, res) => MessageService.sendMessage(req, res));
+router.post("/", (req, res) => MessageService.createMessage(req, res));
 
 // Lấy tất cả tin nhắn trong 1 phòng
 router.get("/room/:id", (req, res) =>
