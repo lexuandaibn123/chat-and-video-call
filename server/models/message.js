@@ -1,6 +1,5 @@
 const mongoose = require("mongoose");
 
-// Schema phụ cho metadata
 const FileMetaDataSchema = new mongoose.Schema(
   {
     fileName: String,
@@ -11,7 +10,7 @@ const FileMetaDataSchema = new mongoose.Schema(
   { _id: false }
 );
 
-// Image (rút gọn)
+// Image
 const ImagePartSchema = new mongoose.Schema(
   {
     metadata: { type: FileMetaDataSchema, default: null },
@@ -23,7 +22,7 @@ const ImagePartSchema = new mongoose.Schema(
   { _id: false }
 );
 
-// Audio (rút gọn)
+// Audio
 const AudioPartSchema = new mongoose.Schema(
   {
     metadata: { type: FileMetaDataSchema, default: null },
@@ -66,7 +65,7 @@ const MessageSchema = new mongoose.Schema({
 
   type: {
     type: String,
-    enum: ["text", "gif", "file", "image", "audio", "video"],
+    enum: ["text", "file", "image", "audio"],
     default: "text",
     index: true,
   },
