@@ -1,4 +1,5 @@
-const conversationRepo = require("../repositories/conversation.repository");
+const conversationRepo = require("../repositories/conversation");
+const messageRepo = require("../repositories/message");
 
 class ConversationService {
   async create11Conversation(req, res) {
@@ -75,6 +76,7 @@ class ConversationService {
     }
   }
 
+  // Gọi khi mới click vào 1 conver
   async getConversationById(req, res) {
     try {
       const { id } = req.params;
@@ -84,9 +86,14 @@ class ConversationService {
         return res.status(404).json({ error: "Phòng không tồn tại" });
       }
 
+      const messages = await messageRepo.findByConversationId(id, 20, 0);
+
       return res.status(200).json({
         success: true,
-        data: conversation,
+        data: {
+          ...conversation.toObject(),
+          messages,
+        },
       });
     } catch (error) {
       console.log(error);

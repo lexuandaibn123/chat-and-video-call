@@ -63,6 +63,7 @@ class MessageService {
       };
 
       const savedMessage = await MessageRepository.createMessage(newMessage);
+      const newLastMessage = await MessageRepository.setLastMessage(newMessage);
 
       return res.status(201).json({
         success: true,
@@ -77,15 +78,16 @@ class MessageService {
 
   async getMessages(req, res) {
     try {
-      const { conversationId, limit = 10, skip = 0 } = req.query;
+      const { conversationId, limit = 20, skip = 0 } = req.query;
 
       if (!conversationId) {
         return res.status(400).json({ error: "Conversation ID is required" });
       }
 
-      const messages = await MessageRepository.find(
-        { conversationId },
-        { limit, skip }
+      const messages = await MessageRepository.findByConversationId(
+        conversationId,
+        limit,
+        skip
       );
 
       return res.status(200).json({
