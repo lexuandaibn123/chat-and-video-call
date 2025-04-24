@@ -18,7 +18,7 @@ class ConversationRepository {
       .populate("members");
   }
 
-  async getRoomByUserId(userId, page = 1, limit = 10) {
+  async getUserConversations(userId, page = 1, limit = 10) {
     return await Conversation.find({ "members.id": userId })
       .skip((page - 1) * limit)
       .limit(limit)

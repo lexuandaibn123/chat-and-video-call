@@ -21,7 +21,6 @@ const ConversationSchema = new mongoose.Schema({
   isGroup: { type: Boolean, default: false },
   members: {
     type: [MemberSchema],
-    validate: [arrayLimit, "A conversation must have at least two members"],
   },
   messages: [
     {
@@ -47,10 +46,6 @@ const ConversationSchema = new mongoose.Schema({
     default: Date.now,
   },
 });
-
-function arrayLimit(val) {
-  return val.length >= 2;
-}
 
 ConversationSchema.pre("save", function (next) {
   this.updatedAt = Date.now();

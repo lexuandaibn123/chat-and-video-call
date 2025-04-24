@@ -1,5 +1,6 @@
 const conversationRepo = require("../repositories/conversation");
 const messageRepo = require("../repositories/message");
+const userRepo = require("../repositories/user");
 
 class ConversationService {
   async create11Conversation(req, res) {
@@ -13,14 +14,17 @@ class ConversationService {
           .json({ error: "Chat 1-1 chỉ có đúng 2 thành viên" });
       }
 
-      const uniqueMemberIds = [...new Set([...members, creatorId])];
+      const partnerId = members[0];
+      const partnerUser = await userRepo.findById(partnerId);
+      if (!partnerUser) {
+        return res.status(404).json({ error: "Người dùng không tồn tại" });
+      }
 
-      const memberDocs = uniqueMemberIds.map((id) => ({
-        id,
-      }));
+      const uniqueMemberIds = [creatorId, partnerId];
+      const memberDocs = uniqueMemberIds.map((id) => ({ id }));
 
       const conversation = await conversationRepo.create({
-        name: null,
+        name: partnerUser.name,
         isGroup: false,
         members: memberDocs,
         lastMessage: null,
@@ -86,7 +90,7 @@ class ConversationService {
         return res.status(404).json({ error: "Phòng không tồn tại" });
       }
 
-      const messages = await messageRepo.findByConversationId(id, 20, 0);
+      const messages = await messageRepo.findById(id, 20, 0);
 
       return res.status(200).json({
         success: true,
@@ -125,7 +129,7 @@ class ConversationService {
     try {
       const { userId } = req.params;
 
-      const conversations = await conversationRepo.findByUserId(userId);
+      const conversations = await conversationRepo.getUserConversations(userId);
       return res.status(200).json({
         success: true,
         data: conversations,

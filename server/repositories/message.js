@@ -6,12 +6,28 @@ class MessageRepository {
     return message.save();
   }
 
-  async getMessagesByConversation(conversationId, limit = 20, skip = 0) {
-    Message.find({ conversationId })
-      .skip(skip)
-      .limit(limit)
-      .sort({ createdAt: -1 });
+  async getLastMessagesByRooms(roomIds) {
+    const messages = await Message.aggregate([
+      { $match: { conversationId: { $in: roomIds } } },
+      { $sort: { createdAt: -1 } },
+      {
+        $group: {
+          _id: "$conversationId",
+          lastMessage: { $first: "$$ROOT" },
+        },
+      },
+      {
+        $project: {
+          roomId: "$_id",
+          lastMessage: "$lastMessage",
+          _id: 0,
+        },
+      },
+    ]);
+  
+    return messages;
   }
+  
 
   async  findByConversationId(conversationId, limit = 10, skip = 0) {
     return Message.find({ conversationId })

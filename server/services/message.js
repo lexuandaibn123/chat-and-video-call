@@ -9,15 +9,13 @@ class MessageService {
         return res.status(400).json({ error: errors.array() });
       }
 
-      const { id, conversationId, senderId, type, data, replyToMessageId } =
-        req.body;
+      const { id, conversationId, senderId, type, data } = req.body;
 
       const baseData = {
         id,
         conversationId,
         senderId,
         type,
-        replyToMessageId,
       };
 
       const content = {};
@@ -63,7 +61,7 @@ class MessageService {
       };
 
       const savedMessage = await MessageRepository.createMessage(newMessage);
-      const newLastMessage = await MessageRepository.setLastMessage(newMessage);
+      await MessageRepository.setLastMessage(newMessage);
 
       return res.status(201).json({
         success: true,

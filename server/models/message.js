@@ -81,7 +81,6 @@ const MessageSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now },
   isDeleted: { type: Boolean, default: false },
   isEdited: { type: Boolean, default: false },
-  replyToMessageId: { type: String, default: null },
 });
 
 MessageSchema.index({ "content.text.text": "text" });
