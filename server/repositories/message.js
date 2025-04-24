@@ -13,6 +13,14 @@ class MessageRepository {
       .sort({ createdAt: -1 });
   }
 
+  async  findByConversationId(conversationId, limit = 10, skip = 0) {
+    return Message.find({ conversationId })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+  }
+  
+
   async updateMessage(messageId, updateData) {
     return Message.findByIdAndUpdate(messageId, updateData, { new: true });
   }
@@ -23,6 +31,13 @@ class MessageRepository {
 
   async getMessageById(messageId) {
     return Message.findById(messageId);
+  }
+  async setLastMessage(conversationId, messageId) {
+    return Conversation.findByIdAndUpdate(
+      conversationId,
+      { lastMessage: messageId, updatedAt: Date.now() },
+      { new: true }
+    );
   }
 }
 
