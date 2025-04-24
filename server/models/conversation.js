@@ -23,14 +23,16 @@ const ConversationSchema = new mongoose.Schema({
     type: [MemberSchema],
     validate: [arrayLimit, "A conversation must have at least two members"],
   },
+  messages: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Message",
+    },
+  ],
   lastMessage: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Message",
     default: null,
-  },
-  isCalling: {
-    type: Boolean,
-    default: false,
   },
   isDeleted: {
     type: Boolean,
