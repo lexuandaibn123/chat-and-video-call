@@ -14,8 +14,9 @@ const ConversationListPanel = ({ groups, friends, onSearchChange, onItemClick, a
           onChange={onSearchChange}
         />
       </div>
-      <GroupList groups={groups} onItemClick={onItemClick} activeChat={activeChat} />
+      {/* Truyền activeChat xuống để các list con truyền tiếp cho ConversationItem */}
       <FriendList friends={friends} onItemClick={onItemClick} activeChat={activeChat} />
+      <GroupList groups={groups} onItemClick={onItemClick} activeChat={activeChat} />
     </aside>
   );
 };

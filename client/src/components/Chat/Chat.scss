@@ -5,26 +5,49 @@
 
 .chat-page-container {
   display: flex;
-  height: 100%; // <<< Chiếm hết chiều cao của .main-content
+  height: 100%;
   width: 100%;
-  gap: $spacing-lg; // Khoảng cách giữa 2 cột
-  padding: 0; // MainLayout đã có padding, bỏ padding ở đây
+  gap: $spacing-lg;
+  padding: 0;
   box-sizing: border-box;
-  background-color: transparent; // Nền sẽ do các panel con quyết định
+  background-color: transparent;
+  position: relative; // Cần cho overlay loading
+
+  // Styles cho overlay loading
+  .loading-overlay, .error-message {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba($secondary-color, 0.8); // Nền mờ
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: $font-size-large;
+      font-weight: $font-weight-bold;
+      color: $primary-color;
+      z-index: 10; // Đảm bảo hiển thị trên các panel
+      border-radius: $border-radius-lg;
+  }
+
+  .error-message {
+      color: $error-color; // Màu đỏ cho lỗi
+  }
 }
 
 // ===== CỘT BÊN TRÁI: DANH SÁCH CUỘC TRÒ CHUYỆN =====
 .conversation-list-panel {
   display: flex;
   flex-direction: column;
-  flex-basis: 320px; // Chiều rộng cố định hoặc dùng %
-  flex-shrink: 0; // Không co lại
+  flex-basis: 320px;
+  flex-shrink: 0;
   height: 100%;
-  background-color: $secondary-color; // Nền trắng
-  border-radius: $border-radius-lg; // Bo góc lớn theo thiết kế
+  background-color: $secondary-color;
+  border-radius: $border-radius-lg;
   padding: $spacing-lg;
   box-sizing: border-box;
-  overflow: hidden; // Ngăn nội dung tràn ra
+  overflow: hidden; // Ngăn nội dung panel tràn ra
 
   .search-bar-container {
     display: flex;
@@ -55,12 +78,13 @@
 
   .conversation-section {
     margin-bottom: $spacing-lg;
+    flex-grow: 1; // Cho phép section giãn ra
+    overflow: hidden; // Ngăn nội dung tràn ra khỏi section
+    display: flex;
+    flex-direction: column; // Thiết lập section như flex column container
     // Cho phép section cuối cùng giãn ra nếu cần
     &:last-child {
-      flex-grow: 1; // Cho phép phần Friends giãn ra
-      overflow: hidden; // Ngăn list tràn section
-      display: flex;
-      flex-direction: column;
+      margin-bottom: 0;
     }
 
     .section-title {
@@ -68,7 +92,8 @@
       font-weight: $font-weight-bold;
       color: $text-color;
       margin-bottom: $spacing-md;
-      padding-left: $spacing-xs; // Căn lề nhẹ
+      padding-left: $spacing-xs;
+      flex-shrink: 0; // Ngăn tiêu đề co lại
     }
 
     .conversation-list {
@@ -173,15 +198,15 @@
 
 // ===== CỘT BÊN PHẢI: CỬA SỔ CHAT ĐANG HOẠT ĐỘNG =====
 .active-chat-panel {
-  flex-grow: 1; // Chiếm hết không gian còn lại
+  flex-grow: 1;
   height: 100%;
-  background-color: $secondary-color; // Nền trắng
+  background-color: $secondary-color;
   border-radius: $border-radius-lg;
   display: flex;
   justify-content: center;
   text-align: center;
   flex-direction: column;
-  overflow: hidden; // Quan trọng: ngăn các phần tử con tràn ra ngoài
+  overflow: hidden;
 
   // --- Header ---
   .chat-header {
@@ -388,47 +413,385 @@
   }
 }
 
+.chat-settings-overlay {
+  position: fixed; // Cố định trên màn hình
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba($text-color, 0.6); // Nền tối mờ
+  display: flex;
+  align-items: center; // Căn giữa dọc
+  justify-content: center; // Căn giữa ngang
+  z-index: 1000; // Đảm bảo hiển thị trên tất cả các phần tử khác
+
+  .settings-content {
+    background-color: $secondary-color; // Nền trắng
+    border-radius: $border-radius-lg;
+    width: 90%; // Chiếm 90% chiều rộng màn hình
+    max-width: 500px; // Giới hạn chiều rộng tối đa
+    max-height: 90vh; // Giới hạn chiều cao tối đa
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; // Ngăn nội dung tràn ra khi cuộn
+
+    .settings-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: $spacing-md $spacing-lg;
+      border-bottom: 1px solid $input-border-color;
+      flex-shrink: 0;
+
+      h2 {
+        margin: 0;
+        font-size: $font-size-large;
+        color: $text-color;
+      }
+
+      .icon-button { // Nút đóng
+        background: none;
+        border: none;
+        color: $text-muted-color;
+        font-size: 20px;
+        cursor: pointer;
+        padding: $spacing-xs;
+        border-radius: 50%;
+        transition: color $transition-fast ease-out;
+        &:hover {
+          color: $error-color; // Màu đỏ khi hover nút đóng
+          background-color: $container-bg-color;
+        }
+      }
+    }
+
+    .settings-body {
+      flex-grow: 1; // Chiếm hết không gian còn lại cho nội dung cuộn
+      overflow-y: auto; // Cho phép cuộn nội dung
+      padding: $spacing-lg;
+
+      // --- Custom scrollbar (optional) ---
+      &::-webkit-scrollbar { width: 8px; }
+      &::-webkit-scrollbar-track { background: transparent; }
+      &::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+      &::-webkit-scrollbar-thumb:hover { background: #aaa; }
+
+
+      .group-info {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-bottom: $spacing-lg;
+        padding-bottom: $spacing-lg;
+        border-bottom: 1px solid $input-border-color;
+
+        .avatar.large {
+          width: 80px;
+          height: 80px;
+          border-radius: 50%;
+          object-fit: cover;
+          margin-bottom: $spacing-md;
+        }
+
+        h3 {
+          margin: 0;
+          font-size: $font-size-large;
+          color: $text-color;
+        }
+      }
+
+      .member-list-section {
+        margin-bottom: $spacing-lg;
+        padding-bottom: $spacing-lg;
+        border-bottom: 1px solid $input-border-color;
+
+        h4 {
+          font-size: $font-size-large;
+          color: $text-color;
+          margin-top: 0;
+          margin-bottom: $spacing-md;
+        }
+
+        .member-list {
+          list-style: none;
+          padding: 0;
+          margin: 0;
+
+          .member-item {
+            display: flex;
+            align-items: center;
+            padding: $spacing-sm 0;
+            border-bottom: 1px solid $container-bg-color; // Đường kẻ nhẹ giữa các thành viên
+            &:last-child { border-bottom: none; } // Bỏ đường kẻ cuối cùng
+
+            .avatar.small {
+              width: 35px;
+              height: 35px;
+              border-radius: 50%;
+              object-fit: cover;
+              margin-right: $spacing-md;
+              flex-shrink: 0;
+            }
+
+            .member-name {
+              flex-grow: 1;
+              color: $text-color;
+              font-size: $font-size-base;
+              font-weight: $font-weight-bold;
+            }
+
+            .member-actions {
+              display: flex;
+              gap: $spacing-xs;
+
+              .icon-button.small {
+                 font-size: 16px;
+                 padding: $spacing-xs;
+                 &.warning { color: $error-color; } // Màu đỏ cho xoá
+                 &.primary { color: $primary-color; } // Màu chính cho đổi leader
+              }
+            }
+          }
+        }
+      }
+
+      .add-user-section {
+          margin-bottom: $spacing-lg;
+          padding-bottom: $spacing-lg;
+          border-bottom: 1px solid $input-border-color;
+
+           h4 {
+              font-size: $font-size-large;
+              color: $text-color;
+              margin-top: 0;
+              margin-bottom: $spacing-md;
+            }
+
+          .add-user-search-form {
+              display: flex;
+              gap: $spacing-sm;
+              margin-bottom: $spacing-md;
+
+              input {
+                  flex-grow: 1;
+                  padding: $spacing-sm $spacing-md;
+                  border: 1px solid $input-border-color;
+                  border-radius: $border-radius-md;
+                  font-size: $font-size-base;
+              }
+              button {
+                  background-color: $primary-color;
+                  color: $secondary-color;
+                  border: none;
+                  padding: $spacing-sm $spacing-md;
+                  border-radius: $border-radius-md;
+                  cursor: pointer;
+                  transition: background-color $transition-fast ease-out;
+                  &:hover:not(:disabled) {
+                      background-color: color.adjust($primary-color, $lightness: -5%);
+                  }
+                   &:disabled {
+                       opacity: 0.5;
+                       cursor: not-allowed;
+                   }
+              }
+          }
+
+           .search-results-list {
+               border: 1px solid $input-border-color;
+               border-radius: $border-radius-md;
+               max-height: 150px; // Giới hạn chiều cao kết quả
+               overflow-y: auto; // Cho phép cuộn kết quả
+               margin-bottom: $spacing-md;
+
+               .search-result-item {
+                   display: flex;
+                   align-items: center;
+                   padding: $spacing-sm $spacing-md;
+                   cursor: pointer;
+                   border-bottom: 1px solid $container-bg-color;
+                   transition: background-color $transition-fast ease-out;
+
+                   &:last-child { border-bottom: none; }
+
+                   &:hover {
+                       background-color: $container-bg-color;
+                   }
+                   &.selected {
+                       background-color: color.adjust($primary-color, $alpha: -0.9); // Nền xanh nhạt khi chọn
+                   }
+
+                   .avatar.tiny {
+                        width: 25px;
+                        height: 25px;
+                        border-radius: 50%;
+                        object-fit: cover;
+                        margin-right: $spacing-sm;
+                   }
+               }
+           }
+
+           .add-user-confirm-button {
+                display: block; // Chiếm toàn bộ chiều rộng
+                width: 100%;
+                padding: $spacing-sm;
+                background-color: $success-color; // Màu xanh cho nút thêm
+                color: $secondary-color;
+                border: none;
+                border-radius: $border-radius-md;
+                cursor: pointer;
+                font-size: $font-size-base;
+                transition: background-color $transition-fast ease-out;
+                 &:hover:not(:disabled) {
+                      background-color: color.adjust($success-color, $lightness: -5%);
+                  }
+                   &:disabled {
+                       opacity: 0.5;
+                       cursor: not-allowed;
+                   }
+           }
+      }
+
+        .info-message {
+             font-size: $font-size-small;
+             color: $text-muted-color;
+             text-align: center;
+             margin-top: $spacing-md;
+        }
+
+      .action-status {
+         color: $primary-color;
+         text-align: center;
+         margin-top: $spacing-md;
+      }
+
+      .action-error {
+         color: $error-color;
+         text-align: center;
+         margin-top: $spacing-md;
+      }
+
+      .leave-group-section, .delete-group-section {
+           margin-top: $spacing-lg;
+           text-align: center;
+
+           .button { // Styles cho các button chung (có thể định nghĩa ở chỗ khác)
+                padding: $spacing-sm $spacing-md;
+                border-radius: $border-radius-md;
+                cursor: pointer;
+                font-size: $font-size-base;
+                &.secondary {
+                     background-color: $container-bg-color;
+                     color: $text-color;
+                     border: 1px solid $input-border-color;
+                     &:hover {
+                          background-color: color.adjust($container-bg-color, $lightness: -5%);
+                     }
+                }
+                &.warning { color: $error-color; }
+                &.danger { background-color: $error-color; color: $secondary-color; border: none; }
+           }
+      }
+
+    }
+  }
+}
+
 // --- Responsive Anpassungen (Beispiel) ---
 @media (max-width: $breakpoint-medium) {
   .chat-page-container {
-    flex-direction: column; // Chuyển thành cột nếu cần trên mobile?
+    flex-direction: column; padding: 0; gap: 0; background-color: $secondary-color;
+    // Đảm bảo container chiếm hết chiều cao nếu cần (thường MainLayout đã xử lý)
+    // height: 100%;
+
+    > aside, > section { border-radius: 0; box-shadow: none; height: 100%; width: 100%; }
+
+    // --- State mặc định (mobile): chỉ hiện list ---
+    .conversation-list-panel {
+       display: flex; // HIỆN mặc định
+       flex-basis: auto; // Không cần fixed basis trên mobile list view
+    }
+    .active-chat-panel {
+       display: none; // ẨN mặc định
+    }
+
+    // --- State khi chat active (class chat-active-mobile được thêm bởi JS) ---
+    &.chat-active-mobile {
+      .conversation-list-panel {
+         display: none; // ẨN list
+      }
+      .active-chat-panel {
+        display: flex; // HIỆN chat window
+        // ... (các style khác của chat panel mobile, bao gồm nút back)
+        .chat-header .back-button {
+            display: flex; // Sử dụng flex để căn giữa icon
+            align-items: center;
+            justify-content: center;
+            margin-right: $spacing-md; // Khoảng cách với avatar
+        }
+        .chat-header {
+          // Điều chỉnh padding header trên mobile
+          padding: $spacing-sm $spacing-md; // Giảm nhẹ padding
+        }
+        .message-list-container {
+            padding: $spacing-md; // Giảm padding khu vực tin nhắn
+        }
+        .chat-input-area {
+            padding: $spacing-sm $spacing-md; // Giảm padding input area
+        }
+        // Styles cho loading messages trên mobile nếu cần khác
+        .loading-messages, .no-messages {
+             font-size: $font-size-base; // Có thể giảm font size
+        }
+      }
+       // Ẩn overlay loading/error trang khi active chat trên mobile
+       .loading-overlay, .error-message {
+          display: none;
+      }
+    }
   }
   .conversation-list-panel {
     flex-basis: 100%; // Chiếm toàn bộ chiều rộng nếu chỉ hiện list
     // Hoặc ẩn đi nếu chỉ hiện chat window
   }
-  .chat-page-container {
-    flex-direction: column; padding: 0; gap: 0; background-color: $secondary-color;
-    // <<< Quan trọng: đảm bảo container chiếm đúng không gian còn lại >>>
-    // height: 100%; // Đã được set bởi .main-content
-
-    > aside, > section { border-radius: 0; box-shadow: none; height: 100%; width: 100%; } // Chiếm toàn bộ container
-
-    // --- State mặc định: chỉ hiện list ---
-    .conversation-list-panel {
-       display: flex; // <<< HIỆN mặc định
-       // ... (các style khác của list panel mobile)
-    }
-    .active-chat-panel {
-       display: none; // <<< ẨN mặc định
-    }
-
-    // --- State khi chat active (class được thêm bởi JS) ---
-    &.chat-active-mobile {
-      .conversation-list-panel {
-         display: none; // <<< ẨN list khi chat active
+  .chat-settings-overlay {
+    .settings-content {
+      width: 100%; // Chiếm toàn bộ chiều rộng trên mobile
+      height: 100%; // Chiếm toàn bộ chiều cao trên mobile
+      max-width: none; // Bỏ giới hạn max-width
+      max-height: none; // Bỏ giới hạn max-height
+      border-radius: 0; // Bỏ bo góc
+        // Nếu container đã có padding thì bỏ padding ở đây, nếu không thì thêm padding cho body
+      .settings-body {
+          padding: $spacing-md;
       }
-      .active-chat-panel {
-        display: flex; // <<< HIỆN chat window khi chat active
-        // ... (các style khác của chat panel mobile, bao gồm nút back)
-        .chat-header .back-button {
-            display: inline-flex; // Đảm bảo nút back hiển thị
-            // ... (các style định vị khác của nút back)
-        }
-        .chat-header {
-          padding: math.div($spacing-md, 2) math.div($spacing-lg, 2);
-        }
+      .settings-header {
+          padding: $spacing-sm $spacing-md;
       }
     }
+  } 
+}
+
+.active-chat-panel {
+  .message-list-container {
+      .loading-messages, .no-messages {
+           text-align: center;
+           color: $text-muted-color;
+           font-size: $font-size-large;
+           margin-top: $spacing-lg;
+           flex-grow: 1; // Giúp căn giữa theo chiều dọc
+      }
   }
 }
+
+// Thêm style cho trạng thái tin nhắn failed (tùy chọn)
+// Có thể thêm icon lỗi hoặc thay đổi màu bubble
+// Ví dụ:
+// .message-bubble-wrapper.sent.failed {
+//    .message-bubble {
+//        background-color: color.adjust($error-color, $alpha: -0.5); // Màu đỏ mờ
+//    }
+//    .message-timestamp {
+//        color: $error-color; // Màu đỏ cho timestamp
+//    }
+// }
