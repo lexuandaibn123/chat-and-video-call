@@ -155,9 +155,9 @@ io.on("connection", (client) => {
     }
   });
 
-  client.on("typing", (roomId) => client.in(roomId).emit("typing"));
+  client.on("typing", ({ roomId, memberId }) => client.in(roomId).emit("typing", memberId));
 
-  client.on("stopTyping", (roomId) => client.in(roomId).emit("stopTyping"));
+  client.on("stopTyping", ({ roomId, memberId }) => client.in(roomId).emit("stopTyping", memberId));
 
   client.on(
     "newMessage",
