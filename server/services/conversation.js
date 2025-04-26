@@ -144,7 +144,10 @@ class ConversationService {
 
       return res.status(200).json({
         success: true,
-        data: conversation,
+        data: {
+          ...conversation.toObject(),
+          messages,
+        },
       });
     } catch (error) {
       console.error(error);

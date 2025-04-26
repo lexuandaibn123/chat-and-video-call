@@ -43,6 +43,13 @@ class MessageRepository {
 
     return messages;
   }
+  async setLastMessage(conversationId, messageId) {
+    return Conversation.findByIdAndUpdate(
+      conversationId,
+      { lastMessage: messageId, updatedAt: Date.now() },
+      { new: true }
+    );
+  }
 }
 
 module.exports = new MessageRepository();
