@@ -9,10 +9,12 @@ const swaggerJsdoc = require("swagger-jsdoc");
 const cors = require("cors");
 const db = require("./config/db");
 const session = require("express-session");
-const http = require("http");
+const { createServer } = require("http");
+const { Server } = require("socket.io");
 const path = require("path");
 const ConversationService = require("./services/conversation");
-const socketIO = require("socket.io");
+const { instrument } = require("@socket.io/admin-ui");
+const { request } = require("http");
 
 const PORT = process.env.PORT || 8080;
 
@@ -21,6 +23,8 @@ const serverUrl = process.env.SERVER_URL;
 const clientUrl = process.env.CLIENT_URL;
 
 const authSecret = process.env.AUTH_SECRET;
+
+const nodeEnv = process.env.NODE_ENV;
 
 db.connect();
 
@@ -54,7 +58,7 @@ app.use(
 
 app.use(
   cors({
-    origin: clientUrl,
+    origin: [clientUrl, "http://localhost:3000"],
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
@@ -62,16 +66,15 @@ app.use(
 );
 
 /* Session */
-app.use(
-  session({
-    secret: authSecret,
-    saveUninitialized: true,
-    resave: true,
-    cookie: {
-      secure: false,
-    },
-  })
-);
+const sessionMiddleware = session({
+  secret: authSecret,
+  saveUninitialized: true,
+  resave: true,
+  cookie: {
+    secure: false,
+  },
+});
+app.use(sessionMiddleware);
 
 app.use(bodyParser.urlencoded({ extended: true }));
 
@@ -86,22 +89,34 @@ app.get("/", (req, res) => {
   res.render("index.ejs");
 });
 
+app.get("/admin-socket", (req, res) => {
+  res.render("admin.socket.ejs");
+});
+
 route(app);
 
 // ----------------------------------deploy----------------------------------
 
-const server = http.createServer(app);
+const server = createServer(app);
 
-const io = socketIO(server, {
+const io = new Server(server, {
   cors: {
-    origin: clientUrl,
+    origin: [clientUrl, "http://localhost:3000"],
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   },
+  withCredentials: true,
 });
 
-io.sockets.on("connection", (client) => {
+io.engine.use(sessionMiddleware);
+
+instrument(io, {
+  auth: false,
+  mode: nodeEnv,
+});
+
+io.on("connection", (client) => {
   const session = client.request.session;
 
   if (!session || !session.userInfo) {
@@ -123,10 +138,15 @@ io.sockets.on("connection", (client) => {
         limit,
       });
       conversations.forEach((conversation) => {
-        const userObj = conversation.members.find(
-          (member) => member.id == userInfo.id
-        );
-        if (userObj.leftAt == null) client.join(conversation._id.toString());
+        const userObj = conversation.members.find((member) => {
+          return (
+            (typeof member.id == "object"
+              ? member.id._id.toString() == userInfo.id
+              : member.id.toString() == userInfo.id) && member.leftAt == null
+          );
+        });
+        if (userObj && userObj.leftAt == null)
+          client.join(conversation._id.toString());
       });
       client.emit("connected");
     } catch (error) {
@@ -160,6 +180,25 @@ io.sockets.on("connection", (client) => {
 
   client.on("disconnect", () => {
     console.log(`Client disconnected: ${client.id}`);
+  });
+});
+
+const adminNamespace = io.of("/admin");
+
+adminNamespace.use((socket, next) => {
+  // ensure the user has sufficient rights
+  next();
+});
+
+adminNamespace.on("connection", (socket) => {
+  console.log("Admin connected");
+
+  socket.on("setup", () => {
+    socket.emit("connected");
+  });
+
+  socket.on("disconnect", () => {
+    console.log("Admin disconnected");
   });
 });
 
