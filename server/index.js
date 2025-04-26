@@ -14,7 +14,6 @@ const { Server } = require("socket.io");
 const path = require("path");
 const ConversationService = require("./services/conversation");
 const { instrument } = require("@socket.io/admin-ui");
-const { request } = require("http");
 
 const PORT = process.env.PORT || 8080;
 
@@ -25,6 +24,8 @@ const clientUrl = process.env.CLIENT_URL;
 const authSecret = process.env.AUTH_SECRET;
 
 const nodeEnv = process.env.NODE_ENV;
+
+const SESSION_RELOAD_INTERVAL = 30 * 1000;
 
 db.connect();
 
@@ -106,7 +107,6 @@ const io = new Server(server, {
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   },
-  withCredentials: true,
 });
 
 io.engine.use(sessionMiddleware);
@@ -117,6 +117,13 @@ instrument(io, {
 });
 
 io.on("connection", (client) => {
+  const sessionTracker = setInterval(() => {
+    client.request.session.reload((err) => {
+      if (err) {
+        client.conn.close();
+      }
+    });
+  }, SESSION_RELOAD_INTERVAL);
   const session = client.request.session;
 
   if (!session || !session.userInfo) {
@@ -125,6 +132,8 @@ io.on("connection", (client) => {
     client.disconnect();
     return;
   }
+
+  console.log("Client connected: " + client.id);
 
   const userInfo = session.userInfo;
 
@@ -155,9 +164,13 @@ io.on("connection", (client) => {
     }
   });
 
-  client.on("typing", ({ roomId, memberId }) => client.in(roomId).emit("typing", memberId));
+  client.on("typing", ({ roomId, memberId }) =>
+    client.in(roomId).emit("typing", memberId)
+  );
 
-  client.on("stopTyping", ({ roomId, memberId }) => client.in(roomId).emit("stopTyping", memberId));
+  client.on("stopTyping", ({ roomId, memberId }) =>
+    client.in(roomId).emit("stopTyping", memberId)
+  );
 
   client.on(
     "newMessage",
@@ -180,6 +193,7 @@ io.on("connection", (client) => {
 
   client.on("disconnect", () => {
     console.log(`Client disconnected: ${client.id}`);
+    clearInterval(sessionTracker);
   });
 });
 
