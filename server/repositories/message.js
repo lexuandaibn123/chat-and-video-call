@@ -1,28 +1,47 @@
-const Message = require("../models/message.model");
-
+const Message = require("../models/message");
+const Conversation = require("../models/conversation");
 class MessageRepository {
-  async createMessage(data) {
-    const message = new Message(data);
-    return message.save();
+  async create(data) {
+    return await Message.create(data);
   }
 
-  async getMessagesByConversation(conversationId, limit = 20, skip = 0) {
-    Message.find({ conversationId })
+  async findById(id) {
+    return await Message.findOne({ _id: id }).populate(
+      "senderId",
+      "-password -verificationToken -resetToken -resetTokenExpiry"
+    );
+  }
+
+  async updateById(id, data) {
+    return await Message.findByIdAndUpdate(id, { ...data }, { new: true });
+  }
+
+  async findByConversationId(conversationId, limit = 30, skip = 0) {
+    return Message.find({ conversationId })
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 });
   }
 
-  async updateMessage(messageId, updateData) {
-    return Message.findByIdAndUpdate(messageId, updateData, { new: true });
-  }
+  async findByConversationIdAndUserId(
+    conversationId,
+    userId,
+    limit = 30,
+    skip = 0,
+    latestDeletedAt = null
+  ) {
+    let query = { conversationId };
 
-  async deleteMessage(messageId) {
-    return Message.findByIdAndDelete(messageId);
-  }
+    if (latestDeletedAt) {
+      query.last_updated = { $gt: latestDeletedAt };
+    }
 
-  async getMessageById(messageId) {
-    return Message.findById(messageId);
+    const messages = await Message.find(query)
+      .sort({ datetime_created: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    return messages;
   }
 }
 

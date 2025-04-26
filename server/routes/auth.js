@@ -1,8 +1,8 @@
 const express = require("express");
-const route = express.Router();
+const router = express.Router();
 const AuthService = require("../services/auth");
 const { check } = require("express-validator"); // For validation
-
+const { validateMiddleware } = require("../middleware/validate");
 /**
  * @openapi
  * /auth/login:
@@ -88,7 +88,7 @@ const { check } = require("express-validator"); // For validation
  *                   type: string
  *                   example: Internal server error
  */
-route.post(
+router.post(
   "/login",
   [
     check("email").isEmail().withMessage("Invalid email format"),
@@ -96,6 +96,7 @@ route.post(
       .isLength({ min: 6 })
       .withMessage("Password must be at least 6 characters"),
   ],
+  validateMiddleware,
   AuthService.login
 );
 
@@ -168,7 +169,7 @@ route.post(
  *                   type: string
  *                   example: Internal server error
  */
-route.post(
+router.post(
   "/register",
   [
     check("fullName")
@@ -182,6 +183,7 @@ route.post(
       .custom((value, { req }) => value === req.body.password)
       .withMessage("Passwords do not match"),
   ],
+  validateMiddleware,
   AuthService.register
 );
 
@@ -244,7 +246,7 @@ route.post(
  *                   type: string
  *                   example: Internal server error
  */
-route.get("/verify-email", AuthService.verifyEmail);
+router.get("/verify-email", AuthService.verifyEmail);
 
 /**
  * @openapi
@@ -317,9 +319,10 @@ route.get("/verify-email", AuthService.verifyEmail);
  *                   type: string
  *                   example: Internal server error
  */
-route.post(
+router.post(
   "/resend-verification-email",
   [check("email").isEmail().withMessage("Invalid email format")],
+  validateMiddleware,
   AuthService.resendVerificationEmail
 );
 
@@ -391,9 +394,10 @@ route.post(
  *                   type: string
  *                   example: Internal server error
  */
-route.post(
+router.post(
   "/forgot-password",
   [check("email").isEmail().withMessage("Invalid email format")],
+  validateMiddleware,
   AuthService.forgotPassword
 );
 
@@ -468,7 +472,7 @@ route.post(
  *                   type: string
  *                   example: Internal server error
  */
-route.post(
+router.post(
   "/reset-password",
   [
     check("token").not().isEmpty().withMessage("Token is required"),
@@ -476,6 +480,7 @@ route.post(
       .isLength({ min: 6 })
       .withMessage("Password must be at least 6 characters"),
   ],
+  validateMiddleware,
   AuthService.resetPassword
 );
 
@@ -553,7 +558,7 @@ route.post(
  *                   type: string
  *                   example: Internal server error
  */
-route.post(
+router.post(
   "/change-password",
   [
     check("email").isEmail().withMessage("Invalid email format"),
@@ -564,6 +569,7 @@ route.post(
       .isLength({ min: 6 })
       .withMessage("Password must be at least 6 characters"),
   ],
+  validateMiddleware,
   AuthService.changePassword
 );
 
@@ -602,7 +608,7 @@ route.post(
  *                     - Logout failed
  *                     - Internal server error
  */
-route.post("/logout", AuthService.logout);
+router.post("/logout", AuthService.logout);
 
 /**
  * @openapi
@@ -645,6 +651,6 @@ route.post("/logout", AuthService.logout);
  *                   type: string
  *                   example: Internal server error
  */
-route.get("/info", AuthService.info);
+router.get("/info", AuthService.info);
 
-module.exports = route;
+module.exports = router;

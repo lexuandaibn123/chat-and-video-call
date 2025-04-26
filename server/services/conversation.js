@@ -1,96 +1,194 @@
-const conversationRepo = require("../repositories/conversation.repository");
-
+const ConversationRepository = require("../repositories/conversation");
+const UserRepository = require("../repositories/user");
+const MessageRepository = require("../repositories/message");
 class ConversationService {
-  async create11Conversation(req, res) {
-    try {
-      const { creatorId } = req.body;
-      const { members = [] } = req.body;
+  async _mustBeValidConversation(conversationId, mustBeGroup = false) {
+    const conversation = await ConversationRepository.findById(conversationId);
+    if (!conversation) {
+      throw new Error("Conversation not found");
+    }
+    if (mustBeGroup && !conversation.isGroup) {
+      throw new Error("Conversation must be a group conversation");
+    }
+    conversation.members = conversation.members.filter(
+      (member) => member.leftAt === null
+    );
+    return conversation;
+  }
 
-      if (members.length !== 1) {
-        return res
-          .status(400)
-          .json({ error: "Chat 1-1 chỉ có đúng 2 thành viên" });
-      }
+  async _mustBeValidMessage(messageId) {
+    const message = await MessageRepository.findById(messageId);
+    if (!message || message.isDeleted) {
+      throw new Error("Message not found");
+    }
+    return message;
+  }
 
-      const uniqueMemberIds = [...new Set([...members, creatorId])];
+  _isOwnerOfMessage(message, userId) {
+    if (typeof message.senderId === "string")
+      return message.senderId.toString() == userId;
+    else if (typeof message.senderId === "object")
+      return message.senderId._id.toString() == userId;
+    else throw new Error("Invalid message");
+  }
 
-      const memberDocs = uniqueMemberIds.map((id) => ({
-        id,
-      }));
-
-      const conversation = await conversationRepo.create({
-        name: null,
-        isGroup: false,
-        members: memberDocs,
-        lastMessage: null,
-        isCalling: false,
-        isDeleted: false,
-      });
-
-      return res.status(201).json({
-        success: true,
-        message: "Tạo cuộc trò chuyện 1-1 thành công",
-        data: conversation,
-      });
-    } catch (error) {
-      console.log(error);
-      return res.status(500).json({ error: "Lỗi hệ thống" });
+  _mustBeOwnerOfMessage(message, userId, errorMsg = "") {
+    if (!this._isOwnerOfMessage(message, userId)) {
+      if (errorMsg.length > 0) throw new Error(errorMsg);
+      throw new Error("You are not the owner of this message");
     }
   }
 
-  async createGroupConversation(req, res) {
-    try {
-      const { creatorId } = req.body;
-      const { name, members } = req.body;
-
-      if (members.length < 3) {
-        return res
-          .status(400)
-          .json({ error: "Nhóm phải có ít nhất 3 thành viên." });
-      }
-
-      const uniqueMemberIds = [...new Set([...members, creatorId])];
-      const memberDocs = uniqueMemberIds.map((id) => ({
-        id,
-        role: id === creatorId ? "leader" : "member",
-      }));
-
-      const conversation = await conversationRepo.create({
-        name,
-        isGroup: true,
-        members: memberDocs,
-        lastMessage: null,
-        isCalling: false,
-        isDeleted: false,
-      });
-
-      return res.status(201).json({
-        success: true,
-        message: "Tạo nhóm trò chuyện thành công",
-        data: conversation,
-      });
-    } catch (error) {
-      console.log(error);
-      return res.status(500).json({ error: "Lỗi hệ thống" });
-    }
+  _isMemberOfConversation(conversation, userId) {
+    return conversation.members.find((member) => {
+      return (
+        (typeof member.id == "object"
+          ? member.id._id.toString() == userId
+          : member.id.toString() == userId) && member.leftAt == null
+      );
+    });
   }
 
-  async getConversationById(req, res) {
-    try {
-      const { id } = req.params;
+  _mustBeMemberOfConversation(conversation, userId, errorMsg = "") {
+    const member = this._isMemberOfConversation(conversation, userId);
+    if (!member) {
+      if (errorMsg.length > 0) throw new Error(errorMsg);
+      throw new Error(`User ${userId} is not a member of the conversation`);
+    }
+    return member;
+  }
 
-      const conversation = await conversationRepo.findById(id);
-      if (!conversation) {
-        return res.status(404).json({ error: "Phòng không tồn tại" });
+  _isLeaderOfConversation(conversation, userId) {
+    return conversation.members.find(
+      (member) =>
+        (typeof member.id == "object"
+          ? member.id._id.toString() == userId
+          : member.id.toString() == userId) &&
+        member.role === "leader" &&
+        member.leftAt == null
+    );
+  }
+
+  _mustBeLeaderOfConversation(conversation, userId, errorMsg = "") {
+    const leader = this._isLeaderOfConversation(conversation, userId);
+    if (!leader) {
+      if (errorMsg.length > 0) throw new Error(errorMsg);
+      throw new Error(`User ${userId} is not a leader of the conversation`);
+    }
+    return leader;
+  }
+
+  _filterMembersLeft(conversation) {
+    conversation.members = conversation.members.filter(
+      (member) => member.leftAt === null
+    );
+  }
+
+  async createConversation(req, res) {
+    try {
+      const { members = [], name = "" } = req.body;
+
+      const userInfo = req.session.userInfo;
+
+      const creatorId = userInfo.id.toString();
+
+      const memberIds = [...members];
+
+      if (!members.includes(creatorId)) {
+        memberIds.push(creatorId);
       }
+
+      const users = await UserRepository.findByIds(memberIds);
+      if (users.length !== memberIds.length) {
+        throw new Error("One or more users do not exist");
+      }
+
+      if (memberIds.length < 2) {
+        return res
+          .status(400)
+          .json({ error: "Conversation must have at least 2 members." });
+      }
+
+      if (memberIds.length == 2) {
+        const existingConversation =
+          await ConversationRepository.findConversationBetweenUsers(
+            memberIds[0],
+            memberIds[1]
+          );
+
+        if (existingConversation) {
+          return res.status(400).json({
+            error: "Conversation already exists between these two users.",
+          });
+        }
+      }
+
+      const isGroup = memberIds.length > 2;
+
+      const membersInfo = memberIds.map((userId) => {
+        const role = isGroup && userId == creatorId ? "leader" : "member";
+        return {
+          id: userId,
+          role,
+          joinedAt: new Date(),
+          leftAt: null,
+          latestDeletedAt: null,
+        };
+      });
+
+      const conversation = await ConversationRepository.create({
+        isGroup,
+        members: membersInfo,
+        name: name ?? "",
+      });
 
       return res.status(200).json({
         success: true,
         data: conversation,
       });
     } catch (error) {
-      console.log(error);
-      return res.status(500).json({ error: "Lỗi hệ thống" });
+      console.error(error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+
+  async fetchConversations(req, res) {
+    try {
+      const { page = 1, limit = 10 } = req.query;
+      const userInfo = req.session.userInfo;
+
+      const userId = userInfo.id.toString();
+      const conversations = await ConversationRepository.findByUserId(
+        userId,
+        page,
+        limit
+      );
+
+      return res.status(200).json({
+        success: true,
+        data: conversations.map((conversation) => {
+          this._filterMembersLeft(conversation);
+          return conversation;
+        }),
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+
+  async fetchConversationsByWs({ userId, page = 1, limit = 10 }) {
+    try {
+      const conversations = await ConversationRepository.findByUserId(
+        userId,
+        page,
+        limit
+      );
+
+      return conversations;
+    } catch (error) {
+      console.error(error);
+      throw error;
     }
   }
 
@@ -99,370 +197,609 @@ class ConversationService {
       const { name } = req.query;
       const { page = 1, limit = 10 } = req.query;
 
-      const conversations = await conversationRepo.findByName(
+      const userInfo = req.session.userInfo;
+
+      const conversations = await ConversationRepository.findByName(
+        userInfo.id.toString(),
         name,
         page,
         limit
       );
       return res.status(200).json({
         success: true,
-        data: conversations,
+        data: conversations.map((conversation) => {
+          this._filterMembersLeft(conversation);
+          return conversation;
+        }),
       });
     } catch (error) {
-      console.log(error);
-      return res.status(500).json({ error: "Lỗi hệ thống" });
+      console.error(error);
+      return res.status(500).json({ error: "Internal server error" });
     }
   }
 
-  async getUserConversations(req, res) {
+  async addNewMember(req, res) {
     try {
-      const { userId } = req.params;
+      const { conversationId, newMemberId, role = "member" } = req.body;
 
-      const conversations = await conversationRepo.findByUserId(userId);
-      return res.status(200).json({
-        success: true,
-        data: conversations,
-      });
-    } catch (error) {
-      console.log(error);
-      return res.status(500).json({ error: "Lỗi hệ thống" });
-    }
-  }
+      try {
+        const conversation = await this._mustBeValidConversation(
+          conversationId,
+          true
+        );
 
-  async addMember(req, res) {
-    try {
-      const { conversationId, userIdToAdd, role = "member" } = req.body;
-      const { requesterId } = req.params;
+        const isAlreadyMember = this._isMemberOfConversation(
+          conversation,
+          newMemberId
+        );
+        if (isAlreadyMember) {
+          return res.status(400).json({
+            error: "User is already a member of the conversation",
+          });
+        }
+        const member = await UserRepository.findById(newMemberId);
+        if (!member) {
+          return res.status(404).json({ error: "User not found" });
+        }
 
-      const conversation = await this.getConversationById(
-        req,
-        res,
-        conversationId
-      );
+        const memberObj = {
+          id: newMemberId,
+          role,
+          joinedAt: new Date(),
+          leftAt: null,
+          latestDeletedAt: null,
+        };
 
-      if (!conversation.isGroup) {
-        return res
-          .status(400)
-          .json({ error: "Không thể thêm thành viên vào chat 1-1" });
+        const updatedConversation = await ConversationRepository.addMember(
+          conversationId,
+          memberObj
+        );
+
+        if (!updatedConversation) {
+          return res.status(400).json({ error: "Failed to add new member" });
+        }
+
+        this._filterMembersLeft(updatedConversation);
+
+        return res.status(200).json({
+          success: true,
+          message: "Added new member successfully",
+          data: updatedConversation,
+        });
+      } catch (error) {
+        console.error(error);
+        return res.status(400).json({ error: error.message });
       }
-
-      const isLeader = conversation.members.some(
-        (m) => m.id.equals(requesterId) && m.role === "leader"
-      );
-      if (!isLeader) {
-        return res
-          .status(403)
-          .json({ error: "Chỉ leader mới có quyền thêm thành viên" });
-      }
-
-      const updatedConversation = await conversationRepo.addMember(
-        conversationId,
-        userIdToAdd,
-        role
-      );
-
-      return res.status(200).json({
-        success: true,
-        message: "Thêm thành viên thành công",
-        data: updatedConversation,
-      });
     } catch (error) {
-      console.log(error);
-      return res.status(500).json({ error: "Lỗi hệ thống" });
+      console.error(error);
+      return res.status(500).json({ error: "Internal server error" });
     }
   }
 
   async removeMember(req, res) {
     try {
-      const { conversationId, userIdToRemove } = req.body;
-      const { requesterId } = req.params;
+      const { conversationId, memberId } = req.body;
 
-      const conversation = await this.getConversationById(
-        req,
-        res,
-        conversationId
-      );
+      const userInfo = req.session.userInfo;
 
-      if (!conversation.isGroup) {
-        return res
-          .status(400)
-          .json({ error: "Không thể xóa thành viên khỏi chat 1-1" });
+      try {
+        const conversation = await this._mustBeValidConversation(
+          conversationId,
+          true
+        );
+
+        this._mustBeMemberOfConversation(
+          conversation,
+          memberId,
+          "User is not a member of the conversation"
+        );
+
+        this._mustBeLeaderOfConversation(
+          conversation,
+          userInfo.id,
+          "You must be a leader of the conversation to remove a member"
+        );
+
+        const updatedConversation = await ConversationRepository.removeMember(
+          conversationId,
+          memberId
+        );
+
+        return res.status(200).json({
+          success: true,
+          message: "Removed member successfully",
+          data: updatedConversation,
+        });
+      } catch (error) {
+        console.error(error);
+        return res.status(400).json({ error: error.message });
       }
-
-      const isLeader = conversation.members.some(
-        (m) => m.id.equals(requesterId) && m.role === "leader"
-      );
-      if (!isLeader) {
-        return res
-          .status(403)
-          .json({ error: "Chỉ leader mới có quyền xóa thành viên" });
-      }
-
-      const updatedConversation = await conversationRepo.removeMember(
-        conversationId,
-        userIdToRemove
-      );
-
-      return res.status(200).json({
-        success: true,
-        message: "Xóa thành viên thành công",
-        data: updatedConversation,
-      });
     } catch (error) {
-      console.log(error);
-      return res.status(500).json({ error: "Lỗi hệ thống" });
+      console.error(error);
+      return res.status(500).json({ error: "Internal server error" });
     }
   }
 
   async leaveConversation(req, res) {
     try {
       const { conversationId } = req.body;
-      const { userId } = req.params;
 
-      const conversation = await this.getConversationById(
-        req,
-        res,
-        conversationId
-      );
+      const userInfo = req.session.userInfo;
 
-      if (!conversation.isGroup) {
-        return res.status(400).json({ error: "Không thể rời khỏi chat 1-1" });
-      }
+      try {
+        const conversation = await this._mustBeValidConversation(
+          conversationId,
+          true
+        );
 
-      const member = conversation.members.find((m) => m.id.equals(userId));
-      if (!member) {
-        return res
-          .status(400)
-          .json({ error: "Bạn không phải thành viên phòng này" });
-      }
+        const userObj = this._mustBeMemberOfConversation(
+          conversation,
+          userInfo.id,
+          "You are not a member of the conversation"
+        );
 
-      if (member.role === "leader") {
-        const totalLeaders = conversation.members.filter(
-          (m) => m.role === "leader"
+        const numberOfLeader = conversation.members.filter(
+          (member) => member.role == "leader" && member.leftAt == null
         ).length;
-        if (totalLeaders <= 1) {
+
+        const userRole = userObj.role;
+
+        if (userRole == "leader" && numberOfLeader <= 1) {
+          const firstMember = conversation.members.find(
+            (member) =>
+              member.id.toString() != userInfo.id && member.leftAt == null
+          );
+          if (!firstMember) {
+            return res.status(400).json({
+              error:
+                "You are the last member, you can't leave the conversation",
+            });
+          }
+          await ConversationRepository.updateRole(
+            conversationId,
+            firstMember.id,
+            "leader"
+          );
+        }
+        await ConversationRepository.removeMember(conversationId, userInfo.id);
+
+        return res.status(200).json({
+          success: true,
+          message: "Left conversation successfully",
+        });
+      } catch (error) {
+        console.error(error);
+        return res.status(400).json({ error: error.message });
+      }
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+
+  async deleteConversationByMember(req, res) {
+    try {
+      const { conversationId } = req.body;
+
+      const userInfo = req.session.userInfo;
+
+      try {
+        const conversation = await this._mustBeValidConversation(
+          conversationId,
+          false
+        );
+
+        this._mustBeMemberOfConversation(
+          conversation,
+          userInfo.id,
+          "You are not a member of the conversation"
+        );
+
+        await ConversationRepository.deleteConversationByMemberId(
+          conversationId,
+          userInfo.id
+        );
+
+        return res.status(200).json({
+          success: true,
+          message: "Deleted conversation successfully",
+        });
+      } catch (error) {
+        console.error(error);
+        return res.status(400).json({ error: error.message });
+      }
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+
+  async deleteConversationByLeader(req, res) {
+    try {
+      const { conversationId } = req.body;
+
+      const userInfo = req.session.userInfo;
+
+      try {
+        const conversation = await this._mustBeValidConversation(
+          conversationId,
+          true
+        );
+
+        this._mustBeLeaderOfConversation(
+          conversation,
+          userInfo.id,
+          "You are not a leader of the conversation"
+        );
+
+        await ConversationRepository.updateById(conversationId, {
+          isDeleted: true,
+        });
+
+        return res.status(200).json({
+          success: true,
+          message: "Deleted conversation successfully",
+        });
+      } catch (error) {
+        console.error(error);
+        return res.status(400).json({ error: error.message });
+      }
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+  async updateMemberRole(req, res) {
+    try {
+      const { conversationId, memberId, newRole } = req.body;
+
+      const userInfo = req.session.userInfo;
+
+      try {
+        const conversation = await this._mustBeValidConversation(
+          conversationId,
+          true
+        );
+        this._mustBeLeaderOfConversation(
+          conversation,
+          userInfo.id,
+          "You are not a leader of the conversation"
+        );
+        const memberObj = this._mustBeMemberOfConversation(
+          conversation,
+          memberId,
+          "User is not a member of the conversation"
+        );
+
+        const memberRole = memberObj.role;
+
+        if (memberRole == "leader") {
           return res.status(400).json({
-            error:
-              "Bạn là leader cuối cùng, hãy chuyển quyền trước khi rời nhóm",
+            error: "You can't change the role of the leader",
           });
         }
-        await conversationRepo.updateLeaders(conversationId, userId, "remove");
-      }
 
-      await conversationRepo.removeMember(conversationId, userId);
+        const updatedConversation = await ConversationRepository.updateRole(
+          conversationId,
+          memberId,
+          newRole
+        );
 
-      return res.status(200).json({
-        success: true,
-        message: "Rời nhóm thành công",
-      });
-    } catch (error) {
-      console.log(error);
-      return res.status(500).json({ error: "Lỗi hệ thống" });
-    }
-  }
-
-  async deleteConversation(req, res) {
-    try {
-      const { conversationId } = req.body;
-      const { requesterId } = req.params;
-
-      const conversation = await this.getConversationById(
-        req,
-        res,
-        conversationId
-      );
-
-      const isLeader = conversation.members.some(
-        (m) => m.id.equals(requesterId) && m.role === "leader"
-      );
-      if (!isLeader) {
-        return res
-          .status(403)
-          .json({ error: "Chỉ leader mới có quyền xóa nhóm" });
-      }
-
-      await conversationRepo.deleteConversation(conversationId);
-
-      return res.status(200).json({
-        success: true,
-        message: "Xóa nhóm thành công",
-      });
-    } catch (error) {
-      console.log(error);
-      return res.status(500).json({ error: "Lỗi hệ thống" });
-    }
-  }
-
-  async transferLeadership(req, res) {
-    try {
-      const { conversationId, newLeaderId } = req.body;
-      const { requesterId } = req.params;
-
-      const conversation = await this.getConversationById(
-        req,
-        res,
-        conversationId
-      );
-
-      const isLeader = conversation.members.some(
-        (m) => m.id.equals(requesterId) && m.role === "leader"
-      );
-      if (!isLeader) {
-        return res.status(403).json({
-          error: "Chỉ leader mới có quyền chuyển quyền quản lý",
+        return res.status(200).json({
+          success: true,
+          message: "Updated member role successfully",
+          conversation: updatedConversation,
         });
+      } catch (error) {
+        console.error(error);
+        return res.status(400).json({ error: error.message });
       }
-
-      const updatedConversation = await conversationRepo.transferLeadership(
-        conversationId,
-        requesterId,
-        newLeaderId
-      );
-
-      return res.status(200).json({
-        success: true,
-        message: "Chuyển quyền quản lý thành công",
-        data: updatedConversation,
-      });
     } catch (error) {
-      console.log(error);
-      return res.status(500).json({ error: "Lỗi hệ thống" });
+      console.error(error);
+      return res.status(500).json({ error: "Internal server error" });
     }
   }
-
-  async updateRoomName(req, res) {
+  async updateConversationName(req, res) {
     try {
       const { conversationId, newName } = req.body;
-      const { requesterId } = req.params;
 
-      const conversation = await this.getConversationById(
-        req,
-        res,
-        conversationId
-      );
+      const userInfo = req.session.userInfo;
 
-      const isLeader = conversation.members.some(
-        (m) => m.id.equals(requesterId) && m.role === "leader"
-      );
-      if (!isLeader) {
-        return res
-          .status(403)
-          .json({ error: "Chỉ leader mới có quyền đổi tên nhóm" });
+      try {
+        const conversation = await this._mustBeValidConversation(
+          conversationId,
+          true
+        );
+
+        this._mustBeMemberOfConversation(
+          conversation,
+          userInfo.id,
+          "You are not a member of the conversation"
+        );
+        const updatedConversation = await ConversationRepository.updateById(
+          conversationId,
+          {
+            name: newName,
+          }
+        );
+
+        return res.status(200).json({
+          success: true,
+          message: "Updated conversation name successfully",
+          conversation: updatedConversation,
+        });
+      } catch (error) {
+        console.error(error);
+        return res.status(400).json({ error: error.message });
       }
-
-      const updatedConversation = await conversationRepo.updateRoomName(
-        conversationId,
-        newName
-      );
-
-      return res.status(200).json({
-        success: true,
-        message: "Đổi tên nhóm thành công",
-        data: updatedConversation,
-      });
     } catch (error) {
-      console.log(error);
-      return res.status(500).json({ error: "Lỗi hệ thống" });
+      console.error(error);
+      return res.status(500).json({ error: "Internal server error" });
     }
   }
 
-  async addLeader(req, res) {
+  async fetchMessages(req, res) {
     try {
-      const { conversationId, userIdToPromote } = req.body;
-      const { requesterId } = req.params;
+      const { conversationId, limit = 30, skip = 0 } = req.body;
 
-      const conversation = await this.getConversationById(
-        req,
-        res,
-        conversationId
-      );
+      const userInfo = req.session.userInfo;
 
-      if (!conversation.isGroup) {
-        return res.status(400).json({ error: "Chỉ nhóm mới có leader" });
+      try {
+        const conversation = await this._mustBeValidConversation(
+          conversationId,
+          false
+        );
+
+        const userObj = this._mustBeMemberOfConversation(
+          conversation,
+          userInfo.id,
+          "You are not a member of the conversation"
+        );
+
+        const latestDeletedAt = userObj.latestDeletedAt;
+
+        const messages = await MessageRepository.findByConversationIdAndUserId(
+          conversationId,
+          userInfo.id,
+          limit,
+          skip,
+          latestDeletedAt
+        );
+
+        return res.status(200).json({
+          success: true,
+          data: messages,
+        });
+      } catch (error) {
+        console.error(error);
+        return res.status(400).json({ error: error.message });
       }
-
-      const isLeader = conversation.members.some(
-        (m) => m.id.equals(requesterId) && m.role === "leader"
-      );
-      if (!isLeader) {
-        return res
-          .status(403)
-          .json({ error: "Chỉ leader mới có quyền thêm leader" });
-      }
-
-      const targetMember = conversation.members.find((m) =>
-        m.id.equals(userIdToPromote)
-      );
-      if (!targetMember) {
-        return res
-          .status(400)
-          .json({ error: "Người này không phải thành viên" });
-      }
-
-      if (targetMember.role === "leader") {
-        return res.status(400).json({ error: "Người này đã là leader" });
-      }
-
-      const updatedConversation = await conversationRepo.updateMemberRole(
-        conversationId,
-        userIdToPromote,
-        "leader"
-      );
-
-      return res.status(200).json({
-        success: true,
-        message: "Thêm leader thành công",
-        data: updatedConversation,
-      });
     } catch (error) {
-      console.log(error);
-      return res.status(500).json({ error: "Lỗi hệ thống" });
+      console.error(error);
+      return res.status(500).json({ error: "Internal server error" });
     }
   }
 
-  async removeSelfAsLeader(req, res) {
+  async createNewMessage(req, res) {
     try {
-      const { conversationId } = req.body;
-      const { userId } = req.params;
+      const { conversationId, data, type, replyToMessageId = null } = req.body;
 
-      const conversation = await this.getConversationById(
-        req,
-        res,
-        conversationId
-      );
+      // data phải có type là TextPartSchema | [ImagePartSchema] | FilePartSchema
 
-      if (!conversation.isGroup) {
-        return res.status(400).json({ error: "Chỉ nhóm mới có leader" });
+      const userInfo = req.session.userInfo;
+
+      try {
+        const conversation = await this._mustBeValidConversation(
+          conversationId,
+          false
+        );
+
+        this._mustBeMemberOfConversation(
+          conversation,
+          userInfo.id,
+          "You are not a member of the conversation"
+        );
+
+        let messageObj = {
+          conversationId: conversationId,
+          senderId: userInfo.id,
+          replyToMessageId,
+        };
+
+        switch (type) {
+          case "text":
+            messageObj.type = "text";
+            messageObj.content = {};
+            messageObj.content.text = { ...data };
+            break;
+          case "image":
+            messageObj.type = "image";
+            messageObj.content = {};
+            messageObj.content.image = [...data];
+            break;
+          case "file":
+            messageObj.type = "file";
+            messageObj.content = {};
+            messageObj.content.file = { ...data };
+            break;
+          default:
+            return res.status(400).json({ error: "Invalid message type" });
+        }
+
+        const message = await MessageRepository.create(messageObj);
+
+        await ConversationRepository.updateById(conversationId, {
+          latestMessage: message._id,
+        });
+
+        return res.status(200).json({
+          success: true,
+          message: "Message created successfully",
+          data: message,
+        });
+      } catch (error) {
+        console.error(error);
+        return res.status(400).json({ error: error.message });
+      }
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+
+  async createNewMessageByWs({
+    userId,
+    conversationId,
+    data,
+    type,
+    replyToMessageId = null,
+  }) {
+    try {
+      const isValidType = ["text", "image", "file"].includes(type);
+      if (!isValidType) throw new Error("Invalid message type");
+
+      if (
+        Array.isArray(data) &&
+        !data.reduce((a, b) => a && b.type == "image", true)
+      ) {
+        throw new Error("Invalid message data");
+      }
+      if (
+        typeof data === "object" &&
+        !(data.type == "text" || data.type == "file")
+      ) {
+        throw new Error("Invalid message data");
       }
 
-      const isLeader = conversation.members.some(
-        (m) => m.id.equals(userId) && m.role === "leader"
-      );
-      if (!isLeader) {
-        return res.status(403).json({ error: "Bạn không phải leader" });
-      }
-
-      const totalLeaders = conversation.members.filter(
-        (m) => m.role === "leader"
-      ).length;
-      if (totalLeaders <= 1) {
-        return res.status(400).json({ error: "Phải còn ít nhất 1 leader" });
-      }
-
-      const updatedConversation = await conversationRepo.updateMemberRole(
+      const conversation = await this._mustBeValidConversation(
         conversationId,
+        false
+      );
+
+      this._mustBeMemberOfConversation(
+        conversation,
         userId,
-        "member"
+        "You are not a member of the conversation"
       );
 
-      return res.status(200).json({
-        success: true,
-        message: "Bạn đã rời khỏi vị trí leader",
-        data: updatedConversation,
+      let messageObj = {
+        conversationId: conversationId,
+        senderId: userInfo.id,
+        replyToMessageId,
+      };
+
+      switch (type) {
+        case "text":
+          messageObj.type = "text";
+          messageObj.content = {};
+          messageObj.content.text = { ...data };
+          break;
+        case "image":
+          messageObj.type = "image";
+          messageObj.content = {};
+          messageObj.content.image = [...data];
+          break;
+        case "file":
+          messageObj.type = "file";
+          messageObj.content = {};
+          messageObj.content.file = { ...data };
+          break;
+        default:
+          throw new Error("Invalid message type");
+      }
+
+      const message = await MessageRepository.create(messageObj);
+
+      await ConversationRepository.updateById(conversationId, {
+        latestMessage: message._id,
       });
+
+      return message;
     } catch (error) {
-      console.log(error);
-      return res.status(500).json({ error: "Lỗi hệ thống" });
+      console.error(error);
+      throw error;
+    }
+  }
+
+  async editMessage(req, res) {
+    try {
+      const { messageId, newData } = req.body;
+
+      // newData must be string
+
+      const userInfo = req.session.userInfo;
+
+      try {
+        const message = await this._mustBeValidMessage(messageId);
+
+        if (message.type != "text")
+          throw new Error("Cannot edit this type of message");
+
+        this._mustBeOwnerOfMessage(
+          message,
+          userInfo.id,
+          "You are not the owner of this message"
+        );
+
+        const newContent = {
+          text: {
+            type: "text",
+            data: newData,
+          },
+        };
+
+        const updatedMessage = await MessageRepository.updateById(messageId, {
+          content: { ...newContent },
+          isEdited: true,
+        });
+
+        return res.status(200).json({
+          success: true,
+          message: "Message updated successfully",
+          data: updatedMessage,
+        });
+      } catch (error) {
+        console.error(error);
+        return res.status(400).json({ error: error.message });
+      }
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+
+  async deleteMessage(req, res) {
+    try {
+      const { messageId } = req.body;
+
+      const userInfo = req.session.userInfo;
+
+      try {
+        const message = await this._mustBeValidMessage(messageId);
+
+        this._mustBeOwnerOfMessage(
+          message,
+          userInfo.id,
+          "You are not the owner of this message"
+        );
+
+        const updatedMessage = await MessageRepository.updateById(messageId, {
+          isDeleted: true,
+          content: null,
+        });
+
+        return res.status(200).json({
+          success: true,
+          message: "Message deleted successfully",
+          data: updatedMessage,
+        });
+      } catch (error) {
+        console.error(error);
+        return res.status(400).json({ error: error.message });
+      }
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: "Internal server error" });
     }
   }
 }

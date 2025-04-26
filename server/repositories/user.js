@@ -9,6 +9,10 @@ class UserRepository {
     return await User.findById(id);
   }
 
+  async findByIds(ids) {
+    return await User.find({ _id: { $in: ids } });
+  }
+
   async findByEmail(email) {
     return await User.findOne({ email });
   }
