@@ -11,7 +11,7 @@ const db = require("./config/db");
 const session = require("express-session");
 const http = require("http");
 const path = require("path");
-
+const ConversationService = require("./services/conversation");
 const socketIO = require("socket.io");
 
 const PORT = process.env.PORT || 8080;
@@ -19,6 +19,8 @@ const PORT = process.env.PORT || 8080;
 const serverUrl = process.env.SERVER_URL;
 
 const clientUrl = process.env.CLIENT_URL;
+
+const authSecret = process.env.AUTH_SECRET;
 
 db.connect();
 
@@ -40,7 +42,7 @@ const options = {
       },
     ],
   },
-  apis: ["./routes/*.js"],
+  apis: ["./routes/*.js", "./models/*.js"],
 };
 const specs = swaggerJsdoc(options);
 
@@ -55,15 +57,19 @@ app.use(
     origin: clientUrl,
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
   })
 );
 
 /* Session */
 app.use(
   session({
-    secret: "anysecret",
+    secret: authSecret,
     saveUninitialized: true,
     resave: true,
+    cookie: {
+      secure: false,
+    },
   })
 );
 
@@ -82,6 +88,8 @@ app.get("/", (req, res) => {
 
 route(app);
 
+// ----------------------------------deploy----------------------------------
+
 const server = http.createServer(app);
 
 const io = socketIO(server, {
@@ -89,24 +97,69 @@ const io = socketIO(server, {
     origin: clientUrl,
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
   },
 });
 
 io.sockets.on("connection", (client) => {
-  client.on("join", (roomId) => {
-    // roomId = userId or groupId
-    /* handle before join */
-    io.sockets.in(room).emit("join", room);
+  const session = client.request.session;
 
-    client.join(room);
+  if (!session || !session.userInfo) {
+    client.emit("unauthorized");
+    console.error("Unauthorized client attempted to connect");
+    client.disconnect();
+    return;
+  }
 
-    client.emit("joined", room, socket.id);
+  const userInfo = session.userInfo;
+
+  client.on("setup", async ({ page = 1, limit = 30 }) => {
+    try {
+      client.join(userInfo.id);
+
+      const conversations = await ConversationService.fetchConversationsByWs({
+        userId: userInfo.id,
+        page,
+        limit,
+      });
+      conversations.forEach((conversation) => {
+        const userObj = conversation.members.find(
+          (member) => member.id == userInfo.id
+        );
+        if (userObj.leftAt == null) client.join(conversation._id.toString());
+      });
+      client.emit("connected");
+    } catch (error) {
+      console.error(error);
+      client.emit("error", error);
+    }
   });
-  client.on("event", (data) => {
-    /* … */
-  });
+
+  client.on("typing", (roomId) => client.in(roomId).emit("typing"));
+
+  client.on("stopTyping", (roomId) => client.in(roomId).emit("stopTyping"));
+
+  client.on(
+    "newMessage",
+    async ({ conversationId, data, type, replyToMessageId = null }) => {
+      try {
+        const message = await ConversationService.createNewMessageByWs({
+          userId: userInfo.id,
+          conversationId,
+          data,
+          type,
+          replyToMessageId,
+        });
+        client.in(conversationId).emit("receiveMessage", message);
+      } catch (error) {
+        console.error(error);
+        client.emit("error", error);
+      }
+    }
+  );
+
   client.on("disconnect", () => {
-    /* … */
+    console.log(`Client disconnected: ${client.id}`);
   });
 });
 

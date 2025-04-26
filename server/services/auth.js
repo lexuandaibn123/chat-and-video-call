@@ -1,4 +1,3 @@
-const { validationResult } = require("express-validator"); // For validation
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const UserRepository = require("../repositories/user");
@@ -9,10 +8,6 @@ const clientUrl = process.env.CLIENT_URL;
 class AuthService {
   async login(req, res) {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ error: errors.array() });
-      }
       const { email, password } = req.body;
 
       const user = await UserRepository.findByEmail(email);
@@ -40,22 +35,23 @@ class AuthService {
         .json({ success: true, message: "Login successful" });
     } catch (error) {
       console.log(error);
-      return res.status(500).json({ error: "Internal server error" });
+      return res.status(500).json({ error: String(error) });
     }
   }
 
   async register(req, res) {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ error: errors.array() });
-      }
       const { email, password, fullName } = req.body;
 
+      const isExistingUser = await UserRepository.findByEmail(email);
+
+      if (isExistingUser) {
+        return res.status(400).json({ error: "User already exists" });
+      }
       const hashedPassword = await bcrypt.hash(password, 10);
       const verificationToken = crypto.randomBytes(20).toString("hex");
 
-      const user = await UserRepository.create({
+      await UserRepository.create({
         fullName,
         email,
         password: hashedPassword,
@@ -77,7 +73,7 @@ class AuthService {
         .json({ success: true, message: "Registration successful" });
     } catch (error) {
       console.error(error);
-      return res.status(500).json({ error: "Internal server error" });
+      return res.status(500).json({ error: String(error) });
     }
   }
 
@@ -88,7 +84,6 @@ class AuthService {
       if (!token) {
         return res.status(400).json({ error: "Invalid token" });
       }
-      console.log("Verification token: ", token);
       const user = await UserRepository.findByVerificationToken(token);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
@@ -106,16 +101,12 @@ class AuthService {
         .status(200)
         .json({ success: true, message: "Email verification successful" });
     } catch (error) {
-      return res.status(500).json({ error: "Internal server error" });
+      return res.status(500).json({ error: String(error) });
     }
   }
 
   async resendVerificationEmail(req, res) {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ error: errors.array() });
-      }
       const { email } = req.body;
 
       const user = await UserRepository.findByEmail(email);
@@ -143,16 +134,12 @@ class AuthService {
         .status(200)
         .json({ success: true, message: "Verification email sent" });
     } catch (error) {
-      return res.status(500).json({ error: "Internal server error" });
+      return res.status(500).json({ error: String(error) });
     }
   }
 
   async forgotPassword(req, res) {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ error: errors.array() });
-      }
       const { email } = req.body;
 
       const user = await UserRepository.findByEmail(email);
@@ -181,16 +168,12 @@ class AuthService {
         .status(200)
         .json({ success: true, message: "Password reset successful" });
     } catch (error) {
-      return res.status(500).json({ error: "Internal server error" });
+      return res.status(500).json({ error: String(error) });
     }
   }
 
   async resetPassword(req, res) {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ error: errors.array() });
-      }
       const { token, password } = req.body;
 
       const user = await UserRepository.findByResetToken(token);
@@ -210,16 +193,12 @@ class AuthService {
         .status(200)
         .json({ success: true, message: "Password reset successful" });
     } catch (error) {
-      return res.status(500).json({ error: "Internal server error" });
+      return res.status(500).json({ error: String(error) });
     }
   }
 
   async changePassword(req, res) {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ error: errors.array() });
-      }
       const { email, oldPassword, newPassword } = req.body;
 
       const user = await UserRepository.findByEmail(email);
@@ -239,7 +218,7 @@ class AuthService {
         .status(200)
         .json({ success: true, message: "Password change successful" });
     } catch (error) {
-      return res.status(500).json({ error: "Internal server error" });
+      return res.status(500).json({ error: String(error) });
     }
   }
 
@@ -256,7 +235,7 @@ class AuthService {
       });
     } catch (error) {
       console.log(error);
-      return res.status(500).json({ error: "Internal server error" });
+      return res.status(500).json({ error: String(error) });
     }
   }
 
@@ -267,7 +246,7 @@ class AuthService {
         .json({ success: true, userInfo: req.session.userInfo });
     } catch (error) {
       console.log(error);
-      return res.status(500).json({ error: "Internal server error" });
+      return res.status(500).json({ error: String(error) });
     }
   }
 }

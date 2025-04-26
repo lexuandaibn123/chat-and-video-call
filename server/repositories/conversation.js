@@ -1,103 +1,127 @@
 const Conversation = require("../models/conversation");
-
 class ConversationRepository {
   async create(data) {
     return await Conversation.create(data);
   }
 
   async findById(id) {
-    return await Conversation.findById(id).populate("members");
+    return await Conversation.findOne({ _id: id, isDeleted: false })
+      .populate(
+        "members.id",
+        "-password -verificationToken -resetToken -resetTokenExpiry"
+      )
+      .populate("latestMessage");
   }
 
-  async findByName(name, page = 1, limit = 10) {
+  async updateById(id, data) {
+    return await Conversation.findByIdAndUpdate(id, { ...data }, { new: true });
+  }
+
+  async findByName(userId, name, page = 1, limit = 10) {
     return await Conversation.find({
       name: { $regex: name, $options: "i" },
-    })
-      .skip((page - 1) * limit) 
-      .limit(limit) 
-      .populate("members");
-  }
-
-  async getRoomByUserId(userId, page = 1, limit = 10) {
-    return await Conversation.find({ "members.id": userId })
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .populate("members.id");
-  }
-
-  async addMember(roomId, userObj) {
-    return await Conversation.findByIdAndUpdate(
-      roomId,
-      { $addToSet: { members: userObj } },
-      { new: true }
-    );
-  }
-
-  async removeMember(roomId, userId) {
-    return await Conversation.findByIdAndUpdate(
-      roomId,
-      { $pull: { members: { id: userId } } },
-      { new: true }
-    );
-  }
-
-  async setCallingStatus(roomId, isCalling) {
-    return await Conversation.findByIdAndUpdate(
-      roomId,
-      { isCalling, updatedAt: new Date() },
-      { new: true }
-    );
-  }
-  async  updateLeaders(conversationId, userId, action) {
-    const update = action === "remove"
-      ? { $set: { "members.$[elem].role": "member" } }
-      : { $set: { "members.$[elem].role": "leader" } };
-  
-    const options = {
-      arrayFilters: [{ "elem.id": userId }],
-      new: true,
-    };
-  
-    return await Conversation.findByIdAndUpdate(conversationId, update, options);
-  }
-  
-  async transferLeadership(conversationId, requesterId, newLeaderId) {
-    return await Conversation.findOneAndUpdate(
-      { _id: conversationId },
-      {
-        $set: {
-          "members.$[from].role": "member",
-          "members.$[to].role": "leader",
+      members: {
+        $elemMatch: {
+          id: userId,
         },
       },
-      {
-        arrayFilters: [
-          { "from.id": requesterId },
-          { "to.id": newLeaderId },
+      isDeleted: false,
+    })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .populate(
+        "members.id",
+        "-password -verificationToken -resetToken -resetTokenExpiry"
+      )
+      .populate("latestMessage");
+  }
+
+  async findByUserId(userId, page = 1, limit = 10) {
+    return Conversation.find({
+      isDeleted: false,
+      members: {
+        $elemMatch: {
+          id: userId,
+        },
+      },
+    })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .populate(
+        "members.id",
+        "-password -verificationToken -resetToken -resetTokenExpiry"
+      )
+      .populate("latestMessage")
+      .sort({ last_updated: -1 });
+  }
+
+  async findConversationBetweenUsers(userId1, userId2) {
+    const conversation = await Conversation.findOne({
+      isGroup: false,
+      isDeleted: false,
+      members: {
+        $size: 2,
+        $all: [
+          { $elemMatch: { id: userId1 } },
+          { $elemMatch: { id: userId2 } },
         ],
-        new: true,
-      }
+      },
+    });
+
+    return conversation;
+  }
+
+  async addMember(conversationId, userObj) {
+    return await Conversation.findByIdAndUpdate(
+      conversationId,
+      { $push: { members: userObj } },
+      { new: true }
     );
   }
-  async updateMemberRole(conversationId, userId, newRole) {
+
+  async removeMember(conversationId, userId) {
+    const conversation = await this.findById(conversationId);
+    const memberIndex = conversation.members.findIndex(
+      (member) => member.id.toString() === userId.toString()
+    );
+
+    if (memberIndex !== -1) {
+      conversation.members[memberIndex].leftAt = new Date();
+      await conversation.save();
+    }
+    return conversation;
+  }
+
+  async updateRole(conversationId, userId, newRole) {
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation) {
+      throw new Error("Conversation not found");
+    }
+
+    const member = conversation.members.find(
+      (member) => member.id.toString() === userId.toString() && !member.leftAt
+    );
+    if (!member) {
+      throw new Error("Member not found or has been deleted");
+    }
+
+    member.role = newRole;
+    await conversation.save();
+    return conversation;
+  }
+
+  async deleteConversationByMemberId(conversationId, userId) {
     return await Conversation.findByIdAndUpdate(
       conversationId,
       {
-        $set: { "members.$[elem].role": newRole },
+        $set: {
+          "members.$[elem].leftAt": new Date(),
+        },
       },
       {
         arrayFilters: [{ "elem.id": userId }],
         new: true,
       }
-    );
-  }
-  
-  
-  async updateRoomName(roomId, newName) {
-    return await Conversation.findByIdAndUpdate(
-      roomId,
-      { name: newName, updatedAt: new Date() },
-      { new: true }
     );
   }
 }
