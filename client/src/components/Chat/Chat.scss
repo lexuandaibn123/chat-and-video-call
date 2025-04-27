@@ -204,9 +204,29 @@
   border-radius: $border-radius-lg;
   display: flex;
   justify-content: center;
-  text-align: center;
+  text-align: center; // <-- Đây là text-align cho placeholder "Select a conversation..."
   flex-direction: column;
-  overflow: hidden;
+  overflow: hidden; // Quan trọng để ẩn nội dung tràn ra
+
+  // Style cho placeholder khi chưa chọn chat
+  &.placeholder {
+       display: flex; // Cần display flex để căn giữa icon và text
+       flex-direction: column; // Xếp icon và text theo cột
+       align-items: center; // Căn giữa ngang
+       justify-content: center; // Căn giữa dọc
+       color: $text-muted-color; // Màu chữ xám
+       font-size: $font-size-large; // Font size lớn hơn
+       .placeholder-icon {
+           font-size: 4em; // Icon rất lớn
+           margin-bottom: $spacing-lg; // Khoảng cách giữa icon và text
+       }
+       span { // Style cho text placeholder
+           font-weight: $font-weight-medium;
+       }
+       // Đảm bảo không bị ảnh hưởng bởi các style khác
+       .chat-header, .message-list-container, .chat-input-area { display: none; }
+  }
+
 
   // --- Header ---
   .chat-header {
@@ -232,6 +252,7 @@
       .name-status {
         display: flex;
         flex-direction: column;
+        text-align: left; // Đảm bảo text-align cho name/status là left
 
         .contact-name {
           font-weight: $font-weight-bold;
@@ -267,13 +288,14 @@
     }
   }
 
-  // --- Khu vực tin nhắn ---
+  // --- Khu vực hiển thị tin nhắn ---
   .message-list-container {
     flex-grow: 1; // Chiếm hết không gian dọc còn lại
     overflow-y: auto; // Cho phép cuộn tin nhắn
     padding: $spacing-lg;
     display: flex;
     flex-direction: column; // Tin nhắn xếp chồng lên nhau
+    // gap: $spacing-xs; // Khoảng cách giữa các message bubble wrapper (tùy chọn, có thể dùng margin-bottom trên wrapper)
 
     // --- Custom scrollbar (optional) ---
     &::-webkit-scrollbar { width: 8px; }
@@ -283,51 +305,156 @@
 
 
     .message-bubble-wrapper {
-      display: flex;
-      flex-direction: column;
-      margin-bottom: $spacing-lg;
+      display: flex; // Sử dụng flex để xếp bubble và timestamp
+      // flex-direction: column; // Giữ mặc định column để xếp bubble và timestamp
+      margin-bottom: $spacing-md; // <-- Giảm margin-bottom để gần hơn
       max-width: 65%; // Giới hạn chiều rộng bubble
       position: relative; // Cho timestamp và status dot
+       // Loại bỏ text-align trên wrapper, để bubble và timestamp căn chỉnh riêng
 
       // Bubble tin nhắn nhận (bên trái)
       &.received {
-        align-self: flex-start;
+        align-self: flex-start; // Căn trái wrapper trong container flex column
+        // margin-right: auto; // Tùy chọn, align-self thường đủ
+
+         // Căn chỉnh nội dung bên trong wrapper (bubble, timestamp) sang trái
+        align-items: flex-start;
+
         .message-bubble {
           background-color: $container-bg-color; // Màu xám nhạt
           color: $text-color;
-          border-radius: $border-radius-md $border-radius-md $border-radius-md $border-radius-sm; // Bo góc khác ở dưới trái
-          margin-bottom: 4px;
+          border-radius: $border-radius-md $border-radius-md $border-radius-md $border-radius-sm;
+          padding: $spacing-sm $spacing-md;
+          word-wrap: break-word;
+  
+          .message-text {
+            margin: 0;
+            line-height: $line-height-base;
+            font-size: $font-size-base;
+             &:not(:last-child) {
+                margin-bottom: math.div($spacing-xs, 2) ;
+             }
+          }
+  
+          .edited-indicator {
+            font-size: 9px;
+            color: color.adjust($text-muted-color, $lightness: -10%);
+            margin-left: $spacing-xs;
+            vertical-align: bottom;
+            white-space: nowrap;
+             position: relative;
+             bottom: -2px;
+          }
+  
+          /* --- Styles cho các loại nội dung khác TEXT --- */
+  
+          .message-image-container {
+              display: flex; // Dùng flex để xếp ảnh trong container
+              flex-direction: column; // Xếp ảnh chồng lên nhau nếu có nhiều
+              gap: $spacing-xs; // Khoảng cách giữa các ảnh
+              margin-top: $spacing-xs; // Khoảng cách trên nếu có text/tên người gửi
+              // Nếu muốn xếp ảnh cạnh nhau: flex-direction: row; flex-wrap: wrap;
+          }
+  
+          .message-image {
+              max-width: 100%; // Ảnh không vượt quá chiều rộng bubble
+              max-height: 200px; // Giới hạn chiều cao để không chiếm quá nhiều diện tích
+              object-fit: cover; // Đảm bảo tỷ lệ ảnh khi resize
+              border-radius: $border-radius-sm; // Bo góc ảnh
+              display: block; // Đảm bảo ảnh là block element cho margin/width
+               // Optional: Thêm shadow/border nhẹ
+               // box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+          }
+  
+          .message-file-link {
+            display: inline-flex; // Hoặc flex để căn icon và text
+            align-items: center;
+            gap: $spacing-xs; // Khoảng cách giữa icon và text
+            color: $primary-color; // Màu link
+            text-decoration: none;
+            font-weight: $font-weight-medium;
+            padding: $spacing-xs $spacing-sm; // Thêm padding nhẹ cho vùng bấm
+            background-color: color.adjust($primary-color, $alpha: -0.95); // Nền nhẹ
+            border-radius: $border-radius-sm;
+            max-width: 100%; // Đảm bảo link không tràn bubble
+            overflow: hidden; // Hide overflowing text
+            text-overflow: ellipsis; // Show ellipsis for long names
+            white-space: nowrap; // Prevent file name from wrapping inside the link element
+  
+            &:hover { text-decoration: underline; }
+  
+            .fas { // Icon styles
+                font-size: $font-size-large; // Icon size
+                color: $primary-color; // Icon color
+            }
+  
+            .file-name {
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+          }
         }
+         // Timestamp bên trái
         .message-timestamp {
+          left: 0; // Đặt timestamp ở vị trí 0px so với lề trái của wrapper
+          right: auto; // Bỏ thuộc tính right
           text-align: left;
-          margin-left: $spacing-sm;
+          margin-left: 0; // Bỏ margin-left cũ
         }
+         // Nếu có info người gửi trong nhóm, căn chỉnh nó ở đây
       }
 
       // Bubble tin nhắn gửi (bên phải)
       &.sent {
-        align-self: flex-end; // Căn phải
-        flex-direction: row-reverse; // Đảo ngược thứ tự bubble và dot
+        align-self: flex-end; // Căn phải wrapper trong container flex column
+        // margin-left: auto; // Tùy chọn, align-self thường đủ
+
+        // Căn chỉnh nội dung bên trong wrapper (bubble, timestamp) sang phải
+        align-items: flex-end;
 
         .message-bubble {
           background-color: $primary-color; // Màu tím theo thiết kế
           color: $secondary-color; // Chữ trắng
           border-radius: $border-radius-md $border-radius-md $border-radius-sm $border-radius-md; // Bo góc khác ở dưới phải
-          margin-bottom: 4px;
+           // Bỏ margin-bottom cũ
         }
+        // Timestamp bên phải
         .message-timestamp {
+          right: 0; // Đặt timestamp ở vị trí 0px so với lề phải của wrapper
+          left: auto; // Bỏ thuộc tính left
           text-align: right; // Đặt timestamp bên trái bubble
-          margin-right: $spacing-sm;
+          margin-right: 0; // Bỏ margin-right cũ
         }
-        .message-status-dot {
-          background-color: $primary-color; // Màu tím giống bubble
-          width: 6px;
-          height: 6px;
-          border-radius: 50%;
-          align-self: flex-end; // Căn dưới cùng của wrapper
-          margin-left: $spacing-xs; // Khoảng cách với bubble
-          margin-bottom: 5px; // Điều chỉnh vị trí dọc
+        // Bỏ status dot cũ nếu không sử dụng
+        // .message-status-dot { ... }
+      }
+
+      &.deleted { // Style for deleted messages
+        opacity: 0.7; // Make it slightly transparent
+        // Make it center aligned visually regardless of sent/received class?
+        // align-self: center; // Optional: Căn giữa tin nhắn bị xóa
+        width: fit-content; // Optional: Chiều rộng vừa nội dung
+        // margin-left: auto; // Optional: Căn giữa thủ công
+        // margin-right: auto; // Optional: Căn giữa thủ công
+
+        .message-bubble.deleted-message {
+          background-color: $container-bg-color; // Light grey
+          color: $text-muted-color; // Muted text
+          font-style: italic;
+          border: 1px dashed $input-border-color;
+          // Remove padding or adjust slightly
+          padding: $spacing-sm $spacing-md;
+          display: flex;
+          align-items: center;
+          gap: $spacing-xs;
+          border-radius: $border-radius-md; // Bo góc cho tin nhắn bị xóa
+          .fas { font-size: $font-size-base; } // Icon size
         }
+         // Đặt timestamp dưới tin nhắn bị xóa ở giữa hoặc theo hướng cũ
+         .message-timestamp {
+             left: 50%; transform: translateX(-50%); // Căn giữa timestamp
+         }
       }
 
       .message-bubble {
@@ -343,6 +470,30 @@
               margin-bottom: math.div($spacing-xs, 2) ;
            }
         }
+
+        .edited-indicator { // Style for edited indicator
+          font-size: 9px;
+          color: color.adjust($text-muted-color, $lightness: -10%); // Màu đậm hơn chút so với timestamp
+          margin-left: $spacing-xs;
+          vertical-align: bottom; // Align to bottom of text line
+          white-space: nowrap;
+           position: relative; // Can position absolutely if needed
+           bottom: -2px; // Adjust position slightly
+        }
+
+        // Styles for different content types (placeholders)
+        .file-message-link {
+          display: flex;
+          align-items: center;
+          gap: $spacing-xs;
+          color: $primary-color; // Link color
+          text-decoration: none;
+          font-weight: $font-weight-medium;
+
+          &:hover { text-decoration: underline; }
+
+          .fas { font-size: $font-size-large; } // Icon size
+        }
       }
 
       .message-timestamp {
@@ -351,6 +502,7 @@
          font-size: 10px;
          color: $text-muted-color;
          white-space: nowrap;
+         // Left/right position defined in .received / .sent
       }
     }
   }
@@ -385,13 +537,20 @@
          transform: rotate(45deg); // Xoay icon kẹp giấy
       }
       // Nút mic/send cuối cùng
-      &.mic-button {
+      &.send-button { // <-- Đổi tên class từ .mic-button sang .send-button
          background-color: $primary-color; // Nền tím
          color: $secondary-color; // Icon trắng
          margin-left: $spacing-sm;
-         &:hover {
+         &:hover:not(:disabled) {
             background-color: color.adjust($primary-color, $lightness: -5%);
          }
+          &:disabled {
+              opacity: 0.5;
+              cursor: not-allowed;
+          }
+          .fas.fa-spinner {
+              font-size: 1em; // Giữ kích thước spinner bằng với icon gửi
+          }
       }
     }
 
@@ -409,6 +568,11 @@
       &::placeholder {
         color: $text-muted-color;
       }
+       &:disabled {
+            cursor: not-allowed;
+            opacity: 0.8;
+            // background-color: $container-bg-color; // Optional: Thêm nền xám khi disabled
+       }
     }
   }
 }
@@ -458,10 +622,40 @@
         padding: $spacing-xs;
         border-radius: 50%;
         transition: color $transition-fast ease-out;
-        &:hover {
+        &:hover:not(:disabled) { // Add not(:disabled)
           color: $error-color; // Màu đỏ khi hover nút đóng
           background-color: $container-bg-color;
         }
+         &:disabled { opacity: 0.5; cursor: not-allowed; } // Add disabled style
+      }
+
+      .group-name-edit { // Style for the name edit mode in header
+        display: flex;
+        align-items: center;
+        flex-grow: 1;
+        margin-right: $spacing-md;
+
+        input[type="text"] {
+            flex-grow: 1;
+            padding: $spacing-xs $spacing-sm;
+            border: 1px solid $input-border-color;
+            border-radius: $border-radius-sm;
+            font-size: $font-size-base; // Smaller font for edit mode
+            margin-right: $spacing-sm;
+        }
+        .icon-button {
+            font-size: $font-size-base; // Smaller icon buttons
+            padding: $spacing-xs;
+        }
+      }
+
+      .edit-name-button { // Style for the edit icon button
+        font-size: $font-size-base;
+        padding: $spacing-xs;
+        margin-left: $spacing-sm;
+        color: $text-muted-color;
+        &:hover:not(:disabled) { color: $primary-color; } // Add not(:disabled)
+         &:disabled { opacity: 0.5; cursor: not-allowed; } // Add disabled style
       }
     }
 
@@ -523,10 +717,15 @@
             padding: $spacing-sm 0;
             border-bottom: 1px solid $container-bg-color; // Đường kẻ nhẹ giữa các thành viên
             &:last-child { border-bottom: none; } // Bỏ đường kẻ cuối cùng
+             // Add hover effect
+             &:hover {
+                background-color: $container-bg-color;
+             }
+
 
             .avatar.small {
-              width: 35px;
-              height: 35px;
+              width: 30px;
+              height: 30px;
               border-radius: 50%;
               object-fit: cover;
               margin-right: $spacing-md;
@@ -536,19 +735,28 @@
             .member-name {
               flex-grow: 1;
               color: $text-color;
-              font-size: $font-size-base;
-              font-weight: $font-weight-bold;
+              font-size: $font-size-base; // Increase font size for better readability
+              font-weight: $font-weight-medium; // Adjust font weight
+              // Add space for roles/you/left indicators
+              span { font-weight: $font-weight-normal; font-size: $font-size-small; color: $text-muted-color; margin-left: $spacing-xs; }
             }
 
             .member-actions {
               display: flex;
               gap: $spacing-xs;
 
-              .icon-button.small {
-                 font-size: 16px;
-                 padding: $spacing-xs;
-                 &.warning { color: $error-color; } // Màu đỏ cho xoá
-                 &.primary { color: $primary-color; } // Màu chính cho đổi leader
+              .icon-button.small { // Style for small action buttons
+                font-size: 14px; // Smaller icon size
+                padding: $spacing-xs;
+                border-radius: 50%;
+                transition: background-color $transition-fast ease-out;
+                &:hover:not(:disabled) {
+                    background-color: $container-bg-color;
+                }
+                 &.warning:hover:not(:disabled) { color: $error-color; }
+                 &.primary:hover:not(:disabled) { color: $primary-color; }
+                 &.secondary:hover:not(:disabled) { color: $text-color; }
+                 &:disabled { opacity: 0.5; cursor: not-allowed; }
               }
             }
           }
@@ -578,15 +786,21 @@
                   border: 1px solid $input-border-color;
                   border-radius: $border-radius-md;
                   font-size: $font-size-base;
+                   &:disabled { opacity: 0.8; cursor: not-allowed; }
               }
               button {
                   background-color: $primary-color;
                   color: $secondary-color;
                   border: none;
-                  padding: $spacing-sm $spacing-md;
                   border-radius: $border-radius-md;
                   cursor: pointer;
                   transition: background-color $transition-fast ease-out;
+                  display: flex; // Use flex to center icon/spinner
+                  align-items: center;
+                  justify-content: center;
+                  width: 35px; // Fixed width for button
+                  height: 35px; // Fixed height for button
+                  padding: 0; // Remove padding
                   &:hover:not(:disabled) {
                       background-color: color.adjust($primary-color, $lightness: -5%);
                   }
@@ -605,30 +819,29 @@
                margin-bottom: $spacing-md;
 
                .search-result-item {
-                   display: flex;
-                   align-items: center;
-                   padding: $spacing-sm $spacing-md;
-                   cursor: pointer;
-                   border-bottom: 1px solid $container-bg-color;
-                   transition: background-color $transition-fast ease-out;
+                  display: flex;
+                  align-items: center;
+                  padding: $spacing-sm $spacing-md;
+                  cursor: pointer;
+                  border-bottom: 1px solid $container-bg-color;
+                  transition: background-color $transition-fast ease-out;
 
-                   &:last-child { border-bottom: none; }
+                  &:last-child { border-bottom: none; }
 
-                   &:hover {
-                       background-color: $container-bg-color;
-                   }
-                   &.selected {
-                       background-color: color.adjust($primary-color, $alpha: -0.9); // Nền xanh nhạt khi chọn
-                   }
+                  &:hover {
+                      background-color: $container-bg-color;
+                  }
+                  &.selected {
+                      background-color: color.adjust($primary-color, $alpha: -0.9); // Nền xanh nhạt khi chọn
+                  }
 
-                   .avatar.tiny {
-                        width: 25px;
-                        height: 25px;
-                        border-radius: 50%;
-                        object-fit: cover;
-                        margin-right: $spacing-sm;
-                   }
-               }
+                  .avatar.tiny {
+                    width: 20px; // Even smaller avatar in search results
+                    height: 20px;
+                    margin-right: $spacing-sm; // Space between avatar and name
+                  }
+                  span { font-size: $font-size-base; } // Match member name font size
+                  }
            }
 
            .add-user-confirm-button {
@@ -663,6 +876,7 @@
          color: $primary-color;
          text-align: center;
          margin-top: $spacing-md;
+         .fas.fa-spinner { margin-left: $spacing-xs; } // Khoảng cách icon spinner
       }
 
       .action-error {
@@ -671,31 +885,55 @@
          margin-top: $spacing-md;
       }
 
-      .leave-group-section, .delete-group-section {
-           margin-top: $spacing-lg;
-           text-align: center;
-
-           .button { // Styles cho các button chung (có thể định nghĩa ở chỗ khác)
-                padding: $spacing-sm $spacing-md;
-                border-radius: $border-radius-md;
-                cursor: pointer;
-                font-size: $font-size-base;
-                &.secondary {
-                     background-color: $container-bg-color;
-                     color: $text-color;
-                     border: 1px solid $input-border-color;
-                     &:hover {
-                          background-color: color.adjust($container-bg-color, $lightness: -5%);
-                     }
-                }
-                &.warning { color: $error-color; }
-                &.danger { background-color: $error-color; color: $secondary-color; border: none; }
-           }
+      .group-actions-footer { // Container for leave/delete buttons
+        display: flex;
+        gap: $spacing-md; // Space between buttons
+        justify-content: center; // Center the buttons
+        margin-top: $spacing-lg;
+        padding-top: $spacing-lg;
+        border-top: 1px solid $input-border-color; // Separator
       }
+
+      .button {
+        // ... (Existing button styles) ...
+        padding: $spacing-sm $spacing-md;
+        border-radius: $border-radius-md;
+        cursor: pointer;
+        font-size: $font-size-base;
+        font-weight: $font-weight-medium;
+        transition: background-color $transition-fast ease-out, color $transition-fast ease-out, border-color $transition-fast ease-out;
+        &:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        &.secondary {
+             background-color: $container-bg-color;
+             color: $text-color;
+             border: 1px solid $input-border-color;
+             &:hover:not(:disabled) {
+                  background-color: color.adjust($container-bg-color, $lightness: -5%);
+             }
+             &.warning { color: $error-color; } // Text color red for warning secondary
+        }
+        &.danger {
+             background-color: $error-color;
+             color: $secondary-color;
+             border: none;
+             &:hover:not(:disabled) {
+                  background-color: color.adjust($error-color, $lightness: -5%);
+             }
+        }
+      }
+
+      // Remove the redundant .leave-group-section, .delete-group-section rules if using .group-actions-footer
+      // .leave-group-section, .delete-group-section {
+      //      margin-top: $spacing-lg;
+      //      text-align: center;
+      //      .button { ... }
+      // }
 
     }
   }
 }
+
 
 // --- Responsive Anpassungen (Beispiel) ---
 @media (max-width: $breakpoint-medium) {
@@ -713,7 +951,9 @@
     }
     .active-chat-panel {
        display: none; // ẨN mặc định
+       &.placeholder { display: none; } // Ẩn placeholder trên mobile khi chỉ hiện list
     }
+
 
     // --- State khi chat active (class chat-active-mobile được thêm bởi JS) ---
     &.chat-active-mobile {
@@ -763,15 +1003,21 @@
       border-radius: 0; // Bỏ bo góc
         // Nếu container đã có padding thì bỏ padding ở đây, nếu không thì thêm padding cho body
       .settings-body {
-          padding: $spacing-md;
+        padding: $spacing-lg; // Ensure padding is applied if no page padding
+        .group-actions-footer {
+            flex-direction: column; // Stack buttons vertically on mobile
+            gap: $spacing-sm;
+        }
+        .button { width: 100%; } // Make buttons full width
       }
       .settings-header {
           padding: $spacing-sm $spacing-md;
       }
     }
-  } 
+  }
 }
 
+// Style cho loading messages và no messages
 .active-chat-panel {
   .message-list-container {
       .loading-messages, .no-messages {

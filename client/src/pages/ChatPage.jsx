@@ -1,630 +1,1011 @@
-// src/pages/ChatPage.jsx (using sample data version)
+// src/pages/ChatPage.jsx
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ConversationListPanel from '../components/Chat/ConversationListPanel';
 import ChatWindow from '../components/Chat/ChatWindow';
-import ChatSettingsOverlay from '../components/Chat/ChatSettingsOverlay'; // <<< Import overlay component
-// import { sendMessageApi, getMessagesByRoomIdApi, getLastMessagesApi } from '../api/messages'; // <<< Comment out API imports
-// import { getMyRoomsApi } from '../api/rooms'; // <<< Comment out API imports
+import ChatSettingsOverlay from '../components/Chat/ChatSettingsOverlay';
+
+// <<< Cập nhật Import API functions >>>
+import {
+    createConversationApi,
+    getMyRoomsApi,
+    searchConversationsByNameApi,
+    addNewMemberApi,
+    removeMemberApi,
+    updateMemberRoleApi,
+    leaveConversationApi,
+    deleteConversationMemberApi,
+    deleteGroupApi,
+    updateConversationNameApi,
+    getMessagesByRoomIdApi,
+    sendMessageApi,
+    editMessageApi,
+    deleteMessageApi,
+} from '../api/conversations';
+
+import { searchUsersApi, getUserDetailsApi } from '../api/users';
+import { infoApi } from '../api/auth';
+
 import '../components/Chat/Chat.scss';
 
-// --- Dữ liệu mẫu để hiển thị giao diện ---
-// Thêm trường 'members' và 'leader' vào dữ liệu mẫu cho group
-// Giả định members là một mảng các object { _id, name, avatar }
-// Giả định có 3 user mẫu: self-user-id, user-alice-id, user-bob-id, user-charlie-id, user-david-id
-const sampleUsers = [
-    { _id: 'self-user-id', name: 'You', avatar: 'https://via.placeholder.com/150/787878/FFFFFF?text=You' },
-    { _id: 'user-alice-id', name: 'Alice Wonderland', avatar: 'https://via.placeholder.com/150/33C3FF/FFFFFF?text=Alice' },
-    { _id: 'user-bob-id', name: 'Bob The Builder', avatar: 'https://via.placeholder.com/150/FFFF33/000000?text=Bob' },
-    { _id: 'user-charlie-id', name: 'Charlie Chaplin', avatar: 'https://via.placeholder.com/150/8A33FF/FFFFFF?text=Charlie' },
-    { _id: 'user-david-id', name: 'David Doe', avatar: 'https://via.placeholder.com/150/FF8A33/FFFFFF?text=David' },
-    { _id: 'user-eve-id', name: 'Eve Adams', avatar: 'https://via.placeholder.com/150/33FFA1/FFFFFF?text=Eve' },
-];
-
-// Helper để tìm user theo ID trong sampleUsers
-const findSampleUser = (userId) => sampleUsers.find(u => u._id === userId);
-
-const sampleConversations = [
-    {
-        id: 'room-1',
-        type: 'group',
-        name: 'Project Alpha Team',
-        avatar: 'https://via.placeholder.com/150/FF5733/FFFFFF?text=GroupA',
-        lastMessage: 'Hey everyone, meeting at 3 PM?',
-        time: '2:58 pm',
-        unread: 3,
-        status: null,
-        statusText: '5 members',
-        members: [findSampleUser('self-user-id'), findSampleUser('user-alice-id'), findSampleUser('user-bob-id'), findSampleUser('user-david-id'), findSampleUser('user-eve-id')].filter(Boolean), // Lấy user objects
-        leader: 'self-user-id', // Giả định bạn là leader
-    },
-    {
-        id: 'friend-abc',
-        type: 'friend',
-        name: 'Alice Wonderland',
-        avatar: 'https://via.placeholder.com/150/33C3FF/FFFFFF?text=Alice',
-        lastMessage: 'Sounds good! See you then.',
-        time: '2:55 pm',
-        unread: 0,
-        status: 'online',
-        statusText: 'Online',
-        members: [findSampleUser('self-user-id'), findSampleUser('user-alice-id')].filter(Boolean),
-        leader: null, // Không có leader cho chat 1-1
-    },
-    {
-        id: 'room-2',
-        type: 'group',
-        name: 'Weekly Sync',
-        avatar: 'https://via.placeholder.com/150/33FF57/FFFFFF?text=GroupB',
-        lastMessage: 'Don\'t forget to submit reports.',
-        time: 'Yesterday',
-        unread: 0,
-        status: null,
-        statusText: '8 members',
-        members: [findSampleUser('self-user-id'), findSampleUser('user-alice-id'), findSampleUser('user-bob-id'), findSampleUser('user-david-id')].filter(Boolean),
-        leader: 'user-alice-id', // Giả định Alice là leader
-    },
-    {
-        id: 'friend-xyz',
-        type: 'friend',
-        name: 'Bob The Builder',
-        avatar: 'https://via.placeholder.com/150/FFFF33/000000?text=Bob',
-        lastMessage: 'Can we fix it?',
-        time: 'Wed',
-        unread: 1,
-        status: 'offline',
-        statusText: 'Offline',
-        members: [findSampleUser('self-user-id'), findSampleUser('user-bob-id')].filter(Boolean),
-        leader: null,
-    },
-    {
-        id: 'friend-pqr',
-        type: 'friend',
-        name: 'Charlie Chaplin',
-        avatar: 'https://via.placeholder.com/150/8A33FF/FFFFFF?text=Charlie',
-        lastMessage: '...',
-        time: 'Tue',
-        unread: 0,
-        status: 'online',
-        statusText: 'Online',
-         members: [findSampleUser('self-user-id'), findSampleUser('user-charlie-id')].filter(Boolean),
-         leader: null,
-    },
-    {
-        id: 'room-3',
-        type: 'group',
-        name: 'Team Social',
-        avatar: 'https://via.placeholder.com/150/FF33A1/FFFFFF?text=GroupC',
-        lastMessage: 'Pizza party this Friday!',
-        time: 'Last Week',
-        unread: 0,
-        status: null,
-        statusText: '12 members',
-         members: [findSampleUser('self-user-id'), findSampleUser('user-alice-id'), findSampleUser('user-bob-id')].filter(Boolean),
-         leader: 'user-bob-id', // Giả định Bob là leader
-    },
-    {
-        id: 'room-3',
-        type: 'group',
-        name: 'Team Social',
-        avatar: 'https://via.placeholder.com/150/FF33A1/FFFFFF?text=GroupC',
-        lastMessage: 'Pizza party this Friday!',
-        time: 'Last Week',
-        unread: 0,
-        status: null,
-        statusText: '12 members',
-         members: [findSampleUser('self-user-id'), findSampleUser('user-alice-id'), findSampleUser('user-bob-id')].filter(Boolean),
-         leader: 'user-bob-id', // Giả định Bob là leader
-    },
-    {
-        id: 'room-3',
-        type: 'group',
-        name: 'Team Social',
-        avatar: 'https://via.placeholder.com/150/FF33A1/FFFFFF?text=GroupC',
-        lastMessage: 'Pizza party this Friday!',
-        time: 'Last Week',
-        unread: 0,
-        status: null,
-        statusText: '12 members',
-         members: [findSampleUser('self-user-id'), findSampleUser('user-alice-id'), findSampleUser('user-bob-id')].filter(Boolean),
-         leader: 'user-bob-id', // Giả định Bob là leader
-    },
-    {
-        id: 'room-3',
-        type: 'group',
-        name: 'Team Social',
-        avatar: 'https://via.placeholder.com/150/FF33A1/FFFFFF?text=GroupC',
-        lastMessage: 'Pizza party this Friday!',
-        time: 'Last Week',
-        unread: 0,
-        status: null,
-        statusText: '12 members',
-         members: [findSampleUser('self-user-id'), findSampleUser('user-alice-id'), findSampleUser('user-bob-id')].filter(Boolean),
-         leader: 'user-bob-id', // Giả định Bob là leader
-    },
-    {
-        id: 'room-3',
-        type: 'group',
-        name: 'Team Social',
-        avatar: 'https://via.placeholder.com/150/FF33A1/FFFFFF?text=GroupC',
-        lastMessage: 'Pizza party this Friday!',
-        time: 'Last Week',
-        unread: 0,
-        status: null,
-        statusText: '12 members',
-         members: [findSampleUser('self-user-id'), findSampleUser('user-alice-id'), findSampleUser('user-bob-id')].filter(Boolean),
-         leader: 'user-bob-id', // Giả định Bob là leader
-    },
-    {
-        id: 'room-3',
-        type: 'group',
-        name: 'Team Social',
-        avatar: 'https://via.placeholder.com/150/FF33A1/FFFFFF?text=GroupC',
-        lastMessage: 'Pizza party this Friday!',
-        time: 'Last Week',
-        unread: 0,
-        status: null,
-        statusText: '12 members',
-         members: [findSampleUser('self-user-id'), findSampleUser('user-alice-id'), findSampleUser('user-bob-id')].filter(Boolean),
-         leader: 'user-bob-id', // Giả định Bob là leader
-    },
-];
-
-const sampleMessagesData = {
-    'room-1': [
-        { id: 'msg-1-1', sender: 'other', text: ['Hi team!'], time: '2:30 pm' }, // Tin nhắn này từ người khác trong nhóm
-        { id: 'msg-1-2', sender: 'other', text: ['Meeting prep needed.'], time: '2:35 pm' },
-        { id: 'msg-1-3', sender: 'self', text: ['Got it!'], time: '2:40 pm' }, // Tin nhắn từ bạn
-        { id: 'msg-1-4', sender: 'other', text: ['Hey everyone,', 'meeting at 3 PM?'], time: '2:58 pm' },
-    ],
-    'friend-abc': [
-        { id: 'msg-abc-1', sender: 'other', text: ['Hi Alice, how are you?'], time: '2:50 pm' },
-        { id: 'msg-abc-2', sender: 'self', text: ['I\'m good, thanks!', 'Just working on the project.'], time: '2:52 pm' },
-        { id: 'msg-abc-3', sender: 'other', text: ['Great!'], time: '2:53 pm' },
-        { id: 'msg-abc-4', sender: 'other', text: ['Sounds good! See you then.'], time: '2:55 pm' },
-    ],
-     'room-2': [
-        { id: 'msg-2-1', sender: 'other', text: ['Weekly reports are due today.'], time: 'Yesterday' },
-        { id: 'msg-2-2', sender: 'self', text: ['Will submit mine shortly.'], time: 'Yesterday' },
-        { id: 'msg-2-3', sender: 'other', text: ['Don\'t forget to submit reports.'], time: 'Yesterday' },
-    ],
-     'friend-xyz': [
-        { id: 'msg-xyz-1', sender: 'other', text: ['Can we fix it?'], time: 'Wed' },
-     ],
-      'friend-pqr': [
-        { id: 'msg-pqr-1', sender: 'other', text: ['...'], time: 'Tue' },
-     ],
-     'room-3': [
-        { id: 'msg-3-1', sender: 'other', text: ['Pizza party this Friday!'], time: 'Last Week' },
-     ]
-};
-
-// Dữ liệu user mẫu để tìm kiếm (những người KHÔNG có trong nhóm hiện tại)
-// Cần lọc danh sách này khi thực hiện tìm kiếm thực tế
-const sampleSearchableUsers = [
-    { _id: 'user-new-1', name: 'New User One', avatar: 'https://via.placeholder.com/150/CCCCCC/000000?text=New1' },
-    { _id: 'user-new-2', name: 'Another User', avatar: 'https://via.placeholder.com/150/AAAAAA/FFFFFF?text=New2' },
-     { _id: 'user-new-3', name: 'Test Account', avatar: 'https://via.placeholder.com/150/BBBBBB/000000?text=New3' },
-];
+// Giả định useAuth hook: user object có _id
+// import { useAuth } from '../context/AuthContext';
 
 
 const ChatPage = () => {
   // --- State ---
   const [conversations, setConversations] = useState([]);
+  // activeChat: thông tin chi tiết conversation, members đã populated
+  // activeChat.detailedMembers: mảng members với user ID đã trim (.id)
   const [activeChat, setActiveChat] = useState(null);
+  // messages: mảng messages với sender ID đã trim (.senderId)
   const [messages, setMessages] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Giả lập trạng thái loading
   const [isLoadingConversations, setIsLoadingConversations] = useState(true);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [sendingMessage, setSendingMessage] = useState(false);
+
+  const [error, setError] = useState(null); // State lỗi chung
 
   const [isMobileChatActive, setIsMobileChatActive] = useState(false);
 
-  // <<< State cho Overlay Cài đặt >>>
+  // <<< State cho Overlay Cài đặt Group >>>
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isPerformingAction, setIsPerformingAction] = useState(false); // Trạng thái cho các action trong settings
-  const [actionError, setActionError] = useState(null); // Lỗi cho các action trong settings
-  const [addUserSearchResults, setAddUserSearchResults] = useState([]); // Kết quả tìm kiếm người dùng để thêm
+  const [isPerformingAction, setIsPerformingAction] = useState(false);
+  const [actionError, setActionError] = useState(null);
+  // addUserSearchResults: mảng user objects từ search API { _id, ... }
+  const [addUserSearchResults, setAddUserSearchResults] = useState([]);
 
-  // <<< Lấy và lưu trữ User ID (Giả định) >>>
-  const currentUserIdRef = useRef('self-user-id'); // ID giả định của người dùng hiện tại ('self-user-id')
+  // currentUserIdRef: Lưu user ID đã trim
+  const currentUserIdRef = useRef(null);
 
-  useEffect(() => {
-     console.log("Current User ID (Sample):", currentUserIdRef.current);
 
-    // Mô phỏng việc load dữ liệu ban đầu sau 1 khoảng thời gian
-    const timer = setTimeout(() => {
-        // Sắp xếp dữ liệu mẫu (logic đơn giản như trước)
-         const sortedConversations = [...sampleConversations].sort((a, b) => {
-             // Logic sắp xếp đơn giản dựa trên thời gian mẫu, cần phức tạp hơn nếu có định dạng khác
-             const parseTime = (timeStr) => {
-                 if (!timeStr || timeStr.includes('Yesterday') || timeStr.includes('Wed') || timeStr.includes('Tue') || timeStr.includes('Last Week')) return new Date(0); // Đặt ngày cũ nhất cho các định dạng này
-                 try {
-                     // Cố gắng parse định dạng hh:mm am/pm
-                     return new Date(`1970/01/01 ${timeStr.replace(' am', ' AM').replace(' pm', ' PM')}`);
-                 } catch (e) {
-                     return new Date(0); // Fallback nếu parse lỗi
-                 }
-             };
-              return parseTime(b.time).getTime() - parseTime(a.time).getTime(); // Mới nhất lên đầu
-        });
+  // --- MOCK useAuth HOOK (hoặc Auth Hook thật của bạn) ---
+  const [mockAuth, setMockAuth] = useState({ user: null, isAuthenticated: false, isLoading: true });
 
-        setConversations(sortedConversations);
-        setIsLoadingConversations(false);
-         console.log("Loaded sample conversations:", sortedConversations);
-    }, 500); // Mô phỏng delay load 0.5 giây
+   // EFFECT 1: Kiểm tra xác thực ban đầu khi component mount
+   useEffect(() => {
+       const checkAuthStatus = async () => {
+           try {
+               const userInfoResponse = await infoApi();
+               if (userInfoResponse && userInfoResponse.success && userInfoResponse.userInfo) {
+                    // <<< TRIM USER ID NGAY KHI NHẬN TỪ INFO API >>>
+                    const userId = userInfoResponse.userInfo.id ? String(userInfoResponse.userInfo.id).trim() : null;
+                    const authenticatedUser = userId ? { _id: userId, ...userInfoResponse.userInfo } : null;
 
-    // Logic dispatch event 'toggleMobileNav'
-    const toggleMobileNavVisibility = (hide) => { window.dispatchEvent(new CustomEvent('toggleMobileNav', { detail: { hideNav: hide } })); };
-    toggleMobileNavVisibility(true); // Tắt nav khi vào trang chat
+                    if (authenticatedUser) {
+                         setMockAuth({ user: authenticatedUser, isAuthenticated: true, isLoading: false });
+                         currentUserIdRef.current = authenticatedUser._id; // Cập nhật Ref với ID đã trim
+                         console.log("Mock Auth check: User authenticated.", authenticatedUser);
+                    } else {
+                         console.error("Mock Auth check: User ID is missing or invalid from API.");
+                         setMockAuth({ user: null, isAuthenticated: false, isLoading: false });
+                         currentUserIdRef.current = null;
+                    }
+               } else {
+                   setMockAuth({ user: null, isAuthenticated: false, isLoading: false });
+                   currentUserIdRef.current = null;
+                    console.log("Mock Auth check: User not authenticated.");
+               }
+           } catch (err) {
+               console.error("Mock Auth check Error:", err);
+               setMockAuth({ user: null, isAuthenticated: false, isLoading: false });
+               currentUserIdRef.current = null;
+               console.log("Mock Auth check: User not authenticated due to error.");
+           }
+       };
+       checkAuthStatus();
+   }, []); // Effect này chỉ chạy 1 lần khi component mount
 
-    return () => {
-        clearTimeout(timer); // Đảm bảo timer được xóa khi unmount
-        toggleMobileNavVisibility(false); // Bật lại khi rời trang
+   const { user, isAuthenticated, isLoading: isAuthLoading } = mockAuth;
+
+
+  // Callback để fetch initial conversations
+  const fetchInitialData = useCallback(async () => {
+    // User ID từ state (đã được trim từ EFFECT 1)
+    const currentUserId = user?._id;
+
+    if (!currentUserId) {
+        console.warn("fetchInitialData: User ID is not set.");
+        //setIsLoadingConversations(false); // Không set false ở đây nếu user không có ID
+        // setError("User not authenticated. Cannot load conversations."); // Có thể set error ở đây
+        return; // Dừng nếu user ID không có
     }
 
-  }, []);
+    console.log("Fetching initial rooms for user:", currentUserId);
+    setIsLoadingConversations(true);
+    setError(null);
 
-  // --- Load tin nhắn chi tiết khi activeChat thay đổi (Dùng dữ liệu mẫu) ---
-   useEffect(() => {
-     const loadMessages = () => {
-         if (activeChat && activeChat.id) {
-            console.log("Loading sample messages for room:", activeChat.id);
-            setIsLoadingMessages(true); // Giả lập loading messages
-            const isMobileView = window.innerWidth <= 768;
-            if(isMobileView) setIsMobileChatActive(true);
+    try {
+      // API getMyRoomsApi (GET /conversation/get-conversations) trả về { success: true, data: [conversations] }
+      // conversations trong data có members (populated user objects) và latestMessage (populated message object)
+      const rooms = await getMyRoomsApi();
 
-            // Mô phỏng delay load tin nhắn
-            const messageTimer = setTimeout(() => {
-                // Lấy tin nhắn mẫu dựa trên activeChat.id
-                const fetchedMessages = sampleMessagesData[activeChat.id] || [];
-                 setMessages(fetchedMessages);
-                 setIsLoadingMessages(false);
-                 console.log("Loaded sample messages:", fetchedMessages);
-            }, 300); // Mô phỏng delay load 0.3 giây
+      if (rooms && Array.isArray(rooms)) {
+         const conversationsData = rooms.map(room => {
+           const roomId = room._id;
+           const isGroup = room.isGroup;
+           const latestMessage = room.latestMessage; // đã populated message object
 
-            return () => clearTimeout(messageTimer); // Cleanup message timer
+           let conversationName = room.name;
+           let conversationAvatar = room.avatar || null;
+           let conversationType = isGroup ? 'group' : 'friend';
 
-           } else {
-             // Reset messages và trạng thái mobile khi activeChat là null (nhấn back)
-             setMessages([]);
-             setIsLoadingMessages(false);
-             if(activeChat === null) {
-                 setIsMobileChatActive(false);
-             }
+           // Xử lý members: đảm bảo member.id._id được trim
+           const processedMembers = room.members?.map(m => ({
+               ...m,
+               // Ensure member.id._id is string and trimmed when processing for state
+               // Handle cases where m.id might be null, object with no _id, or already a string
+               id: (m.id && typeof m.id === 'object' && m.id._id) ? String(m.id._id).trim() : (typeof m.id === 'string' ? m.id.trim() : null)
+           })) || [];
+
+
+           const activeMembers = processedMembers?.filter(m => m.leftAt === null) || [];
+           let conversationStatusText = isGroup ? `${activeMembers.length} members` : 'Offline';
+
+           if (!isGroup && processedMembers && processedMembers.length === 2) {
+               // So sánh ID đã trim
+               const otherMember = processedMembers.find(member => member.id && member.id !== currentUserId); // Compare with trimmed ID
+               if (otherMember && otherMember.id) { // otherMember.id is now the trimmed user ID string
+                   // Use original populated data for name/avatar if available, otherwise fallback
+                   const originalMemberData = room.members?.find(m => m.id?._id === otherMember.id); // Find in original array
+                    conversationName = originalMemberData?.id?.fullName || originalMemberData?.id?.email || 'Unknown User';
+                    conversationAvatar = originalMemberData?.id?.avatar || null;
+               } else if (processedMembers.length === 1 && processedMembers[0].id === currentUserId) { // Compare with trimmed ID
+                   // Self chat case
+                   const originalMemberData = room.members?.find(m => m.id?._id === processedMembers[0].id);
+                   conversationName = room.name || originalMemberData?.id?.fullName || 'Self Chat';
+                   conversationAvatar = room.avatar || originalMemberData?.id?.avatar || null;
+               } else {
+                   conversationName = room.name || 'Unknown User';
+                   conversationAvatar = room.avatar || null;
+               }
            }
-     };
-     loadMessages();
 
-   }, [activeChat, setIsMobileChatActive]); // Dependency là activeChat
+            // Lấy leader ID đã được trim
+            const leaderMember = processedMembers?.find(m => m.role === 'leader' && m.leftAt === null && m.id);
+            const leaderId = leaderMember ? leaderMember.id : null; // Use trimmed id
 
-  // --- Callback để xử lý click item (Giữ nguyên logic) ---
-  const handleConversationClick = useCallback((type, id) => {
+
+           return {
+             id: roomId,
+             type: conversationType,
+             name: conversationName || 'Unknown Conversation',
+             avatar: conversationAvatar,
+             lastMessage: latestMessage ?
+                           (latestMessage.type === 'text' ? latestMessage.content?.text?.data || '' : `[${latestMessage.type.toUpperCase()}]`)
+                           : '',
+             time: latestMessage?.datetime_created ? new Date(latestMessage.datetime_created).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase() : '',
+             createdAt: room.datetime_created,
+             latestMessage: latestMessage?._id || null,
+             latestMessageTimestamp: latestMessage?.datetime_created || room.datetime_created,
+             unread: 0,
+             status: null,
+             statusText: conversationStatusText,
+             members: room.members || [], // Store original populated members
+             leader: leaderId, // Store trimmed leaderId
+             isGroup: isGroup,
+             detailedMembers: processedMembers, // Store members with trimmed ID
+           };
+         });
+
+         conversationsData.sort((a, b) => {
+             const dateA = new Date(a.latestMessageTimestamp || 0);
+             const dateB = new Date(b.latestMessageTimestamp || 0);
+             return dateB.getTime() - dateA.getTime();
+         });
+
+         setConversations(conversationsData);
+         console.log("Processed conversations:", conversationsData);
+
+      } else {
+         setConversations([]);
+         console.log("No rooms found for user.");
+      }
+
+    } catch (err) {
+      console.error("Error fetching initial chat data:", err);
+       if (err.message.includes("HTTP error! status: 401") || err.message.includes("not authenticated")) {
+             setError("Authentication failed. Please login again.");
+       } else {
+            setError(err.message || 'Failed to load conversations.');
+       }
+      setConversations([]); // Clear conversations on error
+    } finally {
+      setIsLoadingConversations(false); // Tắt loading state
+    }
+  }, [user]); // Dependency: user state
+
+
+  // EFFECT 2: Kích hoạt fetchInitialData
+  useEffect(() => {
+      console.log("Auth state check for initial fetch:", { isAuthLoading, isAuthenticated, userId: user?._id });
+      if (!isAuthLoading && isAuthenticated && user?._id) {
+           console.log("Auth complete and user ID available. Triggering fetchInitialData...");
+           fetchInitialData();
+           setError(null);
+      } else if (!isAuthLoading && !isAuthenticated) {
+           console.warn("Auth complete but user not authenticated. Cannot fetch chat data.");
+           setError("User not authenticated. Please login.");
+           setIsLoadingConversations(false);
+           setConversations([]);
+           setActiveChat(null);
+           setMessages([]);
+           setIsMobileChatActive(false);
+      }
+  }, [isAuthLoading, isAuthenticated, user?._id, fetchInitialData]);
+
+
+   // EFFECT 3: Xử lý mobile nav toggle
+   useEffect(() => {
+       const toggleMobileNavVisibility = (hide) => { window.dispatchEvent(new CustomEvent('toggleMobileNav', { detail: { hideNav: hide } })); };
+       toggleMobileNavVisibility(true);
+       return () => toggleMobileNavVisibility(false);
+   }, []);
+
+
+  // --- Load tin nhắn chi tiết khi activeChat thay đổi ---
+   useEffect(() => {
+     // User ID từ state (đã được trim từ EFFECT 1)
+     const currentUserId = user?._id;
+
+     const fetchMessages = async (userId) => {
+       if (!activeChat?.id || !userId) {
+         console.warn("fetchMessages: No active chat or user ID.");
+         setMessages([]);
+         setIsLoadingMessages(false);
+         if(activeChat === null) {
+             setIsMobileChatActive(false);
+         }
+         return;
+       }
+
+       console.log("Fetching messages for room:", activeChat.id, "for user:", userId);
+       setIsLoadingMessages(true);
+
+       const isMobileView = window.innerWidth <= 768;
+       if(isMobileView) setIsMobileChatActive(true);
+
+       try {
+         // API getMessagesByRoomIdApi (POST /conversation/get-messages) trả về { success: true, data: [messages] }
+         // message object có senderId là object user đầy đủ
+         const messages = await getMessagesByRoomIdApi({ conversationId: activeChat.id, limit: 100, skip: 0 });
+
+         if (messages && Array.isArray(messages)) {
+            const formattedMessages = messages.map(msg => {
+               let messageSenderId = null;
+               // Check if senderId exists and try to get the ID, handling object and string types
+               if (msg.senderId) {
+                   if (typeof msg.senderId === 'object' && msg.senderId._id) {
+                       // Populated senderId object
+                       messageSenderId = String(msg.senderId._id).trim();
+                   } else if (typeof msg.senderId === 'string') {
+                       // Unpopulated senderId string (less common but possible depending on API consistency)
+                       messageSenderId = String(msg.senderId).trim();
+                   }
+               }
+               // If messageSenderId is still null/undefined, it remains null
+
+               return ({
+                   id: msg._id,
+                   // KHÔNG TÍNH SENDER Ở ĐÂY
+                   type: msg.type,
+                   content: msg.content,
+                   text: msg.type === 'text' && msg.content?.text?.data ? [msg.content.text.data] : [`[${msg.type.toUpperCase()}]`],
+                   time: msg.datetime_created ? new Date(msg.datetime_created).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase() : '',
+                   createdAt: msg.datetime_created,
+                   isEdited: msg.isEdited || false,
+                   isDeleted: msg.isDeleted || false,
+                   // <<< DÙNG messageSenderId ĐÃ XỬ LÝ VÀ TRIM >>>
+                   senderId: messageSenderId,
+                   // ------------------------------------------
+                   senderName: msg.senderId?.fullName, // Use original populated data for name
+                   senderAvatar: msg.senderId?.avatar, // Use original populated data for avatar
+               });
+            });
+
+            formattedMessages.reverse(); // Đảo ngược
+
+            setMessages(formattedMessages);
+            console.log("Formatted messages (oldest first):", formattedMessages);
+
+         } else {
+            setMessages([]);
+         }
+
+       } catch (err) {
+         console.error(`Error fetching messages for ${activeChat.id}:`, err);
+          if (err.message.includes("HTTP error! status: 401")) {
+               setError("Session expired. Please login again.");
+          } else {
+              setError(err.message || `Failed to load messages.`);
+          }
+         setMessages([]);
+       } finally {
+         setIsLoadingMessages(false);
+       }
+     }
+     if (activeChat && currentUserId) {
+         fetchMessages(currentUserId); // Vẫn truyền user ID vào hàm fetch để log và potential future use
+     } else if (activeChat === null) {
+        setMessages([]);
+        setIsLoadingMessages(false);
+        setIsMobileChatActive(false);
+     }
+
+     // Dependencies: activeChat, user?._id, isMobileChatActive, isAuthLoading, isAuthenticated
+   }, [activeChat, user?._id, setIsMobileChatActive, isAuthLoading, isAuthenticated]);
+
+
+  // --- Callback để xử lý click item (Chọn Conversation) ---
+  const handleConversationClick = useCallback(async (type, id) => {
+     if (!isAuthenticated || !user?._id) {
+          console.warn("User not authenticated. Cannot select conversation.");
+          setError("Please login to view conversations.");
+          return;
+     }
      const clickedConv = conversations.find(c => c.id === id);
      if (clickedConv) {
-         // Set activeChat đầy đủ thông tin từ object tìm được trong state conversations
-         setActiveChat({
-             id: clickedConv.id,
-             type: clickedConv.type,
-             name: clickedConv.name,
-             avatar: clickedConv.avatar,
-             statusText: clickedConv.statusText,
-             // Thêm thông tin members và leader cho group chat settings
-             members: clickedConv.members,
-             leader: clickedConv.leader
-         });
-         // Đóng settings overlay nếu đang mở
+          setActiveChat({
+               ...clickedConv,
+               id: clickedConv.id,
+               // detailedMembers đã được set với ID trim trong fetchInitialData
+               detailedMembers: clickedConv.detailedMembers || [],
+          });
          setIsSettingsOpen(false);
-         // Reset unread count cho cuộc trò chuyện này (Mô phỏng)
-         setConversations(prev => prev.map(c => c.id === id ? {...c, unread: 0} : c));
      }
-  }, [conversations]); // Dependency là conversations state
+  }, [conversations, isAuthenticated, user]);
 
-  // --- Callback để xử lý nút back mobile (Giữ nguyên) ---
+
+  // --- Callback để xử lý nút back mobile ---
   const handleMobileBack = useCallback(() => {
-    setActiveChat(null); // Setting activeChat to null triggers the useEffect above
-    // Đóng settings overlay nếu đang mở khi nhấn back
+    setActiveChat(null);
     setIsSettingsOpen(false);
   }, []);
 
-  // --- Callback xử lý gửi tin nhắn (Mô phỏng) ---
-  const handleSendMessage = useCallback((newMessageText) => {
-      if (!activeChat || !activeChat.id || !newMessageText.trim()) {
-          console.warn("Cannot send empty message or no active chat.");
-          return;
+
+  // Handlers cho Overlay Cài đặt
+  const handleOpenSettings = useCallback(() => {
+      // Kiểm tra activeChat.detailedMembers vì đây là mảng có ID đã trim
+      if (activeChat?.isGroup && activeChat.detailedMembers) {
+         setIsSettingsOpen(true);
+         setActionError(null);
+         setAddUserSearchResults([]);
+      } else if (activeChat) {
+           console.warn("Attempted to open settings for a non-group chat.");
+      }
+  }, [activeChat]); // Dependency: activeChat
+
+  const handleCloseSettings = useCallback(() => {
+      setIsSettingsOpen(false);
+      setActionError(null);
+      setAddUserSearchResults([]);
+  }, []);
+
+
+  // --- Callback xử lý gửi tin nhắn ---
+  const handleSendMessage = useCallback(async (newMessageText) => {
+    // User ID từ ref (đã được trim trong Auth Effect)
+    const currentUserId = currentUserIdRef.current;
+
+    if (!activeChat?.id || !currentUserId || sendingMessage || !newMessageText.trim()) {
+        console.warn("Cannot send empty message or no active chat/user or message already sending.");
+        return;
+    }
+
+    setSendingMessage(true);
+    setActionError(null);
+    const tempId = `temp-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+
+    // --- Optimistic Update ---
+    const newMessageOptimistic = {
+      id: tempId,
+      sender: 'self', // Vẫn dùng 'self' cho optimistic
+      type: 'text',
+      content: { text: { type: 'text', data: newMessageText } },
+      text: [newMessageText],
+      time: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase(),
+      createdAt: new Date().toISOString(),
+      status: 'sending',
+      isEdited: false,
+      isDeleted: false,
+      senderId: currentUserId, // <<< Lưu senderId đã trim vào tin nhắn optimistic
+    };
+    setMessages(prevMessages => [...prevMessages, newMessageOptimistic]); // Thêm vào cuối mảng (sau khi đã reverse)
+
+    try {
+      const messagePayload = {
+          conversationId: activeChat.id,
+          type: 'text',
+          data: { type: 'text', data: newMessageText },
+          replyToMessageId: null
+      };
+      const sentMessage = await sendMessageApi(messagePayload);
+      console.log("Message sent successfully:", sentMessage);
+
+      if (sentMessage && sentMessage._id) {
+           setMessages(prevMessages => prevMessages.map(msg =>
+             msg.id === tempId
+               ? {
+                   id: sentMessage._id,
+                   type: sentMessage.type,
+                   content: sentMessage.content,
+                   text: sentMessage.type === 'text' && sentMessage.content?.text?.data ? [sentMessage.content.text.data] : [`[${sentMessage.type.toUpperCase()}]`],
+                   time: sentMessage.datetime_created ? new Date(sentMessage.datetime_created).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase() : newMessageOptimistic.time,
+                   createdAt: sentMessage.datetime_created,
+                   isEdited: sentMessage.isEdited || false,
+                   isDeleted: sentMessage.isDeleted || false,
+                   // <<< RE-CHECK AND TRIM senderId._id FROM API RESPONSE FOR OPTIMISTIC UPDATE >>>
+                   senderId: sentMessage.senderId && typeof sentMessage.senderId === 'object' && sentMessage.senderId._id
+                               ? String(sentMessage.senderId._id).trim()
+                               : (typeof sentMessage.senderId === 'string' ? String(sentMessage.senderId).trim() : null),
+                   // --------------------------------------------------------------------------
+                   senderName: sentMessage.senderId?.fullName,
+                   senderAvatar: sentMessage.senderId?.avatar,
+                   status: 'sent',
+                 }
+               : msg
+           ));
+
+           setConversations(prevConversations => {
+               const updatedConversations = prevConversations.map(conv =>
+                   conv.id === activeChat.id
+                       ? {
+                           ...conv,
+                           lastMessage: sentMessage.type === 'text' ? sentMessage.content?.text?.data || '' : `[${sentMessage.type.toUpperCase()}]`,
+                           time: sentMessage.datetime_created ? new Date(sentMessage.datetime_created).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase() : conv.time,
+                           latestMessageTimestamp: sentMessage.datetime_created,
+                           latestMessage: sentMessage._id,
+                       }
+                       : conv
+               );
+               updatedConversations.sort((a, b) => {
+                       const dateA = new Date(a.latestMessageTimestamp || 0);
+                       const dateB = new Date(b.latestMessageTimestamp || 0);
+                       return dateB.getTime() - dateA.getTime();
+                 });
+               return updatedConversations;
+           });
+
+      } else {
+           console.error("Failed to send message: API error response or missing data", sentMessage);
+           setMessages(prevMessages => prevMessages.map(msg =>
+             msg.id === tempId ? { ...newMessageOptimistic, status: 'failed' } : msg
+           ));
+           setActionError(sentMessage?.message || sentMessage?.error || "Failed to send message.");
       }
 
-      // Tạo tin nhắn mới giả định (luôn là self)
-      const newMessage = {
-        id: `temp-${Date.now()}`, // ID tạm
-        sender: 'self', // Luôn là self khi gửi từ client này
-        text: [newMessageText],
-        time: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase(),
-        status: 'sent' // Giả định gửi thành công ngay
-      };
+    } catch (err) {
+      console.error("Failed to send message:", err);
+      setActionError(err.message || 'Failed to send message.');
+      setMessages(prevMessages => prevMessages.map(msg =>
+        msg.id === tempId ? { ...newMessageOptimistic, status: 'failed' } : msg
+      ));
+    } finally {
+      setSendingMessage(false);
+    }
+  }, [activeChat, sendingMessage, currentUserIdRef]);
 
-      // Thêm tin nhắn mới vào danh sách tin nhắn
-      setMessages(prevMessages => [...prevMessages, newMessage]);
 
-      // Mô phỏng cập nhật Last Message và thứ tự trong danh sách conversations
-      setConversations(prevConversations => {
-          const updatedConversations = prevConversations.map(conv =>
-              conv.id === activeChat.id
-                  ? {
-                      ...conv,
-                      lastMessage: newMessageText,
-                      time: newMessage.time // Sử dụng thời gian của tin nhắn vừa gửi
-                    }
-                  : conv
-          );
-          // Sắp xếp lại danh sách để cuộc trò chuyện vừa gửi lên đầu
-          updatedConversations.sort((a, b) => {
-               const parseTime = (timeStr) => {
-                 if (!timeStr || timeStr.includes('Yesterday') || timeStr.includes('Wed') || timeStr.includes('Tue') || timeStr.includes('Last Week')) return new Date(0); // Đặt ngày cũ nhất cho các định dạng này
-                 try {
-                     return new Date(`1970/01/01 ${timeStr.replace(' am', ' AM').replace(' pm', ' PM')}`);
-                 } catch (e) {
-                     return new Date(0); // Fallback nếu parse lỗi
-                 }
-             };
-               const timeA = parseTime(a.time).getTime();
-               const timeB = parseTime(b.time).getTime();
-               return timeB - timeA; // Mới nhất lên đầu
-          });
-          return updatedConversations;
-      });
+    // --- Xử lý tìm kiếm ---
+    const handleSearchChange = useCallback(async (event) => {
+       const term = event.target.value.toLowerCase();
+       setSearchTerm(term);
+    }, []);
 
-       console.log("Sample message sent:", newMessage);
-
-  }, [activeChat]);
-
-  // --- Xử lý tìm kiếm (Giữ nguyên) ---
-  const handleSearchChange = useCallback((event) => {
-       setSearchTerm(event.target.value.toLowerCase());
-  }, []);
 
   // Lọc danh sách conversations dựa trên searchTerm
   const filteredConversations = conversations.filter(conv => {
        const nameMatch = conv?.name && typeof conv.name === 'string' && conv.name.toLowerCase().includes(searchTerm);
-       const messageMatch = conv?.lastMessage && typeof conv.lastMessage === 'string' && conv.lastMessage.toLowerCase().includes(searchTerm);
-       return nameMatch || messageMatch;
+       return nameMatch;
   });
 
-  // Tách danh sách đã lọc thành nhóm và bạn bè
+  // Tách danh sách đã lọc
   const filteredGroups = filteredConversations.filter(c => c.type === 'group');
   const filteredFriends = filteredConversations.filter(c => c.type === 'friend');
 
-  // --- Handlers cho Overlay Cài đặt ---
-  const handleOpenSettings = useCallback(() => {
-      // Chỉ mở settings nếu activeChat là group
-      if (activeChat && activeChat.type === 'group') {
-         setIsSettingsOpen(true);
-         setActionError(null); // Reset lỗi khi mở settings
-         setAddUserSearchResults([]); // Reset kết quả tìm kiếm khi mở settings
-      }
-  }, [activeChat]);
-
-  const handleCloseSettings = useCallback(() => {
-      setIsSettingsOpen(false);
-      setActionError(null); // Reset lỗi khi đóng settings
-      setAddUserSearchResults([]); // Reset kết quả tìm kiếm
-  }, []);
-
-  // --- Mock API Actions cho Group Settings ---
-
-  const mockPerformAction = async (actionFunc, ...args) => {
+  // --- API Action Helper for Settings ---
+  const performApiAction = useCallback(async (apiCall, successMessage, updateStateFunc) => {
        setIsPerformingAction(true);
        setActionError(null);
        try {
-           // Mô phỏng delay API
-           await new Promise(resolve => setTimeout(resolve, 800));
-           await actionFunc(...args);
-           // Cập nhật state conversation để UI reflect changes (members, leader)
-            // Tìm và cập nhật activeChat trong danh sách conversations
-           setConversations(prevConversations => prevConversations.map(conv =>
-               conv.id === activeChat.id ? { ...activeChat, ...args[args.length - 1] } : conv // Sử dụng các args cuối cùng để cập nhật activeChat
-           ));
-            // Cập nhật state activeChat
-           setActiveChat(prevActiveChat => ({...prevActiveChat, ...args[args.length - 1]}));
+           const response = await apiCall();
+           if (response && response.success) {
+               console.log(`${successMessage} successful:`, response);
+               let updatedConvData = response.data || response.conversation;
 
-            console.log("Action successful:", args);
+               if (updatedConvData && updatedConvData._id) {
+                   // <<< TRIM member.id._id KHI XỬ LÝ MEMBERS TRONG performApiAction >>>
+                   // Note: Here we process members for the detailedMembers state
+                   // which is used by ChatSettingsOverlay for display and comparison.
+                   // The original 'members' array in conversations state can still hold
+                   // the original populated objects if needed elsewhere, but detailedMembers
+                   // is the source of truth for SettingsOverlay comparisons.
+                   let membersWithDetails = updatedConvData.members?.map(m => ({
+                       ...m,
+                       // Ensure member.id is string and trimmed when processing for state
+                       id: (m.id && typeof m.id === 'object' && m.id._id) ? String(m.id._id).trim() : (typeof m.id === 'string' ? m.id.trim() : null)
+                   })) || [];
+                   // -----------------------------------------------------------------
+
+                   // Lấy leader ID đã được trim
+                    const leaderMember = membersWithDetails?.find(m => m.role === 'leader' && m.leftAt === null && m.id);
+                    const leaderId = leaderMember ? leaderMember.id : null; // Use trimmed id
+
+
+                   setConversations(prevConvs => prevConvs.map(conv =>
+                       conv.id === updatedConvData._id ? {
+                           ...conv,
+                           ...updatedConvData,
+                           id: updatedConvData._id,
+                           type: updatedConvData.isGroup ? 'group' : 'friend',
+                           statusText: updatedConvData.isGroup ? `${membersWithDetails?.filter(m => m.leftAt === null)?.length || 0} members` : conv.statusText,
+                           leader: leaderId, // Use trimmed leaderId
+                           members: updatedConvData.members || [], // Store original populated members
+                           detailedMembers: membersWithDetails, // Store processed members with trimmed ID
+                       } : conv
+                   ));
+
+                   setActiveChat(prevActive => {
+                       if (!prevActive || prevActive.id !== updatedConvData._id) return prevActive;
+                        // Lấy leader ID đã được trim từ membersWithDetails (processedMembers)
+                        const leaderMemberActive = membersWithDetails?.find(m => m.role === 'leader' && m.leftAt === null && m.id);
+                        const leaderIdActive = leaderMemberActive ? leaderMemberActive.id : null;
+
+                       return ({
+                            ...prevActive,
+                            ...updatedConvData,
+                            id: updatedConvData._id,
+                            type: updatedConvData.isGroup ? 'group' : 'friend',
+                            statusText: updatedConvData.isGroup ? `${membersWithDetails?.filter(m => m.leftAt === null)?.length || 0} members` : prevActive.statusText,
+                            leader: leaderIdActive, // Use trimmed leaderId
+                            detailedMembers: membersWithDetails, // Use processed members with trimmed ID
+                       });
+                   });
+
+                } else if (response.message) {
+                     console.log(response.message);
+                }
+
+               if(updateStateFunc) updateStateFunc(response);
+
+           } else {
+                const errorMessage = response?.message || response?.error || "Action failed.";
+                console.error(`${successMessage} failed:`, response);
+                setActionError(errorMessage);
+           }
        } catch (err) {
-           setActionError(err.message || "An error occurred.");
-           console.error("Mock action failed:", err);
-           throw err; // Ném lỗi để component gọi biết (ví dụ: form)
+           console.error(`${successMessage} API call failed:`, err);
+            if (err.message.includes("HTTP error! status: 401")) {
+                 setActionError("Session expired. Please login again.");
+            } else {
+                 setActionError(err.message || "An API error occurred.");
+            }
        } finally {
            setIsPerformingAction(false);
        }
-  };
+       // Dependencies: activeChat, conversations state (using functional updates, identity of conversation objects matters), currentUserIdRef (for leader check)
+       // We remove 'user' dependency as currentUserIdRef is used for leader check in handlers below.
+       // The detailedMembers derived within performApiAction uses the *latest* response members anyway.
+  }, [activeChat, conversations, currentUserIdRef]);
 
 
-  const handleRemoveUser = useCallback(async (roomId, userIdToRemove) => {
-       console.log(`Mock API: Removing user ${userIdToRemove} from room ${roomId}`);
-       // API removeUser: req.body = { roomId, userIdToRemove }
-       // Backend kiểm tra leader, không phải leader không xoá được
-       // Backend kiểm tra không xoá leader, không xoá người không có trong phòng
-       // Backend trả về success: true hoặc error
-       // Sau khi xoá thành công, frontend cần cập nhật danh sách members trong activeChat
-
-       // Mô phỏng logic backend
-       if (roomId !== activeChat?.id || !activeChat.members.find(m => m._id === userIdToRemove)) {
-           throw new Error("User not found in group.");
+  // --- Handlers cho các Hành động Group Settings ---
+  const handleRemoveUser = useCallback(async (conversationId, userIdToRemove) => {
+       // currentUserIdRef.current already trimmed
+       const currentUserId = currentUserIdRef.current;
+       if (!activeChat || activeChat.id !== conversationId || !activeChat.isGroup || !currentUserId) return;
+       // Lấy member ID từ detailedMembers (đã trim ID)
+       const membersList = activeChat.detailedMembers; // Use detailedMembers
+       // userIdToRemove should ideally be the trimmed ID string from the UI/search results
+       const memberToRemove = membersList?.find(m => m.id === userIdToRemove && m.leftAt === null); // Compare trimmed IDs
+       if (!memberToRemove) {
+            setActionError("User not found in group or already left.");
+            return;
        }
-       if (currentUserIdRef.current !== activeChat.leader) {
-           throw new Error("Only the leader can remove users.");
+       if (window.confirm(`Are you sure you want to remove ${memberToRemove.id?.fullName || memberToRemove.id || userIdToRemove} from the group?`)) {
+            // Pass the trimmed userIdToRemove to API if API expects trimmed, or original if API handles it
+            await performApiAction(
+               () => removeMemberApi({ conversationId, memberId: userIdToRemove }),
+               "Remove member"
+            );
        }
-        if (userIdToRemove === activeChat.leader) {
-           throw new Error("Cannot remove leader from group.");
-       }
+   }, [activeChat, performApiAction, currentUserIdRef]); // Keep currentUserIdRef dependency
 
-       // Mô phỏng cập nhật state sau khi thành công
-       const updatedMembers = activeChat.members.filter(m => m._id !== userIdToRemove);
-
-       // Sử dụng mockPerformAction để xử lý loading/error và cập nhật state
-        await mockPerformAction(
-           async () => { /* Mô phỏng API call thành công */ },
-           { members: updatedMembers } // Dữ liệu cần cập nhật vào activeChat
-       );
-
-
-  }, [activeChat, currentUserIdRef, mockPerformAction]); // Thêm mockPerformAction vào dependencies
-
-   const handleChangeLeader = useCallback(async (roomId, newLeaderId) => {
-        console.log(`Mock API: Changing leader of room ${roomId} to ${newLeaderId}`);
-        // API changeLeader: req.body = { roomId, newLeaderId }
-        // Backend kiểm tra người gọi có phải leader cũ không
-        // Backend kiểm tra newLeaderId có trong members không
-        // Sau khi đổi leader thành công, frontend cần cập nhật leader trong activeChat
-
-        // Mô phỏng logic backend
-        if (roomId !== activeChat?.id || !activeChat.members.find(m => m._id === newLeaderId)) {
-            throw new Error("New leader must be a member.");
+   const handleChangeLeader = useCallback(async (conversationId, newLeaderId) => {
+        // currentUserIdRef.current already trimmed
+        const currentUserId = currentUserIdRef.current;
+        if (!activeChat || activeChat.id !== conversationId || !activeChat.isGroup || !currentUserId) return;
+        // Lấy member ID từ detailedMembers (đã trim ID)
+        const membersList = activeChat.detailedMembers; // Use detailedMembers
+        // newLeaderId should ideally be the trimmed ID string from the UI/selection
+        const newLeaderMember = membersList?.find(m => m.id === newLeaderId && m.leftAt === null); // Compare trimmed IDs
+         if (!newLeaderMember) {
+             setActionError("New leader must be a current member of the group.");
+             return;
+         }
+        if (window.confirm(`Are you sure you want to make ${newLeaderMember.id?.fullName || newLeaderId} the new leader?`)) {
+             // Pass the trimmed newLeaderId to API if API expects trimmed, or original if API handles it
+             await performApiAction(
+                () => updateMemberRoleApi({ conversationId, memberId: newLeaderId }),
+                "Change leader"
+             );
         }
-        if (currentUserIdRef.current !== activeChat.leader) {
-           throw new Error("Only the current leader can change the leader.");
-       }
-        if (newLeaderId === activeChat.leader) {
-           throw new Error("User is already the leader.");
-        }
+   }, [activeChat, performApiAction, currentUserIdRef]); // Keep currentUserIdRef dependency
 
-
-        // Mô phỏng cập nhật state sau khi thành công
-        // Sử dụng mockPerformAction để xử lý loading/error và cập nhật state
-        await mockPerformAction(
-            async () => { /* Mô phỏng API call thành công */ },
-            { leader: newLeaderId } // Dữ liệu cần cập nhật vào activeChat
-        );
-
-   }, [activeChat, currentUserIdRef, mockPerformAction]); // Thêm mockPerformAction vào dependencies
+    const handleStepDownLeader = useCallback(async (conversationId, leaderId) => {
+         // currentUserIdRef.current already trimmed
+         const currentUserId = currentUserIdRef.current;
+         // Compare activeChat.leader (trimmed in performApiAction) with currentUserId (trimmed)
+         if (!activeChat || activeChat.id !== conversationId || !activeChat.isGroup || activeChat.leader !== currentUserId || leaderId !== currentUserId || !currentUserId) return;
+         const membersList = activeChat.detailedMembers; // Use detailedMembers (with trimmed IDs)
+         const numberOfLeaders = membersList.filter(m => m.role === 'leader' && m.leftAt === null).length;
+         if (window.confirm("Are you sure you want to step down as leader? A new leader will be assigned if you are the only one left.")) {
+              // Pass leaderId (which is currentUserId, already trimmed)
+              await performApiAction(
+                   () => updateMemberRoleApi({ conversationId, memberId: leaderId, newRole: 'member' }),
+                   "Step down as leader"
+               );
+         }
+    }, [activeChat, currentUserIdRef, performApiAction]); // Keep currentUserIdRef dependency
 
 
    const handleAddUserSearch = useCallback(async (searchTerm) => {
-       console.log(`Mock API: Searching for users with term "${searchTerm}"`);
-       // API findRoomByName/searchUsers (cần endpoint mới): nhận searchTerm, trả về users matching name/username
-       // Cần lọc ra những user ĐÃ CÓ trong nhóm hiện tại
-
+        if (!searchTerm.trim()) {
+            setAddUserSearchResults([]);
+            setActionError(null);
+            return;
+        }
        setIsPerformingAction(true);
        setActionError(null);
-       setAddUserSearchResults([]); // Clear previous results
-
+       setAddUserSearchResults([]);
        try {
-           await new Promise(resolve => setTimeout(resolve, 500)); // Simulate search delay
-
-           // Lọc users từ sampleSearchableUsers + sampleUsers (trừ người hiện tại)
-           // Loại bỏ người đã có trong nhóm activeChat
-           const usersNotInGroup = sampleUsers
-                .filter(user => user._id !== currentUserIdRef.current && !activeChat?.members.some(member => member._id === user._id))
-                .concat(sampleSearchableUsers) // Thêm cả users chỉ có trong searchable
-                .filter((user, index, self) => // Loại bỏ trùng lặp nếu có ID giống nhau
-                     index === self.findIndex((u) => ( u._id === user._id ))
-                )
-
-
-           const results = usersNotInGroup.filter(user =>
-               user.name.toLowerCase().includes(searchTerm.toLowerCase())
-           );
-
-           setAddUserSearchResults(results);
-            console.log("Mock search results:", results);
-
+           // API searchUsersApi trả về user objects { _id: string, ... }
+           const results = await searchUsersApi(searchTerm.trim());
+           if (results && Array.isArray(results)) {
+               // Lấy existing member IDs từ detailedMembers (đã trim ID)
+               const existingMemberUserIds = new Set(activeChat?.detailedMembers?.map(m => m.id).filter(Boolean) || []);
+               // So sánh với user._id từ search result (trim user._id before comparison)
+               // Store user objects with original _id string from API in searchResults state
+               const filteredResults = results.filter(user => user._id && !existingMemberUserIds.has(String(user._id).trim()));
+               setAddUserSearchResults(filteredResults);
+           } else {
+                setAddUserSearchResults([]);
+           }
        } catch (err) {
-           setActionError(err.message || "Search failed.");
-           console.error("Mock search failed:", err);
-           setAddUserSearchResults([]);
+           console.error("Search users API call failed:", err);
+           setActionError(err.message || "An API error occurred during search.");
+            setAddUserSearchResults([]);
        } finally {
            setIsPerformingAction(false);
        }
-   }, [activeChat, currentUserIdRef]); // Thêm activeChat và currentUserIdRef
+   }, [activeChat, performApiAction]); // No currentUserIdRef needed here
 
-   const handleAddUserConfirm = useCallback(async (roomId, userIdToAdd) => {
-       console.log(`Mock API: Adding user ${userIdToAdd} to room ${roomId}`);
-       // API addUser: req.body = { roomId, userIdToAdd }
-       // Backend kiểm tra leader, kiểm tra user có tồn tại không, kiểm tra user đã có trong phòng chưa
-       // Sau khi thêm thành công, frontend cần cập nhật danh sách members trong activeChat
-
-       // Tìm user object từ danh sách mẫu
-       const userToAdd = sampleUsers.find(u => u._id === userIdToAdd) || sampleSearchableUsers.find(u => u._id === userIdToAdd);
-       if (!userToAdd) {
-            throw new Error("User not found.");
+   const handleAddUserConfirm = useCallback(async (conversationId, userIdToAdd) => {
+       // currentUserIdRef.current already trimmed
+       const currentUserId = currentUserIdRef.current;
+       // userIdToAdd is the original _id string from searchResults
+       if (!activeChat || activeChat.id !== conversationId || !userIdToAdd || !currentUserId) {
+           setActionError("Invalid request to add user.");
+           return;
        }
-
-        // Mô phỏng logic backend
-        if (roomId !== activeChat?.id) {
-            throw new Error("Invalid room ID.");
+        // Check if user exists in search results (using original _id)
+        const userToAdd = addUserSearchResults.find(user => user._id === userIdToAdd);
+        if (!userToAdd) {
+             setActionError("User not found in search results.");
+             return;
         }
-         if (currentUserIdRef.current !== activeChat.leader) {
-           throw new Error("Only the leader can add users.");
-       }
-       if (activeChat.members.some(m => m._id === userIdToAdd)) {
-           throw new Error("User is already in this group.");
-       }
-
-
-        // Mô phỏng cập nhật state sau khi thành công
-        const updatedMembers = [...activeChat.members, userToAdd];
-         // Sắp xếp lại members theo tên (tùy chọn)
-        updatedMembers.sort((a, b) => a.name.localeCompare(b.name));
-
-
-        // Sử dụng mockPerformAction để xử lý loading/error và cập nhật state
-        await mockPerformAction(
-            async () => { /* Mô phỏng API call thành công */ },
-            { members: updatedMembers, statusText: `${updatedMembers.length} members` } // Cập nhật members và statusText
+        // Pass the original userIdToAdd string to API (API handles trimming?)
+        // If API expects trimmed, trim here: String(userIdToAdd).trim()
+        await performApiAction(
+            () => addNewMemberApi({ conversationId, newMemberId: userIdToAdd, role: 'member' }),
+            "Add member",
+            (response) => {
+                setAddUserSearchResults([]);
+            }
         );
-
-        // Clear search results and selected user after successful add
-        setAddUserSearchResults([]);
-        // setSelectedUserToAdd(null); // Handled by ChatSettingsOverlay internal state after calling this prop
+   }, [activeChat, performApiAction, addUserSearchResults, currentUserIdRef]); // Keep currentUserIdRef dependency
 
 
-   }, [activeChat, currentUserIdRef, mockPerformAction]); // Thêm activeChat, currentUserIdRef, mockPerformAction
+    const handleLeaveGroup = useCallback(async (conversationId) => {
+        // currentUserIdRef.current already trimmed
+        const currentUserId = currentUserIdRef.current;
+         if (!activeChat || activeChat.id !== conversationId || !activeChat.isGroup || !currentUserId) return;
+
+         // Kiểm tra active member bằng detailedMembers (có ID đã trim)
+         const isCurrentUserActiveMember = activeChat.detailedMembers?.some(m => m.id === currentUserId && m.leftAt === null);
+         // So sánh activeChat.leader (đã trim) với currentUserId (đã trim)
+         const isCurrentUserLeaderAndOnlyLeader = activeChat.leader === currentUserId && activeChat.detailedMembers?.filter(m => m.role === 'leader' && m.leftAt === null).length <= 1;
+         const totalActiveMembers = activeChat.detailedMembers?.filter(m => m.leftAt === null).length || 0;
+
+         if (!isCurrentUserActiveMember || (isCurrentUserLeaderAndOnlyLeader && totalActiveMembers > 1)) {
+              setActionError("You cannot leave this group as the only leader if there are other members.");
+              return;
+         }
+
+         if (window.confirm("Are you sure you want to leave this group?")) {
+              await performApiAction(
+                () => leaveConversationApi({ conversationId }),
+                "Leave group",
+                 (response) => {
+                     setConversations(prevConvs => prevConvs.filter(conv => conv.id !== conversationId));
+                     setActiveChat(null);
+                     setIsSettingsOpen(false);
+                     setIsMobileChatActive(false);
+                 }
+              );
+         }
+    }, [activeChat, performApiAction, currentUserIdRef]); // Keep currentUserIdRef dependency
+
+    const handleDeleteGroup = useCallback(async (conversationId) => {
+         // currentUserIdRef.current already trimmed
+         const currentUserId = currentUserIdRef.current;
+         // So sánh activeChat.leader (đã trim) với currentUserId (đã trim)
+          if (!activeChat || activeChat.id !== conversationId || !activeChat.isGroup || activeChat.leader !== currentUserId || !currentUserId) {
+              console.warn("User is not authorized to delete this group.");
+              setActionError("You must be the leader to delete the group.");
+              return;
+          }
+          if (window.confirm("Are you sure you want to delete this group permanently? This action cannot be undone.")) {
+               await performApiAction(
+                 () => deleteGroupApi({ conversationId }),
+                 "Delete group",
+                  (response) => {
+                      setConversations(prevConvs => prevConvs.filter(conv => conv.id !== conversationId));
+                      setActiveChat(null);
+                      setIsSettingsOpen(false);
+                      setIsMobileChatActive(false);
+                  }
+               );
+          }
+    }, [activeChat, currentUserIdRef, performApiAction]); // Keep currentUserIdRef dependency
+
+     const handleDeleteConversationMember = useCallback(async (conversationId) => {
+         // currentUserIdRef.current already trimmed
+         const currentUserId = currentUserIdRef.current;
+         if (!activeChat || activeChat.id !== conversationId || !currentUserId) return;
+           if (window.confirm("Are you sure you want to delete this conversation? (This will only delete it for you)")) {
+               await performApiAction(
+                 () => deleteConversationMemberApi({ conversationId }),
+                 "Delete conversation",
+                  (response) => {
+                      setConversations(prevConvs => prevConvs.filter(conv => conv.id !== conversationId));
+                      setActiveChat(null);
+                      setIsSettingsOpen(false);
+                      setIsMobileChatActive(false);
+                  }
+               );
+          }
+    }, [activeChat, performApiAction, currentUserIdRef]); // Keep currentUserIdRef dependency
+
+    const handleUpdateGroupName = useCallback(async (conversationId, newName) => {
+         // currentUserIdRef.current already trimmed
+         const currentUserId = currentUserIdRef.current;
+          if (!activeChat || activeChat.id !== conversationId || !activeChat.isGroup || !newName.trim() || !currentUserId) {
+              console.warn("Invalid request to update group name.");
+              if (!newName.trim()) setActionError("Group name cannot be empty.");
+              return;
+          }
+           // Kiểm tra active member bằng detailedMembers (có ID đã trim)
+          const isMember = activeChat.detailedMembers?.some(m => m.id === currentUserId && m.leftAt === null);
+          if (!isMember) {
+             setActionError("You are not an active member of this group.");
+             return;
+          }
+         await performApiAction(
+             () => updateConversationNameApi({ conversationId, newName }),
+             "Update group name",
+             () => setIsEditingName(false)
+         );
+    }, [activeChat, currentUserIdRef, performApiAction]); // Keep currentUserIdRef dependency
+
+
+    const handleDeleteMessage = useCallback(async (messageId) => {
+         // currentUserIdRef.current already trimmed
+         const currentUserId = currentUserIdRef.current;
+         if (!messageId || !activeChat?.id || !currentUserId) return;
+         // messageToDelete.senderId (đã trim trong state messages)
+         const messageToDelete = messages.find(msg => msg.id === messageId);
+          // So sánh messageToDelete.senderId (đã trim trong state) với currentUserId (đã trim)
+          if (!messageToDelete || messageToDelete.senderId !== currentUserId) {
+              console.warn("Cannot delete message: Not the sender.");
+               setActionError("You can only delete your own messages.");
+              return;
+          }
+          if (window.confirm("Are you sure you want to delete this message?")) {
+              await performApiAction(
+                  () => deleteMessageApi({ messageId }),
+                  "Delete message",
+                   (response) => {
+                       const updatedMessage = response.data;
+                       if (updatedMessage && updatedMessage._id) {
+                           setMessages(prevMessages => prevMessages.map(msg =>
+                               msg.id === updatedMessage._id ? {
+                                   ...msg,
+                                   isDeleted: updatedMessage.isDeleted || false,
+                                   content: updatedMessage.content,
+                               } : msg
+                           ));
+                       }
+                   }
+              );
+          }
+    }, [activeChat, performApiAction, messages, currentUserIdRef]); // Keep currentUserIdRef dependency
+
+     const handleEditMessage = useCallback(async (messageId, newText) => {
+        // currentUserIdRef.current already trimmed
+        const currentUserId = currentUserIdRef.current;
+         if (!messageId || !newText.trim() || !activeChat?.id || !currentUserId) return;
+         // messageToEdit.senderId (đã trim trong state messages)
+         const messageToEdit = messages.find(msg => msg.id === messageId);
+          // So sánh messageToEdit.senderId (đã trim trong state) với currentUserId (đã trim)
+          if (!messageToEdit || messageToEdit.senderId !== currentUserId || messageToEdit.type !== 'text') {
+              console.warn("Cannot edit message: Not the sender or not a text message.");
+              setActionError("You can only edit your own text messages.");
+              return;
+          }
+         if (window.confirm("Are you sure you want to edit this message?")) {
+              await performApiAction(
+                  () => editMessageApi({ messageId, newData: newText }),
+                  "Edit message",
+                   (response) => {
+                       const updatedMessage = response.data;
+                       if (updatedMessage && updatedMessage._id) {
+                           setMessages(prevMessages => prevMessages.map(msg =>
+                               msg.id === updatedMessage._id ? {
+                                   ...msg,
+                                   isEdited: updatedMessage.isEdited || false,
+                                   content: updatedMessage.content,
+                                   text: updatedMessage.type === 'text' && updatedMessage.content?.text?.data ? [updatedMessage.content.text.data] : msg.text,
+                               } : msg
+                           ));
+                       }
+                   }
+              );
+         }
+     }, [activeChat, performApiAction, messages, currentUserIdRef]); // Keep currentUserIdRef dependency
 
 
   // --- Render ---
+
+   const showInitialLoading = isAuthLoading || (isAuthenticated && user?._id && isLoadingConversations && !activeChat && !error);
+   const showAuthError = !isAuthLoading && !isAuthenticated;
+   const showGeneralError = error && !isLoadingConversations && !isLoadingMessages && !isPerformingAction && isAuthenticated;
+
+
+   if (showInitialLoading) {
+       return (
+            <div className="chat-page-container">
+                <div className="loading-overlay">Loading conversations...</div>
+            </div>
+       );
+   }
+
+   if (showAuthError) {
+       return (
+            <div className="chat-page-container">
+                <div className="error-message">Error: {error || "User not authenticated. Please login."}</div>
+            </div>
+       );
+   }
+
+   if (showGeneralError) {
+        console.error("Rendering with general error:", error);
+       return (
+           <div className={`chat-page-container ${isMobileChatActive ? 'chat-active-mobile' : ''}`}>
+                <div className="error-message">Error: {error}</div>
+               <ConversationListPanel
+                    groups={filteredGroups}
+                    friends={filteredFriends}
+                    onSearchChange={handleSearchChange}
+                    onItemClick={handleConversationClick}
+                    activeChat={activeChat}
+               />
+               <ChatWindow
+                   activeContact={activeChat}
+                   messages={messages}
+                   onMobileBack={handleMobileBack}
+                   isMobile={isMobileChatActive}
+                   onSendMessage={handleSendMessage}
+                   isLoadingMessages={isLoadingMessages}
+                   onOpenSettings={activeChat?.isGroup ? handleOpenSettings : null}
+                   onDeleteMessage={handleDeleteMessage}
+                   onEditMessage={handleEditMessage}
+                   currentUserId={currentUserIdRef.current} // <<< Truyền currentUserId (đã trim)
+                   sendingMessage={sendingMessage}
+               />
+                 {isSettingsOpen && activeChat?.isGroup && activeChat.detailedMembers && ( // Check detailedMembers (contains trimmed IDs)
+                    <ChatSettingsOverlay
+                         group={activeChat} // group object now contains detailedMembers with trimmed IDs and trimmed leader
+                         currentUserId={currentUserIdRef.current} // <<< Truyền currentUserId (đã trim)
+                         onClose={handleCloseSettings}
+                         onRemoveUser={handleRemoveUser}
+                         onChangeLeader={handleChangeLeader}
+                         onStepDownLeader={handleStepDownLeader}
+                         onAddUserSearch={handleAddUserSearch}
+                         onAddUserConfirm={handleAddUserConfirm}
+                         isPerformingAction={isPerformingAction}
+                         actionError={actionError}
+                         searchResults={addUserSearchResults} // searchResults still contain original _id strings
+                         onLeaveGroup={handleLeaveGroup}
+                         onDeleteGroup={handleDeleteGroup}
+                         onUpdateGroupName={handleUpdateGroupName}
+                    />
+                 )}
+           </div>
+       );
+   }
+
+
+    // Render bình thường
   return (
     <div className={`chat-page-container ${isMobileChatActive ? 'chat-active-mobile' : ''}`}>
 
-      {isLoadingConversations ? (
-           <div className="loading-overlay">Loading conversations...</div>
-      ) : (
-          <>
-             <ConversationListPanel
-                 groups={filteredGroups}
-                 friends={filteredFriends}
-                 onSearchChange={handleSearchChange}
-                 onItemClick={handleConversationClick}
-                 activeChat={activeChat}
-             />
-             <ChatWindow
-                  activeContact={activeChat}
-                  messages={messages}
-                  onMobileBack={handleMobileBack}
-                  isMobile={isMobileChatActive}
-                  onSendMessage={handleSendMessage}
-                  isLoadingMessages={isLoadingMessages}
-                  // <<< Truyền hàm mở cài đặt xuống ChatWindow >>>
-                  onOpenSettings={activeChat?.type === 'group' ? handleOpenSettings : null} // Chỉ truyền nếu là group
-             />
+      <ConversationListPanel
+          groups={filteredGroups}
+          friends={filteredFriends}
+          onSearchChange={handleSearchChange}
+          onItemClick={handleConversationClick}
+          activeChat={activeChat}
+      />
 
-              {/* <<< Hiển thị Settings Overlay nếu đang mở và active chat là group >>> */}
-              {isSettingsOpen && activeChat?.type === 'group' && (
-                  <ChatSettingsOverlay
-                      group={activeChat} // Truyền object group hiện tại
-                      currentUserId={currentUserIdRef.current} // Truyền ID người dùng hiện tại
-                      onClose={handleCloseSettings} // Hàm đóng overlay
-                      onRemoveUser={handleRemoveUser} // Hàm xoá thành viên
-                      onChangeLeader={handleChangeLeader} // Hàm đổi trưởng nhóm
-                      onAddUserSearch={handleAddUserSearch} // Hàm tìm kiếm người dùng
-                      onAddUserConfirm={handleAddUserConfirm} // Hàm xác nhận thêm người dùng
-                      isPerformingAction={isPerformingAction} // Trạng thái loading action
-                      actionError={actionError} // Lỗi action
-                      searchResults={addUserSearchResults} // Kết quả tìm kiếm để thêm
-                  />
-              )}
-          </>
-      )}
+      <ChatWindow
+           activeContact={activeChat}
+           messages={messages} // messages state contains messages with trimmed senderId
+           onMobileBack={handleMobileBack}
+           isMobile={isMobileChatActive}
+           onSendMessage={handleSendMessage}
+           isLoadingMessages={isLoadingMessages}
+           onOpenSettings={activeChat?.isGroup ? handleOpenSettings : null}
+           onDeleteMessage={handleDeleteMessage}
+           onEditMessage={handleEditMessage}
+           currentUserId={currentUserIdRef.current} // <<< Truyền currentUserId (đã trim)
+           sendingMessage={sendingMessage}
+      />
+
+       {isSettingsOpen && activeChat?.isGroup && activeChat.detailedMembers && ( // Check detailedMembers (contains trimmed IDs)
+           <ChatSettingsOverlay
+               group={activeChat} // group object now contains detailedMembers with trimmed IDs and trimmed leader
+               currentUserId={currentUserIdRef.current} // <<< Truyền currentUserId (đã trim)
+               onClose={handleCloseSettings}
+               onRemoveUser={handleRemoveUser}
+               onChangeLeader={handleChangeLeader}
+               onStepDownLeader={handleStepDownLeader}
+               onAddUserSearch={handleAddUserSearch}
+               onAddUserConfirm={handleAddUserConfirm}
+               isPerformingAction={isPerformingAction}
+               actionError={actionError}
+               searchResults={addUserSearchResults} // searchResults still contain original _id strings
+               onLeaveGroup={handleLeaveGroup}
+               onDeleteGroup={handleDeleteGroup}
+               onUpdateGroupName={handleUpdateGroupName}
+           />
+       )}
+
     </div>
   );
 };
 
 export default ChatPage;
+
+// >>> Helper Functions (Defined ONCE outside the component) <<<
+// Keep helpers if still needed, but they are less relevant for the core issue now.
+
+// Note: This helper is unlikely needed anymore if member details are always populated.
+// If used, ensure any ID comparisons or storage also involve trimming.
+const fetchUserDetailsFromId = async (userId) => {
+    try {
+         // Assuming userId passed to this helper is already trimmed
+         const userDetails = await getUserDetailsApi(userId); // API might receive original or trimmed ID
+         if (userDetails && userDetails._id) {
+             // <<< TRIM _id from API response before returning >>>
+              return { ...userDetails, _id: String(userDetails._id).trim() };
+         } else {
+              console.error(`API returned invalid data for user ${userId}:`, userDetails);
+             return { _id: userId, name: 'Unknown User', avatar: null }; // Return with potentially untrimmed ID or null
+         }
+    } catch (error) {
+        console.error(`Failed to fetch user details for ${userId}:`, error);
+        return { _id: userId, name: 'Unknown User', avatar: null };
+    }
+};
