@@ -687,7 +687,7 @@ class ConversationService {
 
       let messageObj = {
         conversationId: conversationId,
-        senderId: userInfo.id,
+        senderId: userId,
         replyToMessageId,
       };
 
