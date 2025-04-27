@@ -10,23 +10,23 @@ const uploadRouter = {
     },
     pdf: {
       maxFileSize: "128MB",
-      maxFileCount: 1,
+      maxFileCount: 10,
     },
     video: {
       maxFileSize: "128MB",
-      maxFileCount: 1,
+      maxFileCount: 10,
     },
     audio: {
       maxFileSize: "128MB",
-      maxFileCount: 1,
+      maxFileCount: 10,
     },
     text: {
       maxFileSize: "128MB",
-      maxFileCount: 1,
+      maxFileCount: 10,
     },
     blob: {
       maxFileSize: "128MB",
-      maxFileCount: 1,
+      maxFileCount: 10,
     },
   })
     // .middleware((req, res) => {
