@@ -200,366 +200,448 @@
 .active-chat-panel {
   flex-grow: 1;
   height: 100%;
-  background-color: $secondary-color;
+  background-color: $secondary-color; // Assuming this is the chat background
   border-radius: $border-radius-lg;
-  display: flex;
-  justify-content: center;
-  text-align: center; // <-- Đây là text-align cho placeholder "Select a conversation..."
-  flex-direction: column;
-  overflow: hidden; // Quan trọng để ẩn nội dung tràn ra
+  overflow: hidden; // Crucial for containing absolute elements and scrollbar
 
-  // Style cho placeholder khi chưa chọn chat
+  // Default flex column layout for header, list, input
+  display: flex;
+  flex-direction: column;
+
+  // Style for placeholder state when no chat is selected
   &.placeholder {
-       display: flex; // Cần display flex để căn giữa icon và text
-       flex-direction: column; // Xếp icon và text theo cột
-       align-items: center; // Căn giữa ngang
-       justify-content: center; // Căn giữa dọc
-       color: $text-muted-color; // Màu chữ xám
-       font-size: $font-size-large; // Font size lớn hơn
-       .placeholder-icon {
-           font-size: 4em; // Icon rất lớn
-           margin-bottom: $spacing-lg; // Khoảng cách giữa icon và text
-       }
-       span { // Style cho text placeholder
-           font-weight: $font-weight-medium;
-       }
-       // Đảm bảo không bị ảnh hưởng bởi các style khác
-       .chat-header, .message-list-container, .chat-input-area { display: none; }
+      display: flex; // Override to flex for centering
+      flex-direction: column; // Stack items vertically
+      align-items: center; // Center horizontally
+      justify-content: center; // Center vertically
+      color: $text-muted-color;
+      font-size: $font-size-large;
+      flex-grow: 1; // Ensure placeholder takes up available space
+
+      .placeholder-icon {
+          font-size: 4em;
+          margin-bottom: $spacing-lg;
+      }
+      span {
+          font-weight: $font-weight-medium;
+      }
+      // Hide other parts when placeholder is active
+      ~ .chat-header, ~ .message-list-container, ~ .chat-input-area {
+           display: none;
+      }
   }
 
 
   // --- Header ---
   .chat-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: $spacing-md $spacing-lg;
-    border-bottom: 1px solid $input-border-color; // Đường kẻ phân cách
-    flex-shrink: 0; // Không co lại
-
-    .contact-info {
       display: flex;
+      justify-content: space-between;
       align-items: center;
+      padding: $spacing-md $spacing-lg;
+      border-bottom: 1px solid $input-border-color;
+      flex-shrink: 0; // Prevent header from shrinking
 
-      .avatar {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        object-fit: cover;
-        margin-right: $spacing-md;
+      .contact-info {
+          display: flex;
+          align-items: center;
+
+          .avatar {
+              width: 40px;
+              height: 40px;
+              border-radius: 50%;
+              object-fit: cover;
+              margin-right: $spacing-md;
+          }
+
+          .name-status {
+              display: flex;
+              flex-direction: column;
+              text-align: left;
+
+              .contact-name {
+                  font-weight: $font-weight-bold;
+                  color: $text-color;
+                  font-size: $font-size-large;
+              }
+              .contact-status {
+                  font-size: $font-size-small;
+                  color: $text-muted-color;
+              }
+          }
       }
 
-      .name-status {
-        display: flex;
-        flex-direction: column;
-        text-align: left; // Đảm bảo text-align cho name/status là left
+      .chat-actions {
+          display: flex;
+          gap: $spacing-sm;
 
-        .contact-name {
-          font-weight: $font-weight-bold;
-          color: $text-color;
-          font-size: $font-size-large;
-        }
-        .contact-status {
-          font-size: $font-size-small;
-          color: $text-muted-color;
-        }
+          .icon-button {
+              background: none;
+              border: none;
+              color: $text-muted-color;
+              font-size: 18px;
+              cursor: pointer;
+              padding: $spacing-xs;
+              border-radius: 50%;
+              transition: background-color $transition-fast ease-out, color $transition-fast ease-out;
+
+              &:hover {
+                  color: $primary-color;
+                  background-color: $container-bg-color;
+              }
+               &:disabled {
+                   opacity: 0.6;
+                   cursor: not-allowed;
+               }
+          }
       }
-    }
-
-    .chat-actions {
-      display: flex;
-      gap: $spacing-sm;
-
-      .icon-button {
-        background: none;
-        border: none;
-        color: $text-muted-color;
-        font-size: 18px;
-        cursor: pointer;
-        padding: $spacing-xs;
-        border-radius: 50%;
-        transition: background-color $transition-fast ease-out, color $transition-fast ease-out;
-
-        &:hover {
-          color: $primary-color;
-          background-color: $container-bg-color;
-        }
-      }
-    }
   }
 
-  // --- Khu vực hiển thị tin nhắn ---
+  // --- Message List Area ---
   .message-list-container {
-    flex-grow: 1; // Chiếm hết không gian dọc còn lại
-    overflow-y: auto; // Cho phép cuộn tin nhắn
-    padding: $spacing-lg;
-    display: flex;
-    flex-direction: column; // Tin nhắn xếp chồng lên nhau
-    // gap: $spacing-xs; // Khoảng cách giữa các message bubble wrapper (tùy chọn, có thể dùng margin-bottom trên wrapper)
+      flex-grow: 1; // Takes remaining vertical space
+      overflow-y: auto; // Enable vertical scrolling
+      padding: $spacing-lg;
+      display: flex;
+      flex-direction: column; // Stack message wrappers vertically
 
-    // --- Custom scrollbar (optional) ---
-    &::-webkit-scrollbar { width: 8px; }
-    &::-webkit-scrollbar-track { background: transparent; }
-    &::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
-    &::-webkit-scrollbar-thumb:hover { background: #aaa; }
+      // --- Custom scrollbar (optional) ---
+      &::-webkit-scrollbar { width: 8px; }
+      &::-webkit-scrollbar-track { background: transparent; }
+      &::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+      &::-webkit-scrollbar-thumb:hover { background: #aaa; }
 
 
-    .message-bubble-wrapper {
-      display: flex; // Sử dụng flex để xếp bubble và timestamp
-      // flex-direction: column; // Giữ mặc định column để xếp bubble và timestamp
-      margin-bottom: $spacing-md; // <-- Giảm margin-bottom để gần hơn
-      max-width: 65%; // Giới hạn chiều rộng bubble
-      position: relative; // Cho timestamp và status dot
-       // Loại bỏ text-align trên wrapper, để bubble và timestamp căn chỉnh riêng
+      // Message wrapper (contains options, bubble, timestamp, sender info)
+      .message-bubble-wrapper {
+          position: relative; // Crucial for absolute positioning of options
+          display: flex;
+          flex-direction: column; // Stack sender info (group) above content area
+          margin-bottom: $spacing-md;
+          max-width: 80%; // Limit the maximum width of the message block
 
-      &.uploading { opacity: 0.8; }
-      &.failed { opacity: 0.8; }
-
-      .uploading-overlay, .error-message-overlay {
-        position: absolute;
-        top: 0; left: 0; right: 0; bottom: 0;
-        background-color: rgba(255, 255, 255, 0.7); // Semi-transparent white/grey overlay
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: $font-size-small;
-        font-weight: $font-weight-medium;
-        z-index: 1; // Ensure it's above the image/file content
-        border-radius: $border-radius-sm; // Match bubble/image border radius
-      }
-
-      .uploading-overlay { color: $text-muted-color; }
-      .error-message-overlay { color: $error-color; }
-    
-
-      // Bubble tin nhắn nhận (bên trái)
-      &.received {
-        align-self: flex-start; // Căn trái wrapper trong container flex column
-        // margin-right: auto; // Tùy chọn, align-self thường đủ
-
-         // Căn chỉnh nội dung bên trong wrapper (bubble, timestamp) sang trái
-        align-items: flex-start;
-
-        .message-bubble {
-          background-color: $container-bg-color; // Màu xám nhạt
-          color: $text-color;
-          border-radius: $border-radius-md $border-radius-md $border-radius-md $border-radius-sm;
-          padding: $spacing-sm $spacing-md;
-          word-wrap: break-word;
-  
-          .message-text {
-            margin: 0;
-            line-height: $line-height-base;
-            font-size: $font-size-base;
-             &:not(:last-child) {
-                margin-bottom: math.div($spacing-xs, 2) ;
-             }
+          // Positioning wrapper based on sender
+          &.received {
+              align-self: flex-start; // Align wrapper to the left
+               // Position options container for received messages (on the right)
+              .message-options-container.other {
+                   right: 0;
+                   transform: translateX(100%); // Move fully outside the wrapper to the right
+                   padding-left: $spacing-xs; // Space between options and bubble
+              }
           }
-  
+          &.sent {
+              align-self: flex-end; // Align wrapper to the right
+               // Position options container for sent messages (on the left)
+              .message-options-container.self {
+                   left: 0;
+                   transform: translateX(-100%); // Move fully outside the wrapper to the left
+                   padding-right: $spacing-xs; // Space between options and bubble
+              }
+          }
+
+          // Visual states for wrapper (loading, failed)
+          &.uploading { opacity: 0.8; }
+          &.failed {
+              // You might add a subtle visual cue here, like a light border or shadow
+               // box-shadow: 0 0 3px rgba($error-color, 0.5);
+          }
+
+
+          // Group chat sender information (only for received messages in group)
+          // This block is rendered conditionally in the MessageBubble component
+          .message-sender-info {
+              display: flex;
+              align-items: center;
+              gap: $spacing-xs;
+              margin-bottom: $spacing-xs; // Space between sender info and bubble
+              font-size: $font-size-small;
+              color: $text-muted-color;
+              // Align sender info left within its wrapper
+              align-self: flex-start; // Even for sent messages, the sender info block (if shown) would align left
+
+               .sender-avatar {
+                   width: 20px;
+                   height: 20px;
+                   border-radius: 50%;
+                   object-fit: cover;
+               }
+                .sender-name {
+                    font-weight: $font-weight-medium;
+                }
+          }
+
+          // Container for the actual bubble and timestamp (stacks them)
+          .message-content-area {
+              display: flex;
+              flex-direction: column; // Bubble above timestamp
+              gap: 4px; // Space between bubble and timestamp
+               // Alignment within the wrapper is handled by the parent (.received, .sent)
+               // Items (bubble, timestamp) alignment within this column is handled below
+          }
+          
           .edited-indicator {
-            font-size: 9px;
+            font-size: 10px;
             color: color.adjust($text-muted-color, $lightness: -10%);
             margin-left: $spacing-xs;
             vertical-align: bottom;
             white-space: nowrap;
-             position: relative;
-             bottom: -2px;
+            position: relative;
+            bottom: -2px;
           }
-  
-          /* --- Styles cho các loại nội dung khác TEXT --- */
-  
-          .message-image-container {
-              display: flex; // Dùng flex để xếp ảnh trong container
-              flex-direction: column; // Xếp ảnh chồng lên nhau nếu có nhiều
-              gap: $spacing-xs; // Khoảng cách giữa các ảnh
-              margin-top: $spacing-xs; // Khoảng cách trên nếu có text/tên người gửi
-              // Nếu muốn xếp ảnh cạnh nhau: flex-direction: row; flex-wrap: wrap;
-              position: relative;
-          }
-  
-          .message-image {
-              max-width: 100%; // Ảnh không vượt quá chiều rộng bubble
-              max-height: 200px; // Giới hạn chiều cao để không chiếm quá nhiều diện tích
-              object-fit: cover; // Đảm bảo tỷ lệ ảnh khi resize
-              border-radius: $border-radius-sm; // Bo góc ảnh
-              display: block; // Đảm bảo ảnh là block element cho margin/width
-               // Optional: Thêm shadow/border nhẹ
-               // box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-               position: relative; z-index: 0;
-          }
-  
-          .message-file-link {
-            display: flex; // Use flex for alignment
-            align-items: center;
-            gap: $spacing-xs;
-            color: $primary-color;
-            text-decoration: none;
-            font-weight: $font-weight-medium;
-            padding: $spacing-xs $spacing-sm;
-            background-color: color.adjust($primary-color, $alpha: -0.95);
-            border-radius: $border-radius-sm;
-            max-width: 100%;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            position: relative; // Needed for positioning status icon
-  
-            &:hover:not(.disabled-link) { text-decoration: underline; } // Hover effect only if not disabled
-  
-            &.disabled-link {
-                cursor: default; // Change cursor for disabled links
-            }
-  
-            .fas { // Icon styles
-                font-size: $font-size-large;
-                color: $primary-color;
-            }
-  
-            .file-name {
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-                 flex-grow: 1; // Allow name to take available space
-            }
-             .file-size {
-                font-size: $font-size-small;
-                color: color.adjust($text-muted-color, $lightness: -10%);
-                flex-shrink: 0; // Prevent size text from shrinking
-             }
-  
-             // Optional: File status icon (e.g., failed)
-             .file-status-icon {
-                 font-size: $font-size-base; // Adjust size
-                 margin-left: $spacing-xs; // Space from file name/size
-                 flex-shrink: 0;
-             }
-          }
-        }
-         // Timestamp bên trái
-        .message-timestamp {
-          left: 0; // Đặt timestamp ở vị trí 0px so với lề trái của wrapper
-          right: auto; // Bỏ thuộc tính right
-          text-align: left;
-          margin-left: 0; // Bỏ margin-left cũ
-          display: flex; // Use flex to align time and status icon
-          align-items: center;
-          gap: 4px; // Space between time and icon
 
-          .message-status-icon {
-              font-size: 10px; // Smaller icon size
-                // Position adjustments might be needed depending on exact layout
+          // The actual message bubble (contains text, image, file)
+          .message-bubble {
+              padding: $spacing-sm $spacing-md;
+              word-wrap: break-word; // Break long words
+              white-space: pre-wrap; // Preserve whitespace and newlines
+              position: relative; // Needed for overlays/indicators inside
+              z-index: 0; // Ensure it's below the options menu
+              // Default border radius - overridden by sent/received
+              border-radius: $border-radius-md;
+
+
+              // Text content inside bubble
+              .message-text {
+                  margin: 0;
+                  line-height: $line-height-base;
+                  font-size: $font-size-base;
+                  // Space between multiple lines in the same bubble
+                  &:not(:last-child) {
+                      margin-bottom: math.div($spacing-xs, 2);
+                  }
+              }
+
+               // Overlays for uploading/failed (image/file)
+                .uploading-overlay, .error-message-overlay {
+                    position: absolute;
+                    top: 0; left: 0; right: 0; bottom: 0;
+                    background-color: rgba(255, 255, 255, 0.7);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: $font-size-small;
+                    font-weight: $font-weight-medium;
+                    z-index: 1;
+                    border-radius: $border-radius-sm; // Match inner content radius
+                }
+
+                .uploading-overlay { color: $text-muted-color; }
+                .error-message-overlay { color: $error-color; }
+
+
+              // Image container
+              .message-image-container {
+                  display: flex;
+                  flex-direction: column; // Stack images if multiple
+                  gap: $spacing-xs; // Space between multiple images
+                  margin-top: $spacing-xs; // Optional: space above if text/sender info precedes
+                   position: relative; // For overlay positioning
+              }
+
+              .message-image {
+                  max-width: 100%;
+                  max-height: 150px; // Example height limit
+                  object-fit: cover;
+                  border-radius: $border-radius-sm;
+                  display: block;
+                  position: relative; z-index: 0; // Ensure image is below overlay
+              }
+
+              // File link
+              .message-file-link {
+                  display: flex;
+                  align-items: center;
+                  gap: $spacing-xs;
+                  color: $primary-color; // Link color
+                  text-decoration: none;
+                  font-weight: $font-weight-medium;
+                  padding: $spacing-xs $spacing-sm;
+                  background-color: color.adjust($primary-color, $alpha: -0.95); // Light background
+                  border-radius: $border-radius-sm;
+                  max-width: 100%;
+                  overflow: hidden; // Hide overflowing text
+                  position: relative; // For positioning status icon
+
+                  &:hover:not(.disabled-link) { text-decoration: underline; }
+
+                  &.disabled-link {
+                      cursor: default;
+                      opacity: 0.8;
+                  }
+
+                  .fas {
+                      font-size: $font-size-large;
+                      color: $primary-color;
+                      flex-shrink: 0; // Prevent icon from shrinking
+                  }
+
+                  .file-name {
+                      overflow: hidden;
+                      text-overflow: ellipsis;
+                      white-space: nowrap;
+                      flex-grow: 1; // Allow name to fill space
+                  }
+                  .file-size {
+                      font-size: $font-size-small;
+                      color: color.adjust($text-muted-color, $lightness: -10%);
+                      flex-shrink: 0; // Prevent size text from shrinking
+                  }
+
+                  .file-status-icon {
+                       font-size: $font-size-base;
+                       margin-left: $spacing-xs;
+                       flex-shrink: 0;
+                       &.failed { color: $error-color; }
+                  }
+              }
           }
-          .message-status-icon.failed { color: $error-color; }
-        }
-         // Nếu có info người gửi trong nhóm, căn chỉnh nó ở đây
+
+          // Timestamp (below the bubble, inside message-content-area)
+          .message-timestamp {
+              font-size: 10px;
+              color: $text-muted-color;
+              white-space: nowrap;
+               // Alignment handled by the parent .message-content-area based on sender
+          }
+
+
+          // Styles for sent bubble/content/timestamp
+          &.sent {
+              .message-content-area {
+                  align-items: flex-end; // Align bubble and timestamp right within the column
+              }
+              .message-bubble {
+                  background-color: $primary-color; // Your primary color
+                  color: $secondary-color; // Often white/light color for text
+                  border-radius: $border-radius-md $border-radius-md $border-radius-sm $border-radius-md; // Tail bottom-right
+              }
+              .message-timestamp { // Timestamp for the deleted message
+                text-align: right; // Center the timestamp below the deleted bubble
+                // No absolute positioning needed here; flows normally within message-content-area
+              }
+               // align-self isn't strictly necessary on timestamp here if parent has align-items
+          }
+
+          // Styles for received bubble/content/timestamp
+          &.received {
+              .message-content-area {
+                  align-items: flex-start; // Align bubble and timestamp left within the column
+              }
+              .message-bubble {
+                  background-color: $container-bg-color; // Light grey/white
+                  color: $text-color;
+                  border: 1px solid $input-border-color; // Often border for received
+                  border-radius: $border-radius-md $border-radius-md $border-radius-md $border-radius-sm; // Tail bottom-left
+              }
+              .message-timestamp { // Timestamp for the deleted message
+                text-align: left; // Center the timestamp below the deleted bubble
+                // No absolute positioning needed here; flows normally within message-content-area
+              }
+               // align-self isn't strictly necessary on timestamp here if parent has align-items
+          }
+
+
+          // --- Options Button & Menu Styles ---
+          .message-options-container {
+              position: absolute;
+              top: 50%; // Vertically align with the middle of the wrapper
+              transform: translateY(-50%); // Adjust for the container's own height
+              display: flex;
+              align-items: center;
+              z-index: 2; // Ensure options are above the bubble
+              opacity: 0; // Hide by default
+              transition: opacity 0.2s ease-in-out;
+              pointer-events: none; // Disable clicks when hidden
+          }
+
+          // Show options container on hover of the message wrapper OR if menu is active
+          &:hover .message-options-container,
+          .message-options-container.active-menu { // 'active-menu' class can be added by JS when menu is open
+              opacity: 1;
+              pointer-events: auto; // Enable clicks when visible
+          }
+
+          .message-options-button {
+              background: none;
+              border: none;
+              cursor: pointer;
+              font-size: 1em;
+              color: $text-muted-color; // Icon color
+              padding: 5px; // Make clickable area larger
+              display: flex;
+              align-items: center;
+               // Add subtle hover effect if desired
+               &:hover {
+                   color: $primary-color; // Color change on hover
+               }
+          }
+
+          // Options Menu (Conditionally rendered by JS)
+          .message-options-menu {
+              position: absolute;
+              background: white;
+              border: 1px solid $input-border-color; // Use a variable for consistency
+              border-radius: 5px;
+              box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+              padding: 5px 0;
+              min-width: 120px;
+              z-index: 10; // Ensure menu is above everything
+              bottom: 100%; // Position above the button
+              margin-bottom: 5px; // Space between button and menu
+              white-space: nowrap;
+
+              // Position menu relative to the options button based on sender
+              &.self {
+                  right: 0; // Align right edge of menu with right edge of button (for sent messages, button is on the left)
+              }
+              &.other {
+                  left: 0; // Align left edge of menu with left edge of button (for received messages, button is on the right)
+              }
+          }
+
+          .option-item {
+              padding: 8px 15px;
+              cursor: pointer;
+              font-size: 0.9em;
+              color: $text-color;
+              transition: background-color 0.1s ease;
+
+              &:hover {
+                  background-color: $container-bg-color; // Light hover background
+              }
+          }
+
+
+          // --- Deleted Message Styles ---
+           &.deleted { // Style for the wrapper when message is deleted
+               opacity: 0.8; // Slightly transparent
+               max-width: fit-content; // Allow the wrapper to shrink to fit the deleted message content
+
+               .message-content-area { // Center the deleted bubble and timestamp within its container
+                    gap: $spacing-xs; // Adjust gap for deleted look if needed
+               }
+
+               .message-bubble.deleted-message { // Style for the deleted message placeholder bubble
+                   background-color: $container-bg-color;
+                   color: $text-muted-color;
+                   font-style: italic;
+                   border: 1px dashed $input-border-color;
+                   padding: $spacing-sm $spacing-md;
+                   display: flex; // Use flex to align icon and text inside
+                   align-items: center;
+                   gap: $spacing-xs;
+                   border-radius: $border-radius-md; // Use a standard border radius
+                   .fas { font-size: $font-size-base; } 
+               }
+               // Hide original bubble content, options, and sender info for deleted messages
+               .message-bubble:not(.deleted-message),
+               .message-options-container,
+               .message-sender-info {
+                   display: none;
+               }
+           }
+
       }
-
-      // Bubble tin nhắn gửi (bên phải)
-      &.sent {
-        align-self: flex-end; // Căn phải wrapper trong container flex column
-        // margin-left: auto; // Tùy chọn, align-self thường đủ
-
-        // Căn chỉnh nội dung bên trong wrapper (bubble, timestamp) sang phải
-        align-items: flex-end;
-
-        .message-bubble {
-          background-color: $primary-color; // Màu tím theo thiết kế
-          color: $secondary-color; // Chữ trắng
-          border-radius: $border-radius-md $border-radius-md $border-radius-sm $border-radius-md; // Bo góc khác ở dưới phải
-           // Bỏ margin-bottom cũ
-        }
-        // Timestamp bên phải
-        .message-timestamp {
-          right: 0; // Đặt timestamp ở vị trí 0px so với lề phải của wrapper
-          left: auto; // Bỏ thuộc tính left
-          text-align: right; // Đặt timestamp bên trái bubble
-          margin-right: 0; // Bỏ margin-right cũ
-        }
-        // Bỏ status dot cũ nếu không sử dụng
-        // .message-status-dot { ... }
-      }
-
-      &.deleted { // Style for deleted messages
-        opacity: 0.7; // Make it slightly transparent
-        // Make it center aligned visually regardless of sent/received class?
-        // align-self: center; // Optional: Căn giữa tin nhắn bị xóa
-        width: fit-content; // Optional: Chiều rộng vừa nội dung
-        // margin-left: auto; // Optional: Căn giữa thủ công
-        // margin-right: auto; // Optional: Căn giữa thủ công
-
-        .message-bubble.deleted-message {
-          background-color: $container-bg-color;
-          color: $text-muted-color;
-          font-style: italic;
-          border: 1px dashed $input-border-color;
-          padding: $spacing-sm $spacing-md;
-          display: flex;
-          align-items: center;
-          gap: $spacing-xs;
-          border-radius: $border-radius-md;
-          .fas { font-size: $font-size-base; }
-        }
-         // Đặt timestamp dưới tin nhắn bị xóa ở giữa hoặc theo hướng cũ
-         .message-timestamp {
-          left: 50%;
-          transform: translateX(-50%);
-          right: auto; // Ensure right is auto when centered
-           // Reset display flex/gap if needed, or style icon separately
-          display: block; // Timestamp itself doesn't need flex when centered below
-          text-align: center;
-        }
-      }
-
-      .message-bubble {
-        padding: $spacing-sm $spacing-md;
-        word-wrap: break-word; // Tự động xuống dòng
-        position: relative; // Needed for overlay positioning inside bubble
-        z-index: 0;
-
-        .message-text {
-          margin: 0;
-          line-height: $line-height-base;
-          font-size: $font-size-base;
-           // Style cho các dòng tin nhắn trong cùng bubble
-          &:not(:last-child) {
-            margin-bottom: math.div($spacing-xs, 2) ;
-          }
-        }
-
-        .edited-indicator { // Style for edited indicator
-          font-size: 9px;
-          color: color.adjust($text-muted-color, $lightness: -10%); // Màu đậm hơn chút so với timestamp
-          margin-left: $spacing-xs;
-          vertical-align: bottom; // Align to bottom of text line
-          white-space: nowrap;
-           position: relative; // Can position absolutely if needed
-           bottom: -2px; // Adjust position slightly
-        }
-
-        // Styles for different content types (placeholders)
-        .file-message-link {
-          display: flex;
-          align-items: center;
-          gap: $spacing-xs;
-          color: $primary-color; // Link color
-          text-decoration: none;
-          font-weight: $font-weight-medium;
-
-          &:hover { text-decoration: underline; }
-
-          .fas { font-size: $font-size-large; } // Icon size
-        }
-      }
-
-      .message-timestamp {
-         position: absolute; // Đặt timestamp tương đối với wrapper
-         bottom: -(math.div($spacing-lg, 1.5)); // Đặt dưới bubble một chút
-         font-size: 10px;
-         color: $text-muted-color;
-         white-space: nowrap;
-         // Left/right position defined in .received / .sent
-      }
-    }
   }
 
   // --- Khu vực nhập liệu ---
@@ -629,6 +711,93 @@
             // background-color: $container-bg-color; // Optional: Thêm nền xám khi disabled
        }
     }
+  }
+  .message-edit-dialog-overlay {
+    position: fixed; // Or absolute relative to chat container if preferred
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(0, 0, 0, 0.4); // Semi-transparent background overlay
+    display: flex;
+    align-items: center; // Center vertically
+    justify-content: center; // Center horizontally
+    z-index: 1000; // Ensure it's above everything else
+  }
+}
+
+.message-edit-dialog {
+  background-color: $secondary-color;
+  padding: $spacing-lg;
+  border-radius: $border-radius-md;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  width: 90%; // Dialog takes 90% width on small screens
+  max-width: 400px; // Maximum width on larger screens
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+
+  h4 {
+      margin: 0;
+      font-size: $font-size-large;
+      color: $text-color;
+      text-align: center;
+  }
+
+  textarea {
+      width: 100%;
+      padding: $spacing-sm;
+      border: 1px solid $input-border-color;
+      border-radius: $border-radius-sm;
+      font-size: $font-size-base;
+      color: $text-color;
+      background-color: $container-bg-color; // Match input background
+      resize: vertical; // Allow vertical resizing
+      outline: none; // Remove default outline
+
+      &:focus {
+          border-color: $primary-color; // Highlight on focus
+      }
+      &:disabled {
+           opacity: 0.8;
+           cursor: not-allowed;
+           background-color: $input-border-color;
+      }
+  }
+
+.dialog-actions {
+      display: flex;
+      justify-content: flex-end; // Align buttons to the right
+      gap: $spacing-sm;
+
+       // Basic button styles (you should replace these with your actual button classes)
+       .button {
+           padding: $spacing-sm $spacing-md;
+           border: none;
+           border-radius: $border-radius-button-main; // Match your button radius
+           cursor: pointer;
+           font-size: $font-size-base;
+           transition: background-color $transition-fast ease-out, opacity $transition-fast ease-out;
+
+           &.primary {
+               background-color: $primary-color;
+               color: $secondary-color;
+               &:hover:not(:disabled) {
+                   background-color: color.adjust($primary-color, $lightness: -5%);
+               }
+           }
+
+           &.secondary {
+               background-color: $container-bg-color; // Light background
+               color: $text-color;
+               border: 1px solid $input-border-color;
+               &:hover:not(:disabled) {
+                   background-color: color.adjust($container-bg-color, $lightness: -5%);
+               }
+           }
+
+           &:disabled {
+               opacity: 0.5;
+               cursor: not-allowed;
+           }
+       }
   }
 }
 
@@ -1072,27 +1241,3 @@
   }
 }
 
-// Style cho loading messages và no messages
-.active-chat-panel {
-  .message-list-container {
-      .loading-messages, .no-messages {
-           text-align: center;
-           color: $text-muted-color;
-           font-size: $font-size-large;
-           margin-top: $spacing-lg;
-           flex-grow: 1; // Giúp căn giữa theo chiều dọc
-      }
-  }
-}
-
-// Thêm style cho trạng thái tin nhắn failed (tùy chọn)
-// Có thể thêm icon lỗi hoặc thay đổi màu bubble
-// Ví dụ:
-// .message-bubble-wrapper.sent.failed {
-//    .message-bubble {
-//        background-color: color.adjust($error-color, $alpha: -0.5); // Màu đỏ mờ
-//    }
-//    .message-timestamp {
-//        color: $error-color; // Màu đỏ cho timestamp
-//    }
-// }

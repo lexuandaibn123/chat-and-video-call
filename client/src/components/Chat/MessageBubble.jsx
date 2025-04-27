@@ -1,9 +1,6 @@
 // src/components/Chat/MessageBubble.jsx
-import React, { useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import defaultAvatarPlaceholder from '../../assets/images/avatar_placeholder.jpg';
-// Optional: Import Font Awesome icons if you want custom icons for file types
-// import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-// import { faFile, faFileAlt, faFileImage, faFilePdf, faSpinner } from '@fortawesome/free-solid-svg-icons'; // Add faSpinner
 
 const MessageBubble = ({
     time,
@@ -17,23 +14,76 @@ const MessageBubble = ({
     currentUserId,
     senderName,
     senderAvatar,
-    status, // <<< NHẬN STATUS PROP (uploading, sending, sent, failed)
-    // ... action handlers ...
+    status, // NHẬN STATUS PROP (uploading, sending, sent, failed)
+    onDeleteMessage, // Nhận handler delete
+    onEditMessage, // Nhận handler edit
+    editingMessageId, // <<< Nhận prop này
 }) => {
 
-    // Tính toán sender dựa trên so sánh (senderId và currentUserId đều đã được trim ở ChatPage)
+    const [showMenu, setShowMenu] = useState(false);
+    const menuRef = useRef(null);
+
     const sender = senderId === currentUserId ? 'self' : 'other';
+
+    // Logic đóng menu khi click ra ngoài
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (menuRef.current && !menuRef.current.contains(event.target)) {
+                setShowMenu(false);
+            }
+        };
+
+        if (showMenu) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [showMenu]);
+
+
+    // Toggle menu visibility
+    const toggleMenu = () => {
+        setShowMenu(!showMenu);
+    };
+
+    // Handle Delete Action
+    const handleDelete = () => {
+        if (onDeleteMessage && !isDeleted && status !== 'uploading' && id !== editingMessageId) { // Prevent deleting while editing or uploading
+            onDeleteMessage(id);
+            setShowMenu(false); // Close menu after action
+        }
+    };
+
+    // Handle Edit Action
+    const handleEdit = () => {
+        const textContent = content?.text?.data || '';
+        // Check if editable (text type, not deleted, not uploading/sending, not already being edited)
+        if (onEditMessage && type === 'text' && !isDeleted && status !== 'uploading' && status !== 'sending' && id !== editingMessageId) {
+            onEditMessage(id, textContent); // <<< Truyền ID và nội dung hiện tại
+            setShowMenu(false); // Close menu after action
+        }
+    };
+
+    // Determine which options to show in the menu
+    const canEdit = sender === 'self' && type === 'text' && !isDeleted && status !== 'uploading' && status !== 'sending' && id !== editingMessageId;
+    const canDelete = sender === 'self' && !isDeleted && status !== 'uploading' && id !== editingMessageId;
+
+    // Determine if the options button container should be shown
+    // Show options only for self, not deleted, and not the message currently being edited
+    const shouldShowOptionsButton = sender === 'self' && !isDeleted && id !== editingMessageId;
+
+    // Add class if this message is currently being edited
+    const isCurrentlyEditing = id === editingMessageId;
+
 
     // Render content based on type and status
     const renderContent = () => {
-        // If message is deleted or failed after sending, show specific status/placeholder instead of content
-        // If status is 'failed', render failure indicator instead of content (unless you want to show content with an error icon)
-        if (isDeleted) {
-             // Deleted state is handled in the wrapper check, renderContent should not be called for deleted
-             return null;
+        if (isDeleted || isCurrentlyEditing) { // Don't render standard content if deleted or editing
+             return null; // Or render a placeholder if needed
         }
 
-        // Handle different types
         switch (type) {
             case 'text':
                 const textContent = content?.text?.data || '';
@@ -42,133 +92,146 @@ const MessageBubble = ({
                 ));
 
             case 'image':
-                // content.image is an array of image objects { metadata: { fileName, ... }, data: "URL", ... }
-                // For optimistic update, data might be a local URL (blob)
                 const images = content?.image;
                 if (!images || !Array.isArray(images) || images.length === 0) {
-                    // Handle cases with no images or invalid data
                     return status === 'uploading' ? <p className="message-text">[Uploading Image...]</p> : <p className="message-text">[No Image Data]</p>;
                 }
-
                 return (
                     <div className="message-image-container">
-                         {/* Add uploading indicator overlay or style if status is 'uploading' */}
                          {status === 'uploading' && <div className="uploading-overlay"><i className="fas fa-spinner fa-spin"></i> Uploading...</div>}
                          {status === 'failed' && <div className="error-message-overlay"><i className="fas fa-exclamation-circle"></i> Failed</div>}
-
                         {images.map((img, index) => {
-                            // Access URL from 'data' field, which could be local URL during optimistic update
                             const imageUrl = img.data;
                             const imageName = img.metadata?.fileName || `Image ${index + 1}`;
-
-                            if (!imageUrl) {
-                                // Fallback if URL is missing even in data
+                            if (!imageUrl && status !== 'uploading') {
                                 return <p key={index} className="message-text">[Image URL Missing: {imageName}]</p>;
                             }
-
                             return (
                                 <img
                                     key={index}
                                     src={imageUrl}
                                     alt={imageName}
                                     className="message-image"
-                                    // Disable click while uploading
-                                     onClick={status !== 'uploading' ? () => window.open(imageUrl, '_blank') : undefined}
-                                     style={{ cursor: status !== 'uploading' ? 'pointer' : 'default', opacity: status === 'uploading' ? 0.7 : 1 }} // Dim while uploading
+                                     onClick={(status !== 'uploading' && imageUrl) ? () => window.open(imageUrl, '_blank') : undefined}
+                                     style={{ cursor: (status !== 'uploading' && imageUrl) ? 'pointer' : 'default', opacity: status === 'uploading' ? 0.7 : 1 }}
                                 />
                             );
                         })}
                     </div>
                 );
-
-
             case 'file':
-                 // content.file is a file object { metadata: { fileName, ... }, data: "URL", ... }
-                 // For optimistic update, data might be null, name/size should be in metadata
                  const file = content?.file;
-                 // Access URL from 'data' field
                  const fileUrl = file?.data;
                  const fileName = file?.metadata?.fileName;
-                 const fileSize = file?.metadata?.size; // Access size from metadata
-
+                 const fileSize = file?.metadata?.size;
 
                  if (!fileName) {
-                      // Handle cases with no name or invalid data
                       return status === 'uploading' ? <p className="message-text">[Uploading File...]</p> : <p className="message-text">[Invalid File Data: Name Missing]</p>;
                  }
-
-                 // Display file info even if URL is not available (e.g., during upload)
                  return (
-                      // Disable link while uploading or if URL is missing
                       <a
-                         href={fileUrl || '#'} // Use # or null if url is missing, href="" might cause page reload
-                         target={fileUrl ? "_blank" : undefined} // Only open in new tab if URL exists
-                         rel={fileUrl ? "noopener noreferrer" : undefined} // Only add rel if URL exists
-                         className={`message-file-link ${!fileUrl ? 'disabled-link' : ''}`}
-                         onClick={!fileUrl ? (e) => e.preventDefault() : undefined} // Prevent default click if no URL
-                         style={{ opacity: status === 'uploading' ? 0.7 : 1, cursor: !fileUrl ? 'default' : 'pointer' }} // Dim/change cursor while uploading
+                         href={fileUrl || '#'}
+                         target={fileUrl ? "_blank" : undefined}
+                         rel={fileUrl ? "noopener noreferrer" : undefined}
+                         className={`message-file-link ${!fileUrl || status === 'uploading' ? 'disabled-link' : ''}`}
+                         onClick={(!fileUrl || status === 'uploading') ? (e) => e.preventDefault() : undefined}
+                         style={{ opacity: status === 'uploading' ? 0.7 : 1, cursor: (!fileUrl || status === 'uploading') ? 'default' : 'pointer' }}
                       >
-                           {/* Add uploading indicator or style if status is 'uploading' */}
                            {status === 'uploading' ?
-                               <i className="fas fa-spinner fa-spin"></i> : // Font Awesome spinner
-                               <i className="fas fa-file-alt"></i> // Font Awesome file icon
+                               <i className="fas fa-spinner fa-spin"></i> :
+                               <i className="fas fa-file-alt"></i>
                            }
                            <span className="file-name">{fileName}</span>
-                           {/* Display size if available */}
-                           {fileSize && <span className="file-size">({(fileSize / 1024).toFixed(1)} KB)</span>}
-
-                            {status === 'failed' && <i className="fas fa-exclamation-circle file-status-icon failed" title="Failed"></i>} {/* Font Awesome error icon */}
+                           {fileSize != null && <span className="file-size">({(fileSize / 1024).toFixed(1)} KB)</span>}
+                            {status === 'failed' && <i className="fas fa-exclamation-circle file-status-icon failed" title="Failed"></i>}
                       </a>
                  );
-
-
             default:
-                // Handle unknown types
                 return <p className="message-text">[{type ? type.toUpperCase() : 'UNKNOWN'}] Unsupported message type.</p>;
         }
     };
 
-    // Deleted state is handled by wrapper class and specific bubble style in CSS
-    // The renderContent function will return null if isDeleted is true
-    const contentElement = renderContent();
+    const contentElement = renderContent(); // Render the content element
 
-    // Hide the bubble completely if deleted and no specific deleted style is needed
-    // Or keep wrapper if deleted style handles visibility
-    // if (isDeleted && !contentElement) { // Check if deleted AND renderContent returned null
-    //     return null; // Or return the deleted placeholder wrapper defined earlier
-    // }
+    // Determine if we should render the standard bubble structure or just the deleted one
+    const shouldRenderBubble = !isDeleted && !isCurrentlyEditing;
+    const shouldRenderDeletedPlaceholder = isDeleted;
+    const shouldRenderEditingPlaceholder = isCurrentlyEditing;
+    const nonConflictingStatusClass = (status && status !== 'sent' && status !== 'received') ? status : '';
 
 
     return (
-        // Apply 'sent' or 'received', and 'deleted', 'failed', 'uploading' classes to the wrapper
-        <div className={`message-bubble-wrapper ${sender === 'self' ? 'sent' : 'received'} ${isDeleted ? 'deleted' : ''} ${status ? status : ''}`} data-message-id={id}>
-             {/* ... SenderInfo for group chat (TODO) ... */}
+        // Apply classes to the wrapper including 'editing' if it's the message being edited
+        <div className={`message-bubble-wrapper ${sender === 'self' ? 'sent' : 'received'} ${isDeleted ? 'deleted' : ''} ${nonConflictingStatusClass} ${isCurrentlyEditing ? 'editing-message' : ''}`} data-message-id={id} ref={menuRef}>
 
-             {/* Render the content bubble ONLY if not deleted and content is available */}
-             {!isDeleted && contentElement && (
-                <div className="message-bubble">
-                    {contentElement} {/* Render the content */}
-                    {isEdited && <span className="edited-indicator">(edited)</span>}
-                     {/* Optional: Status icons next to timestamp if needed, or here */}
-                     {/* {sender === 'self' && status === 'sent' && <i className="fas fa-check-double message-status-icon"></i>} */}
-                     {/* {sender === 'self' && status === 'failed' && <i className="fas fa-exclamation-circle message-status-icon failed"></i>} */}
-                </div>
-             )}
+             {/* SenderInfo for group chat (only for received messages) */}
+              {isGroupChat && sender !== 'self' && !isDeleted && !isCurrentlyEditing && (
+                   <div className="message-sender-info">
+                        <img src={senderAvatar || defaultAvatarPlaceholder} alt={senderName || 'User'} className="sender-avatar" />
+                         <span className="sender-name">{senderName || 'Unknown'}</span>
+                   </div>
+              )}
 
-             {/* Render deleted message placeholder if deleted */}
-             {isDeleted && (
-                 <div className="message-bubble deleted-message">
-                     <i className="fas fa-trash-alt"></i> Message deleted.
+            {/* Container for bubble and timestamp */}
+            {(shouldRenderBubble || shouldRenderEditingPlaceholder || shouldRenderDeletedPlaceholder) && ( // Render this container if any form of the message is shown
+                 <div className="message-content-area">
+                      {/* Render the actual bubble content OR placeholder */}
+                      {isEdited && <span className="edited-indicator">(edited)</span>}
+                      {shouldRenderBubble && contentElement && (
+                          <div className="message-bubble">
+                              {contentElement}
+                              {/* Optional status icons */}
+                          </div>
+                      )}
+
+                      {/* Render deleted message placeholder if deleted */}
+                      {shouldRenderDeletedPlaceholder && (
+                          <div className="message-bubble deleted-message">
+                              <i className="fas fa-trash-alt"></i> Message deleted.
+                          </div>
+                      )}
+
+                       {/* Render editing placeholder if editing */}
+                       {shouldRenderEditingPlaceholder && (
+                           <div className="message-bubble editing-message-placeholder">
+                               <i className="fas fa-edit"></i> Editing...
+                           </div>
+                       )}
+
+                      {/* Timestamp (always show unless wrapper is hidden) */}
+                      <span className="message-timestamp">{time}</span>
                  </div>
              )}
 
 
-            <span className="message-timestamp">{time}</span>
+             {/* Options Button & Menu (Conditionally rendered) */}
+             {shouldShowOptionsButton && (
+                  <div className={`message-options-container ${sender}`}>
+                       {/* Options Button */}
+                       <button
+                            className="icon-button message-options-button"
+                            title="Message Options"
+                            onClick={toggleMenu}
+                       >
+                            <i className="fas fa-ellipsis-h"></i> {/* Horizontal ellipsis icon */}
+                       </button>
 
-            {/* Status dot (sending, sent, read) */}
-            {/* This can be added as CSS pseudo-elements or spans */}
-            {/* {sender === 'self' && status === 'sending' && <span className="message-status-dot sending"></span>} */}
-            {/* {sender === 'self' && status === 'sent' && <span className="message-status-dot sent"></span>} */}
+                       {/* Options Menu (Conditionally rendered) */}
+                       {showMenu && (
+                            <div className={`message-options-menu ${sender}`}>
+                                 {/* Edit Option (Conditionally rendered) */}
+                                 {canEdit && (
+                                      <div className="option-item" onClick={handleEdit}>Edit</div>
+                                 )}
+                                 {/* Delete Option (Conditionally rendered) */}
+                                 {canDelete && (
+                                      <div className="option-item" onClick={handleDelete}>Delete</div>
+                                 )}
+                                 {/* Add other potential options here */}
+                            </div>
+                       )}
+                  </div>
+             )}
         </div>
     );
 };
