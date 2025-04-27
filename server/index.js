@@ -33,9 +33,9 @@ const options = {
   definition: {
     openapi: "3.1.0",
     info: {
-      title: "API Documentation",
+      title: "Chat and Video all API Documentation",
       version: "0.1.0",
-      description: "This is a sample API documentation",
+      description: "Documentation for Chat and Video all API",
       license: {
         name: "MIT",
         url: "https://spdx.org/licenses/MIT.html",
@@ -54,7 +54,10 @@ const specs = swaggerJsdoc(options);
 app.use(
   "/api-docs",
   swaggerUi.serve,
-  swaggerUi.setup(specs, { explorer: true })
+  swaggerUi.setup(specs, {
+    customSiteTitle: "Chat and Video all API Documentation",
+    explorer: true,
+  })
 );
 
 app.use(

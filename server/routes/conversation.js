@@ -9,8 +9,10 @@ router.use(authMiddleware);
 
 /**
  * @openapi
- * /conversation/create-conversation:
+ * /api/conversation/create-conversation:
  *   post:
+ *     tags:
+ *       - Conversation
  *     summary: Create a new conversation
  *     description: Creates a new conversation with the specified members. The authenticated user is automatically included if not specified in the members list. For two members, it checks if a conversation already exists.
  *     requestBody:
@@ -73,8 +75,10 @@ router.post(
 
 /**
  * @openapi
- * /conversation/get-conversations:
+ * /api/conversation/get-conversations:
  *   get:
+ *     tags:
+ *       - Conversation
  *     summary: Fetch user's conversations
  *     description: Retrieves a paginated list of conversations that the authenticated user is a part of.
  *     parameters:
@@ -122,8 +126,10 @@ router.get(
 
 /**
  * @openapi
- * /conversation/search-by-name:
+ * /api/conversation/search-by-name:
  *   get:
+ *     tags:
+ *       - Conversation
  *     summary: Search conversations by name
  *     description: Searches for conversations the authenticated user is part of by name, with pagination.
  *     parameters:
@@ -177,8 +183,10 @@ router.get(
 
 /**
  * @openapi
- * /conversation/add-new-member:
+ * /api/conversation/add-new-member:
  *   post:
+ *     tags:
+ *       - Conversation
  *     summary: Add a new member to a conversation
  *     description: Adds a new member to an existing group conversation. The authenticated user must be a member of the conversation.
  *     requestBody:
@@ -258,8 +266,10 @@ router.post(
 
 /**
  * @openapi
- * /conversation/remove-member:
+ * /api/conversation/remove-member:
  *   post:
+ *     tags:
+ *       - Conversation
  *     summary: Remove a member from a conversation
  *     description: Removes a member from a group conversation. The authenticated user must be a leader of the conversation.
  *     requestBody:
@@ -325,8 +335,10 @@ router.post(
 
 /**
  * @openapi
- * /conversation/leave-conversation:
+ * /api/conversation/leave-conversation:
  *   post:
+ *     tags:
+ *       - Conversation
  *     summary: Leave a conversation
  *     description: Allows the authenticated user to leave a group conversation. If the user is the last leader, the first remaining member is promoted to leader.
  *     requestBody:
@@ -383,8 +395,10 @@ router.post(
 
 /**
  * @openapi
- * /conversation/delete-conversation-by-member:
+ * /api/conversation/delete-conversation-by-member:
  *   post:
+ *     tags:
+ *       - Conversation
  *     summary: Delete a conversation by a member
  *     description: Allows the authenticated user to delete a conversation from their view. The conversation remains for other members.
  *     requestBody:
@@ -441,8 +455,10 @@ router.post(
 
 /**
  * @openapi
- * /conversation/delete-conversation-by-leader:
+ * /api/conversation/delete-conversation-by-leader:
  *   post:
+ *     tags:
+ *       - Conversation
  *     summary: Delete a conversation by a leader
  *     description: Allows a leader to delete a group conversation entirely for all members.
  *     requestBody:
@@ -499,8 +515,10 @@ router.post(
 
 /**
  * @openapi
- * /conversation/update-member-role:
+ * /api/conversation/update-member-role:
  *   post:
+ *     tags:
+ *       - Conversation
  *     summary: Update a member's role in a conversation
  *     description: Allows a leader to update the role of a member in a group conversation. Cannot change the role of a leader.
  *     requestBody:
@@ -570,8 +588,10 @@ router.post(
 
 /**
  * @openapi
- * /conversation/update-conversation-name:
+ * /api/conversation/update-conversation-name:
  *   post:
+ *     tags:
+ *       - Conversation
  *     summary: Update the name of a conversation
  *     description: Allows a member to update the name of a group conversation.
  *     requestBody:
@@ -632,8 +652,10 @@ router.post(
 
 /**
  * @openapi
- * /conversation/get-messages:
+ * /api/conversation/get-messages:
  *   post:
+ *     tags:
+ *       - Conversation
  *     summary: Fetch messages from a conversation
  *     description: Retrieves a list of messages from the specified conversation for the authenticated user, with pagination support.
  *     requestBody:
@@ -702,8 +724,10 @@ router.post(
 
 /**
  * @openapi
- * /conversation/create-new-message:
+ * /api/conversation/create-new-message:
  *   post:
+ *     tags:
+ *       - Conversation
  *     summary: Create a new message in a conversation
  *     description: Creates a new message in the specified conversation. The message type can be "text", "image", or "file", and the data must correspond to the type.
  *     requestBody:
@@ -796,8 +820,10 @@ router.post(
 
 /**
  * @openapi
- * /conversation/edit-message:
+ * /api/conversation/edit-message:
  *   post:
+ *     tags:
+ *       - Conversation
  *     summary: Edit a message
  *     description: Edits the content of a text message. Only the owner of the message can edit it, and only text messages can be edited.
  *     requestBody:
@@ -865,8 +891,10 @@ router.post(
 
 /**
  * @openapi
- * /conversation/delete-message:
+ * /api/conversation/delete-message:
  *   post:
+ *     tags:
+ *       - Conversation
  *     summary: Delete a message
  *     description: Deletes a message from the conversation. Only the owner of the message can delete it.
  *     requestBody:

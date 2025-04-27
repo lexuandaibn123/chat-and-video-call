@@ -5,8 +5,10 @@ const { check } = require("express-validator"); // For validation
 const { validateMiddleware } = require("../middleware/validate");
 /**
  * @openapi
- * /auth/login:
+ * /api/auth/login:
  *   post:
+ *     tags:
+ *       - Authentication
  *     summary: Login endpoint
  *     operationId: login
  *     description: Logs in a user with the provided email and password.
@@ -102,8 +104,10 @@ router.post(
 
 /**
  * @openapi
- * /auth/register:
+ * /api/auth/register:
  *   post:
+ *     tags:
+ *       - Authentication
  *     summary: Register endpoint
  *     operationId: register
  *     description: Registers a new user with full name, email, and password, and sends a verification email.
@@ -189,8 +193,10 @@ router.post(
 
 /**
  * @openapi
- * /auth/verify-email:
+ * /api/auth/verify-email:
  *   get:
+ *     tags:
+ *       - Authentication
  *     summary: Email verification endpoint
  *     operationId: verifyEmail
  *     description: Verifies the user's email using the provided token.
@@ -250,8 +256,10 @@ router.get("/verify-email", AuthService.verifyEmail);
 
 /**
  * @openapi
- * /auth/resend-verification-email:
+ * /api/auth/resend-verification-email:
  *   post:
+ *     tags:
+ *       - Authentication
  *     summary: Resend email verification endpoint
  *     operationId: resendVerificationEmail
  *     description: Resends a verification email to the provided email address if the email is not yet verified.
@@ -328,8 +336,10 @@ router.post(
 
 /**
  * @openapi
- * /auth/forgot-password:
+ * /api/auth/forgot-password:
  *   post:
+ *     tags:
+ *       - Authentication
  *     summary: Forgot password endpoint
  *     operationId: forgotPassword
  *     description: Initiates a password reset by sending a reset link to the provided email.
@@ -403,8 +413,10 @@ router.post(
 
 /**
  * @openapi
- * /auth/reset-password:
+ * /api/auth/reset-password:
  *   post:
+ *     tags:
+ *       - Authentication
  *     summary: Reset password endpoint
  *     operationId: resetPassword
  *     description: Resets the user's password using the provided reset token and new password.
@@ -486,8 +498,10 @@ router.post(
 
 /**
  * @openapi
- * /auth/change-password:
+ * /api/auth/change-password:
  *   post:
+ *     tags:
+ *       - Authentication
  *     summary: Change password endpoint
  *     operationId: changePassword
  *     description: Allows a user to change their password by providing the old and new passwords.
@@ -575,8 +589,10 @@ router.post(
 
 /**
  * @openapi
- * /auth/logout:
+ * /api/auth/logout:
  *   post:
+ *     tags:
+ *       - Authentication
  *     summary: Logout endpoint
  *     operationId: logout
  *     description: Logs out the current user by destroying their session.
@@ -612,8 +628,10 @@ router.post("/logout", AuthService.logout);
 
 /**
  * @openapi
- * /auth/info:
+ * /api/auth/info:
  *   get:
+ *     tags:
+ *       - Authentication
  *     summary: User info endpoint
  *     operationId: info
  *     description: Retrieves information about the current user.
