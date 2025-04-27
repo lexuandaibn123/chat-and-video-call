@@ -68,6 +68,8 @@ const ChatPage = () => {
   // <<< STATE FOR INPUT AREA & EDITING MESSAGE >>>
   const [messageInput, setMessageInput] = useState(''); // <<< Lifted state for input
   const [editingMessageId, setEditingMessageId] = useState(null); // ID of message being edited
+  const [isEditingName, setIsEditingName] = useState(false); // <-- Khai báo ở đây
+  const [editingGroupName, setEditingGroupName] = useState('');
 
 
   // --- MOCK useAuth HOOK (hoặc Auth Hook thật của bạn) ---
@@ -401,10 +403,12 @@ const ChatPage = () => {
 
 
   // --- Callback xử lý gửi tin nhắn text (New Message) ---
-  const handleSendTextMessage = useCallback(async (newMessageText) => {
+  const handleSendTextMessage = useCallback(async () => { // No need to pass text, use messageInput state
     const currentUserId = currentUserIdRef.current;
+    const newMessageText = messageInput.trim(); // Use state here
 
-    if (!activeChat?.id || !currentUserId || sendingMessage || editingMessageId !== null || !newMessageText.trim()) {
+    // Prevent sending if already sending, editing, or text is empty
+    if (!activeChat?.id || !currentUserId || sendingMessage || editingMessageId !== null || !newMessageText) {
         console.warn("Cannot send text message: Invalid state (no chat, no user, sending, editing, or empty).");
         return;
     }
@@ -414,6 +418,7 @@ const ChatPage = () => {
     const tempId = `temp-${Date.now()}-${Math.random().toString(36).substring(7)}`;
 
     // --- Optimistic Update for Text ---
+    // For optimistic update, senderId MUST be the current user ID to show it on the right
     const newMessageOptimistic = {
       id: tempId,
       sender: 'self', // Used only for CSS positioning, not API
@@ -425,23 +430,18 @@ const ChatPage = () => {
       status: 'sending', // Add a status field
       isEdited: false,
       isDeleted: false,
-      senderId: currentUserId, // Trimmed sender ID
+      senderId: currentUserId, // Trimmed sender ID - This is correct for optimistic!
     };
     setMessages(prevMessages => [...prevMessages, newMessageOptimistic]);
     setMessageInput(''); // Clear input immediately after sending optimistically
 
     try {
-      // <<< CHỈNH SỬA CẤU TRÚC data CHO TEXT MESSAGE PAYLOAD (Confirmed correct) >>>
       const messagePayload = {
           conversationId: activeChat.id,
           type: 'text',
-          data: { // This 'data' field is the content payload wrapper
-              data: newMessageText, // The actual text content (string)
-              type: 'text' // Type indicator within the content payload (string)
-          },
+          data: { data: newMessageText, type: 'text' },
           replyToMessageId: null // TODO
       };
-      // ----------------------------------------------------------
 
       const sentMessage = await sendMessageApi(messagePayload);
       console.log("Text message sent successfully:", sentMessage);
@@ -449,7 +449,34 @@ const ChatPage = () => {
       if (sentMessage && sentMessage._id) {
            setMessages(prevMessages => prevMessages.map(msg => {
                 if (msg.id === tempId) {
-                    // Update optimistic message with real data
+                    // Update optimistic message with real data from API response
+                    let apiSenderId = null;
+                   let apiSenderName = null;
+                   let apiSenderAvatar = null;
+
+                   // Check if senderId is populated (object with _id) or just an ID string
+                   if (sentMessage.senderId) {
+                       if (typeof sentMessage.senderId === 'object' && sentMessage.senderId._id) {
+                            apiSenderId = String(sentMessage.senderId._id).trim();
+                            apiSenderName = sentMessage.senderId.fullName;
+                            apiSenderAvatar = sentMessage.senderId.avatar;
+                       } else if (typeof sentMessage.senderId === 'string') {
+                            apiSenderId = String(sentMessage.senderId).trim();
+                            // If it's just a string ID, we might not have name/avatar in the message response
+                            // Keep existing name/avatar from optimistic update or set null/default
+                            // Let's keep the name/avatar from the optimistic update for self messages
+                            if (apiSenderId === currentUserId) { // If the returned sender ID is the current user
+                                 apiSenderName = msg.senderName; // Keep name/avatar from optimistic (which are likely null/placeholder for self)
+                                 apiSenderAvatar = msg.senderAvatar;
+                            } else { // If for some reason the returned sender ID is NOT the current user (e.g., system message)
+                                 // We don't have the other user's name/avatar here, might need another fetch or use default
+                                 apiSenderName = null; // Use null or default
+                                 apiSenderAvatar = null; // Use null or default
+                            }
+                       }
+                   }
+
+
                     return {
                         ...msg, // Keep optimistic fields like 'sender' for immediate display
                         id: sentMessage._id, // Real ID
@@ -459,9 +486,9 @@ const ChatPage = () => {
                         time: new Date(sentMessage.datetime_created).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase(), // Formatted time
                         isEdited: sentMessage.isEdited || false,
                         isDeleted: sentMessage.isDeleted || false,
-                        senderId: sentMessage.senderId?._id ? String(sentMessage.senderId._id).trim() : null, // Trim API sender ID
-                        senderName: sentMessage.senderId?.fullName, // Use real sender info
-                        senderAvatar: sentMessage.senderId?.avatar,
+                       senderId: apiSenderId, // Use the processed sender ID
+                       senderName: apiSenderName, // Use the processed sender name
+                       senderAvatar: apiSenderAvatar, // Use the processed sender avatar
                         status: 'sent', // Update status
                     };
                 }
@@ -503,15 +530,14 @@ const ChatPage = () => {
       console.error("Failed to send text message:", err);
       setActionError(err.message || 'Failed to send text message.');
       setMessages(prevMessages => prevMessages.map(msg =>
-        msg.id === tempId ? { ...newMessageOptimistic, status: 'failed' } : msg // Revert to optimistic structure but set status to failed
+        msg.id === tempId ? { ...newMessageOptimistic, status: 'failed' } : msg
       ));
       // setMessageInput(newMessageText); // Restore input on error?
     } finally {
       setSendingMessage(false); // Re-enable input area
        // Do NOT clear editingMessageId here, as this is only for *new* messages
     }
-  }, [activeChat, sendingMessage, editingMessageId, currentUserIdRef, conversations]);
-
+  }, [activeChat, sendingMessage, editingMessageId, messageInput, currentUserIdRef, conversations]);
 
   // --- Callback xử lý chọn & gửi file ---
   // This function will be called by ChatWindow when a file is selected via input
@@ -556,6 +582,8 @@ const ChatPage = () => {
         isEdited: false,
         isDeleted: false,
         senderId: currentUserId, // Trimmed sender ID
+        senderName: user?.fullName || 'You', // Use user's name from auth context
+        senderAvatar: user?.avatar || null, // Use user's avatar from auth context
       };
       setMessages(prevMessages => [...prevMessages, newFileMessageOptimistic]);
       // Do NOT clear messageInput here, it's not used for file messages
@@ -571,21 +599,39 @@ const ChatPage = () => {
               throw new Error(uploadResponse?.message || uploadResponse?.error || 'File upload failed.');
           }
           // uploadedFileDetails structure from mock: { data: "URL", metadata: {...}, type: "image"|"file" }
-          uploadedFileDetails = uploadResponse.data;
+          uploadedFileDetails = uploadResponse.data; // This object contains { data: URL, metadata: {...}, type: '...' }
 
           // --- Step 2: Send Message with Uploaded File Details ---
-          // Based on text message success and file error, the payload seems to be:
-          // data: { data: "URL_STRING", type: "file"|"image" }
+          // <<< CORRECTED PAYLOAD FOR FILE/IMAGE >>>
+          // Assuming API expects the 'data' field in the POST body to match the 'content' structure it stores.
+          let apiPayloadData;
+          if (fileType === 'image') {
+               // API likely expects { image: [{ data: URL, metadata: {...}, type: 'image' }] }
+              apiPayloadData = {
+                  image: [{
+                      data: uploadedFileDetails.data, // The URL string
+                      metadata: uploadedFileDetails.metadata, // The metadata object
+                      type: 'image' // Type within the image object
+                  }]
+              };
+          } else { // fileType === 'file'
+               // API likely expects { file: { data: URL, metadata: {...}, type: 'file' } }
+               apiPayloadData = {
+                   file: {
+                       data: uploadedFileDetails.data, // The URL string
+                       metadata: uploadedFileDetails.metadata, // The metadata object
+                       type: 'file' // Type within the file object
+                   }
+               };
+          }
+
           const messagePayload = {
               conversationId: activeChat.id,
-              type: fileType, // 'image' or 'file'
-              data: { // This 'data' field is the content payload wrapper object
-                  data: uploadedFileDetails.data, // <<< Use ONLY the URL string here
-                  type: fileType // Type indicator within the content payload
-                  // Metadata might need to be sent separately or is fetched by API from URL
-              },
+              type: fileType, // 'image' or 'file' (outer type)
+              data: apiPayloadData, // <<< Send the constructed content structure here
               replyToMessageId: null // TODO
           };
+          // ----------------------------------------------------------
           console.log("File message send payload:", messagePayload); // Log payload before sending
 
           const sentMessage = await sendMessageApi(messagePayload); // Call your send message API
@@ -596,8 +642,33 @@ const ChatPage = () => {
               setMessages(prevMessages => prevMessages.map(msg => {
                    if (msg.id === tempId) {
                        // Update optimistic message with real data
+                        let apiSenderId = null;
+                        let apiSenderName = null;
+                        let apiSenderAvatar = null;
+
+                         // --- CORRECTED LOGIC TO GET SENDER INFO FROM API RESPONSE (same as text) ---
+                         if (sentMessage.senderId) {
+                            if (typeof sentMessage.senderId === 'object' && sentMessage.senderId._id) {
+                                apiSenderId = String(sentMessage.senderId._id).trim();
+                                apiSenderName = sentMessage.senderId.fullName;
+                                apiSenderAvatar = sentMessage.senderId.avatar;
+                            } else if (typeof sentMessage.senderId === 'string') {
+                                apiSenderId = String(sentMessage.senderId).trim();
+                                // For senderName/Avatar, if API only returns ID string, use auth context info for self messages
+                                 if (apiSenderId === currentUserId) {
+                                     apiSenderName = user?.fullName || 'You';
+                                     apiSenderAvatar = user?.avatar || null;
+                                 } else {
+                                    console.warn(`API returned unexpected sender ID for file message ${sentMessage._id}`);
+                                    apiSenderName = 'Unknown User'; // Fallback
+                                    apiSenderAvatar = null; // Fallback
+                                 }
+                            }
+                         }
+                         // --- END CORRECTED LOGIC ---
+
                        return {
-                           ...msg, // Keep optimistic fields like 'sender'
+                           ...msg, // Keep optimistic fields like 'sender' (for CSS class)
                            id: sentMessage._id, // Real ID
                            content: sentMessage.content, // Real content (should match fetch structure)
                            type: sentMessage.type, // Real type
@@ -605,9 +676,9 @@ const ChatPage = () => {
                            time: new Date(sentMessage.datetime_created).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase(), // Formatted time
                            isEdited: sentMessage.isEdited || false,
                            isDeleted: sentMessage.isDeleted || false,
-                           senderId: sentMessage.senderId?._id ? String(sentMessage.senderId._id).trim() : null, // Trim API sender ID
-                           senderName: sentMessage.senderId?.fullName, // Use real sender info
-                           senderAvatar: sentMessage.senderId?.avatar,
+                           senderId: apiSenderId, // Use processed ID
+                           senderName: apiSenderName, // Use processed name
+                           senderAvatar: apiSenderAvatar, // Use processed avatar
                            status: 'sent', // Update status
                        };
                    }
@@ -665,11 +736,10 @@ const ChatPage = () => {
              URL.revokeObjectURL(localPreviewUrl);
          }
       } finally {
-        setSendingMessage(false); // Re-enable input area
-         // Do NOT clear editingMessageId here, this handler doesn't start/stop edits
+        setSendingMessage(false); // Re-enable send button
       }
-  }, [activeChat, sendingMessage, editingMessageId, currentUserIdRef, conversations]); // Added editingMessageId to dependencies
-
+    // Added user to dependencies because we use user?.fullName/avatar
+  }, [activeChat, sendingMessage, editingMessageId, currentUserIdRef, conversations, user]);
 
   // --- Xử lý tìm kiếm ---
   const handleSearchChange = useCallback(async (event) => {
@@ -688,128 +758,269 @@ const ChatPage = () => {
   const filteredFriends = filteredConversations.filter(c => !c.isGroup); // Use isGroup flag
 
   // --- API Action Helper for Settings ---
-  // Renamed from performApiAction to clarify it's for non-input area actions
-    const performSettingsAction = useCallback(async (apiCall, successMessage, updateStateFunc) => {
-    setIsPerformingAction(true);
-    setActionError(null); // Clear action error before performing new action
-    try {
-        const response = await apiCall();
-        if (response && response.success) {
-            console.log(`${successMessage} successful:`, response);
-            let updatedConvData = response.data || response.conversation;
-
-            if (updatedConvData && updatedConvData._id) {
-                let membersWithDetails = updatedConvData.members?.map(m => ({
-                    ...m,
-                    id: (m.id && typeof m.id === 'object' && m.id._id) ? String(m.id._id).trim() : (typeof m.id === 'string' ? m.id.trim() : null)
-                })) || [];
-
-                 const leaderMember = membersWithDetails?.find(m => m.role === 'leader' && m.leftAt === null && m.id);
-                 const leaderId = leaderMember ? leaderMember.id : null;
-
-                setConversations(prevConvs => prevConvs.map(conv =>
-                    conv.id === updatedConvData._id ? {
-                        ...conv,
-                        ...updatedConvData,
-                        id: updatedConvData._id, // Ensure ID is correct
-                        type: updatedConvData.isGroup ? 'group' : 'friend',
-                        statusText: updatedConvData.isGroup ? `${membersWithDetails?.filter(m => m.leftAt === null)?.length || 0} members` : conv.statusText,
-                        leader: leaderId,
-                        members: updatedConvData.members || [], // Keep original members array if needed
-                        detailedMembers: membersWithDetails, // Use detailed members with trimmed IDs
-                    } : conv
-                ));
-
-                // Update active chat if it's the one being modified
-                setActiveChat(prevActive => {
-                    if (!prevActive || prevActive.id !== updatedConvData._id) return prevActive;
-                     const leaderMemberActive = membersWithDetails?.find(m => m.role === 'leader' && m.leftAt === null && m.id);
-                     const leaderIdActive = leaderMemberActive ? leaderMemberActive.id : null;
-
-                    return ({
-                         ...prevActive,
-                         ...updatedConvData,
-                         id: updatedConvData._id, // Ensure ID is correct
-                         type: updatedConvData.isGroup ? 'group' : 'friend',
-                         statusText: updatedConvData.isGroup ? `${membersWithDetails?.filter(m => m.leftAt === null)?.length || 0} members` : prevActive.statusText,
-                         leader: leaderIdActive,
-                         detailedMembers: membersWithDetails,
-                    });
-                });
-
-            } else if (response.message) {
-                  console.log(response.message); // Log success message even if no data
+      // Refined performSettingsAction: Calls API, sets loading/error, executes custom updateStateFunc on success.
+      const performSettingsAction = useCallback(async (apiCall, successMessage, updateStateFunc = null) => {
+        setIsPerformingAction(true);
+        setActionError(null); // Clear action error before performing new action
+        try {
+            const response = await apiCall();
+    
+            // Assume success if no error thrown by apiCall and response is not explicitly marked as failure.
+            // If API uses { success: true/false }, check that. If it throws on error, check response structure here.
+            // Let's assume success if response exists and doesn't have success === false.
+            if (response && response.success === false) {
+                // API returned a response indicating failure
+                const errorMessage = response?.message || response?.error || "Action failed.";
+                console.error(`${successMessage} failed: API indicated failure.`, response);
+                setActionError(errorMessage);
+            } else {
+                // API call completed successfully (no error thrown, no success: false)
+                console.log(`${successMessage} successful:`, response);
+                setActionError(null); // Clear any previous error on success
+    
+                // Execute the custom update function if provided.
+                // This function is responsible for all state updates related to this action (conversations, activeChat).
+                if(updateStateFunc) {
+                    updateStateFunc(response); // Pass the API response to the custom updater
+                }
+                // Note: If no updateStateFunc is provided, state related to conversations/activeChat is NOT updated by default here.
+                // This means handlers MUST provide an updateStateFunc if they need UI to reflect changes.
             }
-
-            if(updateStateFunc) updateStateFunc(response); // Custom state update logic
-
-        } else {
-             const errorMessage = response?.message || response?.error || "Action failed.";
-             console.error(`${successMessage} failed:`, response);
-             setActionError(errorMessage); // Set action-specific error
+    
+        } catch (err) {
+            // API call failed completely (network error, HTTP error handled by fetch wrapper, unhandled exception)
+            console.error(`API call failed for ${successMessage}:`, err);
+            setActionError(err.message || `An API error occurred during ${successMessage.toLowerCase()}.`);
+        } finally {
+            setIsPerformingAction(false); // Reset loading state
         }
-    } catch (err) {
-        console.error(`API call failed for ${successMessage}:`, err);
-        setActionError(err.message || `An API error occurred during ${successMessage.toLowerCase()}.`);
-    } finally {
-        setIsPerformingAction(false);
-    }
-}, [activeChat, conversations, currentUserIdRef]);
+    }, [setIsPerformingAction, setActionError]); // Dependencies: Only state setters controlled by this hook
 
 
   // --- Handlers for various actions using performSettingsAction ---
   const handleRemoveUser = useCallback(async (conversationId, userIdToRemove) => {
-       const currentUserId = currentUserIdRef.current;
-       if (!activeChat || activeChat.id !== conversationId || !activeChat.isGroup || !currentUserId) return;
-       const membersList = activeChat.detailedMembers;
-       const memberToRemove = membersList?.find(m => m.id === userIdToRemove && m.leftAt === null);
-       if (!memberToRemove) {
-            setActionError("User not found in group or already left.");
-            return;
-       }
-       if (window.confirm(`Are you sure you want to remove ${memberToRemove.id?.fullName || memberToRemove.id || userIdToRemove} from the group?`)) {
-            await performSettingsAction(
-               () => removeMemberApi({ conversationId, memberId: userIdToRemove }),
-               "Remove member"
-            );
-       }
-   }, [activeChat, performSettingsAction, currentUserIdRef]);
+    const currentUserId = currentUserIdRef.current;
+     if (!activeChat || activeChat.id !== conversationId || !activeChat.isGroup || !currentUserId || !userIdToRemove) {
+         console.warn("Invalid request to remove user.");
+         setActionError("Cannot perform action on this chat.");
+         return;
+     }
+    const membersList = activeChat.detailedMembers; // Use detailedMembers from state
+    const memberToRemove = membersList?.find(m => m.id === userIdToRemove && m.leftAt === null);
+    if (!memberToRemove) {
+         setActionError("User not found in group or already left.");
+         return;
+    }
 
-   const handleUpdateGroupName = useCallback(async (conversationId, newName) => {
+    // Check if current user has permission (is leader)
+    const isCurrentUserLeader = activeChat.leader === currentUserId;
+    if (!isCurrentUserLeader) {
+        setActionError("Only the leader can remove members.");
+        return;
+    }
+    // Leader cannot remove themselves
+    if (userIdToRemove === currentUserId) {
+        setActionError("You cannot remove yourself. Use 'Leave Group'.");
+        return;
+    }
+     // Leader cannot remove another leader (unless backend logic says otherwise)
+     if (memberToRemove.role === 'leader') {
+          setActionError("Cannot remove another leader. Change their role first.");
+          return;
+     }
+
+
+    if (window.confirm(`Are you sure you want to remove ${memberToRemove.id?.fullName || userIdToRemove} from the group?`)) {
+         await performSettingsAction(
+            () => removeMemberApi({ conversationId, memberId: userIdToRemove }), // API call
+            "Remove member", // Success message text
+            // <<< Custom updateStateFunc for successful member removal >>>
+            (apiResponse) => {
+                 console.log("Custom updateStateFunc running for remove member success:", apiResponse);
+
+                 // FIND the conversation in the current state
+                 setConversations(prevConvs => prevConvs.map(conv => {
+                     if (conv.id === conversationId) {
+                          // Find the member in detailedMembers and mark them as left or remove them
+                          // Assuming backend marks leftAt instead of removing from array
+                         const updatedDetailedMembers = conv.detailedMembers.map(member => {
+                             if (member.id === userIdToRemove) {
+                                  // Simulate marking as left (get current time or from API response if available)
+                                 return { ...member, leftAt: apiResponse?.leftAt || new Date().toISOString(), role: 'member' }; // Also demote on leaving/removal
+                             }
+                             return member;
+                         }).filter(member => !member.leftAt); // Filter out left members for active list display
+
+                         // Update the conversation object
+                         return {
+                             ...conv,
+                             // Leader ID might change if leader is removed (backend handles this?)
+                             // If API response includes the updated conversation object, use its leader/members list
+                             // Otherwise, re-evaluate leader from updatedDetailedMembers
+                             leader: apiResponse?.conversation?.leader !== undefined ? apiResponse.conversation.leader : conv.leader, // Assuming API returns updated conv or leader
+                             detailedMembers: updatedDetailedMembers, // Use the updated member list
+                             statusText: `${updatedDetailedMembers.length} members`, // Update member count text
+                             // API response might contain updated last_updated timestamp.
+                         };
+                     }
+                     return conv; // Return other conversations unchanged
+                 }));
+
+                  // Update active chat state if it's the current chat
+                  setActiveChat(prevActive => {
+                      if (!prevActive || prevActive.id !== conversationId) return prevActive;
+
+                       const updatedDetailedMembers = prevActive.detailedMembers.map(member => {
+                           if (member.id === userIdToRemove) {
+                               return { ...member, leftAt: apiResponse?.leftAt || new Date().toISOString(), role: 'member' };
+                           }
+                           return member;
+                       }).filter(member => !member.leftAt);
+
+                      return {
+                          ...prevActive,
+                           leader: apiResponse?.conversation?.leader !== undefined ? apiResponse.conversation.leader : prevActive.leader,
+                          detailedMembers: updatedDetailedMembers,
+                           statusText: `${updatedDetailedMembers.length} members`,
+                      };
+                  });
+            }
+            // <<< End custom updateStateFunc >>>
+         );
+         // setActionError is cleared by performSettingsAction
+    } else {
+        // User cancelled
+        setActionError(null); // Clear error if it was set before confirm
+    }
+}, [activeChat, performSettingsAction, currentUserIdRef, removeMemberApi, setConversations, setActiveChat, setActionError]); // Add dependencies
+
+      const handleUpdateGroupName = useCallback(async (conversationId, newName) => {
         const currentUserId = currentUserIdRef.current;
-        if (!activeChat || activeChat.id !== conversationId || !activeChat.isGroup || !newName.trim() || !currentUserId) {
+        const trimmedName = newName.trim();
+        if (!activeChat || activeChat.id !== conversationId || !activeChat.isGroup || !trimmedName || !currentUserId) {
             console.warn("Invalid request to update group name.");
-            if (!newName.trim()) setActionError("Group name cannot be empty.");
+            if (!trimmedName) setActionError("Group name cannot be empty.");
             return;
         }
+        // Optional: Check if the current user has permissions (e.g., is leader or active member)
         const isMember = activeChat.detailedMembers?.some(m => m.id === currentUserId && m.leftAt === null);
         if (!isMember) {
             setActionError("You are not an active member of this group.");
             return;
         }
-        await performSettingsAction(
-            () => updateConversationNameApi({ conversationId, newName }),
-            "Update group name",
-            () => setIsEditingName(false)
-        );
-    }, [activeChat, currentUserIdRef, performSettingsAction]);
 
-   const handleChangeLeader = useCallback(async (conversationId, newLeaderId) => {
+
+        await performSettingsAction(
+            () => updateConversationNameApi({ conversationId, newName: trimmedName }), // API call
+            "Update group name", // Success message text
+            // <<< Custom updateStateFunc for successful name change >>>
+            (apiResponse) => { // apiResponse is the response from updateConversationNameApi (likely updated conv object or {success: true})
+                console.log("Custom updateStateFunc running for name change success:", apiResponse);
+                 // Use the name that was successfully sent/confirmed (trimmedName)
+                setConversations(prevConvs => prevConvs.map(conv =>
+                    conv.id === conversationId ? { ...conv, name: trimmedName } : conv // Update name in list
+                ));
+                setActiveChat(prevActive => {
+                    if (!prevActive || prevActive.id !== conversationId) return prevActive;
+                    return { ...prevActive, name: trimmedName }; // Update name in active chat
+                });
+                 // Close the editing UI
+                // These states are managed in ChatSettingsOverlay, but ChatPage controls the handlers.
+                // You might need a way for ChatPage to signal ChatSettingsOverlay to close edit mode.
+                // A prop like `onNameUpdateSuccess` could be passed to Overlay and called here.
+                // For now, if isEditingName state is in ChatPage, move it here.
+                // ASSUMPTION: isEditingName and editingGroupName are in ChatPage.
+                 setIsEditingName(false);
+                 setEditingGroupName('');
+                // Clear any error related to name editing (handled by setActionError in performSettingsAction finally/success)
+            }
+            // <<< End custom updateStateFunc >>>
+        );
+        // setActionError is cleared by performSettingsAction on success or when starting
+    }, [activeChat, currentUserIdRef, performSettingsAction, updateConversationNameApi, setConversations, setActiveChat, setIsEditingName, setEditingGroupName, setActionError]); // Add dependencies
+
+    const handleChangeLeader = useCallback(async (conversationId, newLeaderId) => {
         const currentUserId = currentUserIdRef.current;
-        if (!activeChat || activeChat.id !== conversationId || !activeChat.isGroup || !currentUserId) return;
-        const membersList = activeChat.detailedMembers;
+         if (!activeChat || activeChat.id !== conversationId || !activeChat.isGroup || !currentUserId || !newLeaderId) {
+             console.warn("Cannot change leader: Invalid state.");
+             setActionError("Cannot perform action on this chat.");
+             return;
+         }
+        const membersList = activeChat.detailedMembers; // Use detailedMembers from state
         const newLeaderMember = membersList?.find(m => m.id === newLeaderId && m.leftAt === null);
          if (!newLeaderMember) {
              setActionError("New leader must be a current member of the group.");
              return;
          }
+
+         // Check if the current user has permission (is the current leader based on state)
+         const isCurrentUserLeader = activeChat.leader === currentUserId;
+         if (!isCurrentUserLeader) {
+             setActionError("Only the current leader can change leadership.");
+             return;
+         }
+
+
         if (window.confirm(`Are you sure you want to make ${newLeaderMember.id?.fullName || newLeaderId} the new leader?`)) {
              await performSettingsAction(
-                () => updateMemberRoleApi({ conversationId, memberId: newLeaderId }),
-                "Change leader"
+                () => updateMemberRoleApi({ conversationId, memberId: newLeaderId, newRole: 'leader' }), // API call
+                "Change leader", // Success message text
+                // <<< Custom updateStateFunc for successful leader change >>>
+                // Assuming API response might be just {success: true} or updated conv object
+                (apiResponse) => {
+                     console.log("Custom updateStateFunc running for leader change success:", apiResponse);
+
+                     // FIND the conversation in the current state
+                     setConversations(prevConvs => prevConvs.map(conv => {
+                         if (conv.id === conversationId) {
+                             // Update the leader ID and member roles in detailedMembers
+                             const updatedDetailedMembers = conv.detailedMembers.map(member => {
+                                 if (member.id === newLeaderId) return { ...member, role: 'leader' }; // New leader
+                                  if (member.id === currentUserId) return { ...member, role: 'member' }; // Old leader becomes member
+                                  return member; // Other members unchanged
+                             }).filter(member => !member.leftAt); // Filter out left members
+
+                             // Update the conversation object
+                             return {
+                                 ...conv,
+                                 leader: newLeaderId, // Set the new leader ID
+                                 detailedMembers: updatedDetailedMembers, // Use the updated member list
+                                  statusText: `${updatedDetailedMembers.length} members`, // Update member count text
+                                 // API response might contain updated last_updated timestamp, you can use it here if needed.
+                             };
+                         }
+                         return conv; // Return other conversations unchanged
+                     }));
+
+                      // Update active chat state if it's the current chat
+                     setActiveChat(prevActive => {
+                         if (!prevActive || prevActive.id !== conversationId) return prevActive;
+
+                         // Update member roles in detailedMembers of active chat
+                         const updatedDetailedMembers = prevActive.detailedMembers.map(member => {
+                              if (member.id === newLeaderId) return { ...member, role: 'leader' };
+                               if (member.id === currentUserId) return { ...member, role: 'member' };
+                               return member;
+                          }).filter(member => !member.leftAt); // Filter out left members
+
+                         return {
+                             ...prevActive,
+                             leader: newLeaderId, // Set the new leader ID
+                             detailedMembers: updatedDetailedMembers, // Use the updated member list
+                              statusText: `${updatedDetailedMembers.length} members`, // Update member count text
+                             // API response might contain updated last_updated timestamp.
+                              // time: ... // Update formatted time if needed
+                         };
+                     });
+                }
+                // <<< End custom updateStateFunc >>>
              );
+             // setActionError is cleared by performSettingsAction on success or when starting
+        } else {
+             // User cancelled
+             setActionError(null); // Clear error if it was set before confirm
         }
-   }, [activeChat, performSettingsAction, currentUserIdRef]);
+   }, [activeChat, performSettingsAction, currentUserIdRef, updateMemberRoleApi, setConversations, setActiveChat, setActionError]); // Add dependencies
 
     const handleStepDownLeader = useCallback(async (conversationId, leaderId) => {
          const currentUserId = currentUserIdRef.current;
@@ -855,27 +1066,122 @@ const ChatPage = () => {
 
 
    const handleAddUserConfirm = useCallback(async (conversationId, userIdToAdd) => {
-       const currentUserId = currentUserIdRef.current;
-       if (!activeChat || activeChat.id !== conversationId || !userIdToAdd || !currentUserId) {
-           setActionError("Invalid request to add user.");
+    const currentUserId = currentUserIdRef.current;
+    if (!activeChat || activeChat.id !== conversationId || !userIdToAdd || !currentUserId) {
+        setActionError("Invalid request to add user.");
+        return;
+    }
+     const userToAdd = addUserSearchResults.find(user => user._id === userIdToAdd);
+     if (!userToAdd) {
+          setActionError("User not found in search results.");
+          return;
+     }
+
+     // Check if current user has permission (is leader)
+     const isCurrentUserLeader = activeChat.leader === currentUserId;
+     if (!isCurrentUserLeader) {
+         setActionError("Only the leader can add members.");
+         return;
+     }
+
+     // Check if user is already an active member (should be filtered by search, but double check)
+      const isAlreadyMember = activeChat.detailedMembers?.some(m => m.id === userIdToAdd && m.leftAt === null);
+      if (isAlreadyMember) {
+           setActionError("User is already an active member of this group.");
+           setAddUserSearchResults([]); // Clear results as action isn't needed
+           setAddUserInput('');
+           setSelectedUserToAdd(null);
            return;
-       }
-        const userToAdd = addUserSearchResults.find(user => user._id === userIdToAdd);
-        if (!userToAdd) {
-             setActionError("User not found in search results.");
-             return;
-        }
-        // Clear search results and error message on confirm
-        setAddUserSearchResults([]);
-        setActionError(null);
+      }
 
-        await performSettingsAction(
-            () => addNewMemberApi({ conversationId, newMemberId: userIdToAdd, role: 'member' }),
-            "Add member"
-            // updateStateFunc handled by performSettingsAction updating activeChat/conversations
-        );
-   }, [activeChat, performSettingsAction, addUserSearchResults, currentUserIdRef]);
 
+     // Clear search results and error message on confirm
+     setAddUserSearchResults([]); // Clear immediately for better UX
+     setAddUserInput(''); // Clear input immediately
+     setSelectedUserToAdd(null); // Clear selection immediately
+     setActionError(null); // Clear action error before API call
+
+
+     await performSettingsAction(
+        () => addNewMemberApi({ conversationId, newMemberId: userIdToAdd, role: 'member' }), // API call
+        "Add member", // Success message text
+         // <<< Custom updateStateFunc for successful member add >>>
+         (apiResponse) => {
+             console.log("Custom updateStateFunc running for add member success:", apiResponse);
+             // Update core states (conversations, activeChat) based on API response or local userToAdd info.
+             // This logic remains the same as previously refined.
+             const updatedConvData = apiResponse?.conversation || apiResponse?.data || apiResponse;
+
+             if (updatedConvData && updatedConvData._id) {
+                  const membersWithDetails = updatedConvData.members?.map(m => ({
+                     ...m,
+                     id: (m.id && typeof m.id === 'object' && m.id._id) ? String(m.id._id).trim() : (typeof m.id === 'string' ? m.id.trim() : null)
+                 })) || [];
+
+                 setConversations(prevConvs => prevConvs.map(conv => {
+                     if (conv.id === conversationId) {
+                          return {
+                              ...conv,
+                              members: updatedConvData.members || conv.members,
+                              detailedMembers: membersWithDetails,
+                               statusText: `${membersWithDetails?.filter(m => m.leftAt === null)?.length || 0} members`,
+                          };
+                     }
+                     return conv;
+                 }));
+
+                 setActiveChat(prevActive => {
+                     if (!prevActive || prevActive.id !== conversationId) return prevActive;
+                     const membersWithDetailsActive = updatedConvData.members?.map(m => ({
+                         ...m,
+                         id: (m.id && typeof m.id === 'object' && m.id._id) ? String(m.id._id).trim() : (typeof m.id === 'string' ? m.id.trim() : null)
+                     })) || [];
+                      return {
+                         ...prevActive,
+                         members: updatedConvData.members || prevActive.members,
+                         detailedMembers: membersWithDetailsActive,
+                         statusText: `${membersWithDetailsActive?.filter(m => m.leftAt === null)?.length || 0} members`,
+                      };
+                 });
+
+             } else {
+                  console.warn("Add member API success but response did not contain expected conversation data. Manually adding user info to state.", apiResponse);
+                  // Fallback: Manually add the user to detailedMembers using the userToAdd info
+                  const addedUserDetailed = {
+                       id: userToAdd._id,
+                       role: 'member',
+                       leftAt: null,
+                       addedAt: new Date().toISOString(),
+                       fullName: userToAdd.fullName,
+                       avatar: userToAdd.avatar,
+                       email: userToAdd.email,
+                   };
+                   setConversations(prevConvs => prevConvs.map(conv => {
+                        if (conv.id === conversationId) {
+                            const updatedDetailedMembers = [...(conv.detailedMembers || []), addedUserDetailed];
+                             return {
+                                 ...conv,
+                                 detailedMembers: updatedDetailedMembers,
+                                 statusText: `${updatedDetailedMembers?.filter(m => m.leftAt === null)?.length || 0} members`,
+                             };
+                        }
+                       return conv;
+                   }));
+                    setActiveChat(prevActive => {
+                        if (!prevActive || prevActive.id !== conversationId) return prevActive;
+                         const updatedDetailedMembers = [...(prevActive.detailedMembers || []), addedUserDetailed];
+                        return {
+                            ...prevActive,
+                            detailedMembers: updatedDetailedMembers,
+                            statusText: `${updatedDetailedMembers?.filter(m => m.leftAt === null)?.length || 0} members`,
+                        };
+                    });
+             }
+         }
+         // <<< End custom updateStateFunc >>>
+    );
+     // setActionError is cleared by performSettingsAction
+}, [activeChat, performSettingsAction, addUserSearchResults, currentUserIdRef, addNewMemberApi, setConversations, setActiveChat, setActionError, setAddUserSearchResults]);
 
     const handleLeaveGroup = useCallback(async (conversationId) => {
         const currentUserId = currentUserIdRef.current;
@@ -974,10 +1280,6 @@ const ChatPage = () => {
     }, [activeChat, performSettingsAction, currentUserIdRef]);
 
 
-    // State and handlers for editing group name
-    const [isEditingName, setIsEditingName] = useState(false);
-    const [editingGroupName, setEditingGroupName] = useState('');
-
     const handleStartEditGroupName = useCallback(() => {
          if (activeChat?.isGroup && activeChat.name) {
              setEditingGroupName(activeChat.name);
@@ -996,10 +1298,10 @@ const ChatPage = () => {
          // setSendingMessage(false); // Or reset specific state
      }, []);
 
-    const handleSaveEditGroupName = useCallback(async () => {
+        const handleSaveEditGroupName = useCallback(async () => {
          const currentUserId = currentUserIdRef.current;
          const conversationId = activeChat?.id;
-         const newName = editingGroupName.trim();
+         const newName = editingGroupName.trim(); // Lấy tên mới từ state
 
           if (!conversationId || !activeChat?.isGroup || !newName || !currentUserId) {
               if (!newName) setActionError("Group name cannot be empty.");
@@ -1010,96 +1312,233 @@ const ChatPage = () => {
           // const isLeader = activeChat.leader === currentUserId;
           // if (!isLeader) { setActionError("Only the leader can rename the group."); return; }
 
-           // Clear error before attempting save
            setActionError(null);
-           // Disable buttons during save
-           setIsPerformingAction(true); // Use general action state
+           setIsPerformingAction(true); // Disable buttons during save
+
 
          await performSettingsAction(
-             () => updateConversationNameApi({ conversationId, newName }),
-             "Update group name",
-             () => {
-                  setIsEditingName(false); // Close input on success
-                  setEditingGroupName(''); // Clear input
-                  // Re-enable input area if it was disabled
-                  // setSendingMessage(false);
+             () => updateConversationNameApi({ conversationId, newName }), // Truyền API call
+             "Update group name", // Truyền thông báo thành công
+             // <<< Truyền hàm callback xử lý cập nhật state khi API thành công >>>
+             (apiResponse) => { // apiResponse ở đây là { success: true, message: ... }
+                 console.log("Custom updateStateFunc running for name change success:", apiResponse);
+                 // Cập nhật state conversations: Tìm conversation bằng ID và thay đổi tên
+                 setConversations(prevConvs => prevConvs.map(conv =>
+                     conv.id === conversationId ? { ...conv, name: newName } : conv // Sử dụng newName đã có ở scope ngoài
+                 ));
+                 // Cập nhật state activeChat: Thay đổi tên của activeChat
+                 setActiveChat(prevActive => {
+                     if (!prevActive || prevActive.id !== conversationId) return prevActive; // Đảm bảo đúng chat đang active
+                     return { ...prevActive, name: newName }; // Sử dụng newName
+                 });
+                 // Đóng chế độ chỉnh sửa và xóa nội dung input
+                 setIsEditingName(false);
+                 setEditingGroupName('');
+                 // Xóa lỗi nếu có lỗi trước đó
+                 setActionError(null);
+                 // Bạn có thể muốn hiển thị một thông báo thành công nhỏ ở đây nếu cần
+                 // Ví dụ: alert(apiResponse.message || "Tên nhóm đã được cập nhật.");
              }
+             // <<< Kết thúc hàm callback >>>
          );
-         // setIsPerformingAction(false); // Moved to performSettingsAction finally block
-    }, [activeChat, currentUserIdRef, editingGroupName, performSettingsAction]);
+         // setIsPerformingAction(false); // Được gọi trong finally của performSettingsAction
+    }, [activeChat, currentUserIdRef, editingGroupName, performSettingsAction, setConversations, setActiveChat, setIsEditingName, setEditingGroupName, setActionError]); // Thêm các setters vào dependency array
 
 
     // --- Handle Delete Message (Existing Logic) ---
-    const handleDeleteMessage = useCallback(async (messageId) => {
-        const currentUserId = currentUserIdRef.current;
-        if (!messageId || !activeChat?.id || !currentUserId) { console.warn("Cannot delete message: Invalid parameters or no active chat/user."); return; }
-        // Find the message in the current messages state
-        const messageToDelete = messages.find(msg => msg.id === messageId);
-        // Check if the message exists and if the current user is the sender
-        if (!messageToDelete) {
-            console.warn(`Cannot delete message ${messageId}: Message not found in state.`);
-            setActionError("Message not found."); // Set action-specific error
-            return;
-        }
-         // SenderId is already trimmed in state
-        if (messageToDelete.senderId !== currentUserId) {
-            console.warn(`Cannot delete message ${messageId}: Not the sender.`);
-            setActionError("You can only delete your own messages."); // Set action-specific error
-            return;
-        }
-         // Prevent deleting messages that are still uploading/sending/failed (adjust based on backend)
-         if (messageToDelete.status && ['uploading', 'sending', 'failed'].includes(messageToDelete.status)) {
-              console.warn(`Cannot delete message ${messageId}: Message status is '${messageToDelete.status}'.`);
-              setActionError("Cannot delete message while uploading or sending."); // Set action-specific error
-              return;
-         }
-         // Prevent deleting a message if it's the one currently being edited
-         if (messageId === editingMessageId) {
-             console.warn(`Cannot delete message ${messageId}: Message is currently being edited.`);
-             setActionError("Cannot delete message while editing."); // Set action-specific error
-             return;
-         }
-
-
-        if (window.confirm("Are you sure you want to delete this message?")) {
-             // --- Optimistic UI update: Mark message as deleted immediately ---
-            setMessages(prevMessages =>
-                prevMessages.map(msg =>
-                    msg.id === messageId ? { ...msg, isDeleted: true, content: { text: { data: '' } } } : msg // Clear content for deleted text msg preview
-                )
-            );
-            setActionError(null); // Clear action error before API call
-
-            try {
-                // Call the delete API
-                const response = await deleteMessageApi({ messageId }); // Assuming API expects messageId in body
-
-                 if (!response || !response.success) {
-                     console.error(`Failed to delete message ${messageId}:`, response?.message || response?.error);
-                     setActionError(response?.message || response?.error || "Failed to delete message on server.");
-                     // Revert optimistic update on failure (optional but good UX)
-                      setMessages(prevMessages =>
-                          prevMessages.map(msg =>
-                              msg.id === messageId ? { ...msg, isDeleted: false, content: messageToDelete.content } : msg // Restore content and isDeleted status
-                          )
-                      );
-                 } else {
-                     console.log(`Message ${messageId} deleted successfully on server.`);
-                     // No further state update needed if optimistic update was correct
-                 }
-
-            } catch (err) {
-                console.error(`Error calling delete message API for ${messageId}:`, err);
-                setActionError(err.message || 'An API error occurred while deleting message.');
-                 // Revert optimistic update on API call error
-                 setMessages(prevMessages =>
-                     prevMessages.map(msg =>
-                         msg.id === messageId ? { ...msg, isDeleted: false, content: messageToDelete.content } : msg // Restore content and isDeleted status
-                     )
-                 );
+        // Handler to delete a message
+        const handleDeleteMessage = useCallback(async (messageId) => {
+            const currentUserId = currentUserIdRef.current;
+    
+            // --- 1. Validate Parameters and State ---
+            if (!messageId || !activeChat?.id || !currentUserId) {
+                 console.warn("Cannot delete message: Invalid parameters or no active chat/user.");
+                 setActionError("Cannot perform action without active chat or user.");
+                 return;
             }
-        }
-    }, [activeChat?.id, messages, currentUserIdRef, deleteMessageApi, editingMessageId]); // Added editingMessageId to dependencies
+    
+            // Find the message in the current messages state
+            const messageToDelete = messages.find(msg => msg.id === messageId);
+    
+            // Check if the message exists and if the current user is the sender
+            if (!messageToDelete) {
+                console.warn(`Cannot delete message ${messageId}: Message not found in state.`);
+                setActionError("Message not found in current view.");
+                return;
+            }
+             // SenderId is already trimmed in state
+            if (messageToDelete.senderId !== currentUserId) {
+                console.warn(`Cannot delete message ${messageId}: Not the sender.`);
+                setActionError("You can only delete your own messages.");
+                return;
+            }
+             // Prevent deleting messages that are still in transient states or being edited
+             if (messageToDelete.status && ['uploading', 'sending', 'failed'].includes(messageToDelete.status)) {
+                  console.warn(`Cannot delete message ${messageId}: Message status is '${messageToDelete.status}'.`);
+                  setActionError("Cannot delete message while uploading or sending.");
+                  return;
+             }
+             // Prevent deleting a message if it's the one currently being edited
+             if (messageId === editingMessageId) {
+                 console.warn(`Cannot delete message ${messageId}: Message is currently being edited.`);
+                 setActionError("Cannot delete message while editing.");
+                 return;
+             }
+    
+    
+            if (window.confirm("Are you sure you want to delete this message?")) {
+                 // --- 2. Capture original state before optimistic update (for reverting on failure) ---
+                 // We need a copy of the original message object's relevant state parts
+                 const originalMessageState = messages.find(msg => msg.id === messageId); // Find again in case state changed slightly
+                  if (!originalMessageState) { // Should not happen given checks above, but safety
+                      console.error("Original message state not found for revert during delete optimistic update.");
+                      // Decide if you should abort or proceed with just the optimistic update. Proceeding is safer.
+                  }
+                  // Create a copy for potential revert
+                  const originalMessageStateCopy = originalMessageState ? { ...originalMessageState } : null;
+    
+    
+                 // --- 3. Optimistic UI update: Mark message as deleted immediately ---
+                 // This changes the state *before* the API call. MessageBubble should pick this up.
+                setMessages(prevMessages =>
+                    prevMessages.map(msg =>
+                        msg.id === messageId ? {
+                            ...msg,
+                            isDeleted: true,
+                            // Clear content for text/file previews, but keep structure if needed for revert
+                            // For text: content should be { text: { data: '' } }
+                            // For file: content should be { file: { data: null, metadata: {...} } }
+                            // For image: content should be { image: [{ data: null, metadata: {...} }] } (or similar based on your structure)
+                            content: msg.type === 'text' ? { text: { data: '' } } :
+                                     (msg.type === 'file' && msg.content?.file) ? { file: { ...msg.content.file, data: null } } :
+                                     (msg.type === 'image' && Array.isArray(msg.content?.image)) ? { image: msg.content.image.map(img => ({ ...img, data: null })) } : msg.content, // Fallback to original content if structure is unexpected
+    
+                            // Optional: Add a 'deleting' status visually
+                            // status: 'deleting',
+                        } : msg
+                    )
+                );
+                setActionError(null); // Clear any previous action error before API call
+    
+    
+                // --- 4. Call the API to delete the message on the server ---
+                // setSendingMessage(true); // Delete might not need sendingMessage state if it doesn't block input
+    
+    
+                try {
+                    // Call the delete API
+                    // Assuming API expects { messageId: "string" } in body
+                    const response = await deleteMessageApi({ messageId });
+    
+                    // <<< ĐIỀU CHỈNH QUAN TRỌNG: Kiểm tra thành công/thất bại dựa trên định dạng API thực tế >>>
+                    // Dựa trên kinh nghiệm và lỗi trước, API thành công có thể trả về { success: true }
+                    // hoặc không trả về thuộc tính success khi thành công.
+                    // API thất bại có thể trả về { success: false, ... } hoặc ném lỗi HTTP.
+                    // Ta kiểm tra nếu response tồn tại VÀ có thuộc tính success == false.
+                    // Nếu không phải trường hợp này, TA GIẢ ĐỊNH LÀ THÀNH CÔNG (vì try/catch sẽ bắt lỗi fetch/HTTP).
+                     if (response && response.success === false) {
+                         // --- 5. Handle API failure (API returned a response, but explicitly said success: false) ---
+                         console.error(`Failed to delete message ${messageId} on server:`, response?.message || response?.error || "API reported failure.");
+                         // Log full response if it's not just message/error
+                          if (!response?.message && !response?.error) console.error("Full API error response:", response);
+    
+    
+                         let detailedErrorMessage = response?.message || response?.error || "Failed to delete message on server.";
+                         setActionError(detailedErrorMessage);
+    
+                         // Revert optimistic update on explicit failure
+                          if (originalMessageStateCopy) { // Only revert if we captured the original state
+                              setMessages(prevMessages =>
+                                  prevMessages.map(msg =>
+                                      msg.id === messageId ? { ...msg, content: originalMessageStateCopy.content, isDeleted: originalMessageStateCopy.isDeleted, status: originalMessageStateCopy.status, time: originalMessageStateCopy.time, createdAt: originalMessageStateCopy.createdAt } : msg
+                                  )
+                              );
+                          } else {
+                               console.warn("Could not revert optimistic delete for message:", messageId, "Original state was not captured.");
+                               // Depending on UX, you might leave it deleted visually or try to refetch.
+                          }
+    
+    
+                     } else {
+                         // <<< 6. SUCCESS SCENARIO >>>
+                         // API call finished without throwing AND response did not indicate explicit failure.
+                         // This is server-side success.
+                         console.log(`Message ${messageId} deleted successfully on server.`, response);
+                         // The optimistic update (step 3) already handled the UI change (marking as deleted).
+                         // No further setMessages call is needed here for the message itself to mark it as deleted.
+                         // We just need to ensure any status added during optimistic update is removed (e.g. 'deleting')
+                         setMessages(prevMessages =>
+                             prevMessages.map(msg =>
+                                 msg.id === messageId ? { ...msg, status: msg.isDeleted ? msg.status : 'sent' } : msg // Reset status unless it's already 'failed' etc. Keep 'isDeleted' true from optimistic update.
+                                 // OR simply remove status if you used a transient 'deleting' status
+                                 // msg.id === messageId ? { ...msg, status: 'sent' } : msg // If you used 'deleting' status
+                             )
+                         );
+    
+    
+                         // --- Optional: Update conversation list if the latest message was deleted ---
+                         setConversations(prevConvs => {
+                             const activeConvIndex = prevConvs.findIndex(conv => conv.id === activeChat?.id);
+                             if (activeConvIndex === -1) return prevConvs; // Active chat not found in list
+    
+                             const activeConv = prevConvs[activeConvIndex];
+                              // Check if the deleted message was the latest message in the active chat
+                              // Note: Need to check activeConv.latestMessage BEFORE it's potentially updated by a new message arriving
+                             if (activeConv.latestMessage === messageId) {
+                                  // Find the previous message's preview and timestamp if possible
+                                  // This requires looking in the 'messages' state, which is tricky here
+                                  // A simpler approach is to set a generic "Message deleted" preview.
+                                  const previousMessageIndex = messages.findIndex(msg => msg.id === messageId) - 1;
+                                  const previousMessage = previousMessageIndex >= 0 ? messages[previousMessageIndex] : null;
+    
+                                   const updatedConversations = [...prevConvs];
+                                   updatedConversations[activeConvIndex] = {
+                                       ...activeConv,
+                                       // Set lastMessage based on the previous message or a placeholder
+                                       lastMessage: previousMessage ? (previousMessage.type === 'text' ? previousMessage.content?.text?.data || '' : `[${previousMessage.type.toUpperCase()}]`) : "[Message deleted]",
+                                        // Set timestamp based on previous message or a recent time
+                                       time: previousMessage ? previousMessage.time : new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase(),
+                                       latestMessageTimestamp: previousMessage ? previousMessage.createdAt : new Date().toISOString(),
+                                       // Keep latestMessage ID as the ID of the *previous* message if found, or null
+                                       latestMessage: previousMessage ? previousMessage.id : null,
+                                   };
+                                    // Re-sort the list
+                                    updatedConversations.sort((a, b) => {
+                                      const dateA = new Date(a.latestMessageTimestamp || 0);
+                                      const dateB = new Date(b.latestMessageTimestamp || 0);
+                                      return dateB.getTime() - dateA.getTime();
+                                   });
+    
+                                  return updatedConversations;
+                             }
+                              // If not the latest message, return the list unchanged
+                             return prevConvs;
+                         });
+                     }
+    
+                } catch (err) {
+                    // --- 7. Handle API call error (network error, fetch rejected, unhandled exception in apiCall) ---
+                    console.error(`Error calling delete message API for ${messageId}:`, err);
+    
+                    const detailedErrorMessage = err.message || 'An API error occurred while deleting message.';
+                    setActionError(detailedErrorMessage);
+    
+                     // Revert optimistic update on API call error
+                     if (originalMessageStateCopy) { // Only revert if we captured the original state
+                         setMessages(prevMessages =>
+                             prevMessages.map(msg =>
+                                msg.id === messageId ? { ...msg, content: originalMessageStateCopy.content, isDeleted: originalMessageStateCopy.isDeleted, status: originalMessageStateCopy.status, time: originalMessageStateCopy.time, createdAt: originalMessageStateCopy.createdAt } : msg
+                             )
+                         );
+                     } else {
+                          console.warn("Could not revert optimistic delete for message:", messageId, "Original state was not captured on API error.");
+                     }
+                } finally {
+                     // --- 8. Cleanup ---
+                     // setSendingMessage(false); // Only if it was set true before try
+                }
+            }
+        },  [activeChat?.id, messages, currentUserIdRef, deleteMessageApi, editingMessageId]); // Added editingMessageId to dependencies
 
 
     // --- Handle Edit Message (Initiate Edit - Called from MessageBubble) ---
@@ -1146,118 +1585,236 @@ const ChatPage = () => {
 
     // --- Handle Save Edited Message (Called from ChatWindow onSubmit) ---
     const handleSaveEditedMessage = useCallback(async () => {
-        // Use the ID stored in state
+        // Get the ID of the message being edited from state
         const messageId = editingMessageId;
+        // Get the current user ID from ref
         const currentUserId = currentUserIdRef.current;
-        const newText = messageInput; // Get text from the input state
+        // Get the new text from the input state
+        const newText = messageInput;
 
-        // Validate parameters and state
-        if (!messageId || !activeChat?.id || !currentUserId || !newText.trim()) {
-            console.warn("Cannot save edit: Invalid state (no message ID, no chat, no user, or empty text).");
-             // Clear editing state and show error
+        // --- 1. Validate Parameters and State ---
+        if (!messageId || !activeChat?.id || !currentUserId) {
+            console.warn("Cannot save edit: Invalid state (no message ID, no chat, or no user).");
+             // Clear editing state immediately on invalid state
              setEditingMessageId(null);
-             setMessageInput(''); // Clear input on invalid save attempt
-             setActionError("Invalid text provided for edit.");
+             setMessageInput('');
+             setActionError("Invalid request to save message.");
             return;
+        }
+
+        // Find the message in the current messages state to get original text and state
+        const messageToEdit = messages.find(msg => msg.id === messageId);
+
+        // Guard against message not found if state updated unexpectedly
+         if (!messageToEdit) {
+             console.warn(`Cannot save edit for message ${messageId}: Message not found in state.`);
+             // Clear editing state immediately if message not found
+             setEditingMessageId(null);
+             setMessageInput('');
+             setActionError("Message to edit not found in current view.");
+             return;
+         }
+
+        // Get original text safely
+        const originalText = messageToEdit?.content?.text?.data || '';
+         const trimmedNewText = newText.trim();
+
+        // If the text hasn't changed (after trimming), just cancel the edit mode
+        if (trimmedNewText === originalText.trim()) {
+             console.log("No change in message text, cancelling edit mode.");
+             setActionError(null); // Clear any previous error related to starting edit
+             setEditingMessageId(null); // Exit edit mode immediately
+             setMessageInput(''); // Clear input immediately
+             return;
         }
 
          // Prevent saving if already sending/saving
          if (sendingMessage) {
-             console.warn("Cannot save edit: Already saving/sending.");
+             console.warn("Cannot save edit: Already saving/sending another item.");
              setActionError("Save in progress. Please wait.");
              return;
          }
 
-
-        // Find the message in the current messages state to get original text
-        const messageToEdit = messages.find(msg => msg.id === messageId);
-        const originalText = messageToEdit?.content?.text?.data || '';
-
-        // If the text hasn't changed, just cancel the edit mode
-        if (newText.trim() === originalText.trim()) {
-             console.log("No change in message text, cancelling edit mode.");
-             setActionError(null); // Clear any previous error
-             setEditingMessageId(null); // Exit edit mode
-             setMessageInput(''); // Clear input
+        // Basic validation: new text cannot be empty after trimming
+        if (!trimmedNewText) {
+             console.warn("Cannot save empty message.");
+             setActionError("Edited message cannot be empty."); // Provide user feedback
+             // Do NOT clear editing state here, let user fix or cancel
              return;
         }
 
 
-         setSendingMessage(true); // Indicate that saving is in progress (disables input/buttons)
-         setActionError(null); // Clear any previous error
+         // --- 2. Capture original state before optimistic update (for reverting on failure) ---
+         // We need a copy of the original message object's relevant state parts
+         const originalMessageState = {
+             content: messageToEdit.content, // Original content structure
+             isEdited: messageToEdit.isEdited, // Original isEdited status (might be false)
+             time: messageToEdit.time, // Original formatted time
+             createdAt: messageToEdit.createdAt, // Original timestamp
+             status: messageToEdit.status, // Original status (should be 'sent' for editing)
+         };
 
 
-         // --- Optimistic UI update: Update message text immediately ---
-         // Use the messageToEdit found earlier to get original state
+         // --- 3. Optimistic UI update: Update message text and mark as edited immediately ---
+         // This changes the state *before* the API call. MessageBubble should pick this up.
+         // We also optimistically update time and createdAt IF we want the UI to reflect "just edited".
+         // If you prefer the time/createdAt to only update when the API confirms, remove those lines here.
           setMessages(prevMessages =>
                prevMessages.map(msg =>
                    msg.id === messageId ? {
                        ...msg,
-                       content: { text: { type: 'text', data: newText.trim() } }, // Update content with new text
-                        // isEdited might be set true optimistically here, or wait for API confirmation
-                        isEdited: true, // Optimistically mark as edited
-                       // status: 'saving', // Optional: Add a 'saving' status
+                       // Update content with new text
+                       content: { ...msg.content, text: { ...(msg.content?.text), data: trimmedNewText } },
+                       isEdited: true, // Optimistically mark as edited
+                       // Optional: Optimistically update time/timestamp to show it was just edited
+                       // time: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase(),
+                       // createdAt: new Date().toISOString(),
+                       // status: 'saving', // Optional visual status during API call
                    } : msg
                )
            );
 
+        // <<< BƯỚC QUAN TRỌNG: Reset editing state NGAY LẬP TỨC sau optimistic update >>>
+        // This triggers MessageBubble to exit 'editing-message' mode and display the new content from the updated 'messages' state.
+        setEditingMessageId(null);
+        setMessageInput('');
+        // <<< KẾT THÚC BƯỚC QUAN TRỌNG >>>
+
+
+        // --- 4. Call the API to save the edit on the server ---
+         setSendingMessage(true); // Indicate that saving is in progress (disables input/buttons)
+         setActionError(null); // Clear any previous action error before the API call
+
 
         try {
-             // Call the edit API
-             const response = await editMessageApi({ messageId, newData: newText.trim() });
+             // Call the edit API with message ID and new trimmed text
+             // Assuming API expects { messageId: "string", "newData": "string" } in body
+             const response = await editMessageApi({ messageId, newData: trimmedNewText });
 
-             if (!response || !response.success) {
-                 console.error(`Failed to edit message ${messageId} on server:`, response?.message || response?.error);
-                 setActionError(response?.message || response?.error || "Failed to edit message.");
+             // <<< ĐIỀU CHỈNH QUAN TRỌNG: Kiểm tra thành công dựa trên định dạng API thực tế >>>
+             // Dựa trên log của bạn, API thành công trả về object tin nhắn đã cập nhật.
+             // Kiểm tra xem phản hồi có tồn tại và có vẻ như là một object tin nhắn hợp lệ không (ít nhất có _id khớp và isEdited).
+             if (response && response._id === messageId && typeof response.isEdited === 'boolean') {
+                 console.log(`Message ${messageId} edited successfully on server.`, response);
+
+                 // --- 5. Update state with data from the successful API response ---
+                 // This confirms/corrects the optimistic update with the definitive server data.
+                 // It's crucial for properties like last_updated or if the server applies final formatting/sanitization.
+                 setMessages(prevMessages =>
+                      prevMessages.map(msg =>
+                         msg.id === messageId ? {
+                             ...msg,
+                             // Update content with the *server's* version of content (most reliable)
+                             content: response.content,
+                             // Use server's isEdited status (should be true)
+                             isEdited: response.isEdited,
+                             // Use server's timestamp if available (e.g., last_updated for edits)
+                             time: response.last_updated ? new Date(response.last_updated).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase() : msg.time,
+                             createdAt: response.last_updated || msg.createdAt, // Prefer last_updated if exists
+                             status: 'sent', // Ensure status is 'sent' after server success
+                             // Keep other properties from the existing state unless API response provides them
+                             // senderId: response.senderId, // Should match currentUserId
+                             // type: response.type, // Should be 'text'
+                             // ... other properties from response if applicable ...
+                         } : msg
+                      )
+                 );
+
+                 // --- Optional: Update conversation list if latest message was edited ---
+                 // This is more complex. You'd need to check if messageId is the active chat's latestMessage.
+                 // If so, update the conversation's lastMessage text preview and time if needed.
+                  setConversations(prevConvs => {
+                      // Find the active chat in the conversations list
+                      const activeConvIndex = prevConvs.findIndex(conv => conv.id === activeChat?.id);
+                      if (activeConvIndex === -1) return prevConvs; // Active chat not found in list
+
+                      const activeConv = prevConvs[activeConvIndex];
+                       // Check if the edited message was the latest message
+                       if (activeConv.latestMessage === messageId) {
+                            const updatedConversations = [...prevConvs];
+                            // Update the lastMessage preview and potentially the time
+                            updatedConversations[activeConvIndex] = {
+                                ...activeConv,
+                                lastMessage: trimmedNewText, // Update preview with new text
+                                time: response.last_updated ? new Date(response.last_updated).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase() : activeConv.time,
+                                latestMessageTimestamp: response.last_updated || activeConv.latestMessageTimestamp,
+                            };
+                            // Re-sort the list might be needed if time updated (less common for edits than new messages)
+                            // If sorting by last message time, and edit updates time, resorting is correct.
+                             updatedConversations.sort((a, b) => {
+                                const dateA = new Date(a.latestMessageTimestamp || 0);
+                                const dateB = new Date(b.latestMessageTimestamp || 0);
+                                return dateB.getTime() - dateA.getTime();
+                             });
+                             return updatedConversations;
+                       }
+                       // If not the latest message, return the list unchanged
+                      return prevConvs;
+                  });
+
+
+             } else {
+                 // --- 6. Handle API failure (API returned a response, but not the expected success format) ---
+                 console.error(`Failed to edit message ${messageId} on server. API response did not match expected success format:`, response);
+
+                 // Try to extract a meaningful error message from the response, or use a fallback
+                 let detailedErrorMessage = "Failed to edit message on server (unexpected response).";
+                  // Add checks for other potential error structures from your API if known
+                  if (response && response.message) detailedErrorMessage = response.message;
+                  else if (response && response.error) detailedErrorMessage = response.error;
+
+
+                 setActionError(detailedErrorMessage);
+
                  // Revert optimistic update on failure
                  setMessages(prevMessages =>
                     prevMessages.map(msg =>
-                        msg.id === messageId ? { ...msg, content: messageToEdit.content, isEdited: messageToEdit.isEdited, status: 'sent' } : msg // Revert content, isEdited status, reset status
+                       // Use originalMessageState to restore the state before the optimistic update
+                       msg.id === messageId && originalMessageState ? { ...msg, content: originalMessageState.content, isEdited: originalMessageState.isEdited, status: 'sent' } : msg
                     )
                  );
-             } else {
-                 console.log(`Message ${messageId} edited successfully on server.`, response.data);
-                 // Update state based on API response if needed (e.g., if API confirms isEdited)
-                 // If API response has the updated message, you could use it to update the state
-                 // For now, we assume the optimistic update is correct and just ensure status is sent
-                 setMessages(prevMessages =>
-                     prevMessages.map(msg =>
-                         msg.id === messageId ? { ...msg, isEdited: response.data?.isEdited || true, status: 'sent' } : msg // Ensure isEdited is true and status is sent
-                     )
-                  );
+                  // Note: editingMessageId and messageInput were already cleared above,
+                  // so the UI will be back to the empty input/non-editing mode.
              }
 
         } catch (err) {
+             // --- 7. Handle API call error (network error, fetch rejected, unhandled exception in apiCall) ---
              console.error(`Error calling edit message API for ${messageId}:`, err);
-             setActionError(err.message || 'An API error occurred while editing message.');
+
+             const detailedErrorMessage = err.message || 'An API error occurred while editing message.';
+             setActionError(detailedErrorMessage);
+
               // Revert optimistic update on API call error
-              setMessages(prevMessages =>
-                  prevMessages.map(msg =>
-                      msg.id === messageId ? { ...msg, content: messageToEdit.content, isEdited: messageToEdit.isEdited, status: 'sent' } : msg // Revert content, isEdited status, reset status
-                  )
-              );
+              // Use originalMessageState if message not found in current state for some reason during revert
+              const messageBeforeRevert = messages.find(msg => msg.id === messageId) || originalMessageState;
+               setMessages(prevMessages =>
+                   prevMessages.map(msg =>
+                       msg.id === messageId && messageBeforeRevert ? { ...msg, content: messageBeforeRevert.content, isEdited: messageBeforeRevert.isEdited, status: 'sent', time: messageBeforeRevert.time, createdAt: messageBeforeRevert.createdAt } : msg
+                   )
+               );
+                // Note: editingMessageId and messageInput were already cleared above.
         } finally {
-            setSendingMessage(false); // Saving is complete, re-enable input area
-            setEditingMessageId(null); // Exit edit mode
-            setMessageInput(''); // Clear input after saving
+            // --- 8. Cleanup ---
+            setSendingMessage(false); // Saving is complete, re-enable send/save button
+            // editingMessageId and messageInput were already cleared after optimistic update
         }
-    }, [activeChat?.id, editingMessageId, messageInput, messages, currentUserIdRef, sendingMessage, editMessageApi]); // Added messageInput, sendingMessage to dependencies
+    }, [activeChat?.id, editingMessageId, messageInput, messages, currentUserIdRef, sendingMessage, editMessageApi, setMessageInput, setActionError]); // Dependencies
 
 
     // --- Handle Cancel Edit (Called from ChatWindow) ---
     const handleCancelEdit = useCallback(() => {
-         console.log(`Cancelling edit for message ${editingMessageId}.`);
-         if (sendingMessage) { // Prevent cancelling if save is in progress
-             console.warn("Cannot cancel edit: Save in progress.");
-             setActionError("Save in progress. Please wait.");
-             return;
-         }
-         // Reset editing state to exit edit mode
-         setEditingMessageId(null);
-         setMessageInput(''); // Clear the input text
-         setActionError(null); // Clear any error related to starting/saving edit
-         // Note: If you implemented an 'editing' status on the message, you'd reset it here.
-    }, [editingMessageId, sendingMessage]); // Added sendingMessage to dependencies
+        console.log(`Cancelling edit for message ${editingMessageId}.`);
+        if (sendingMessage) { // Prevent cancelling if save is in progress
+            console.warn("Cannot cancel edit: Save in progress.");
+            setActionError("Save in progress. Please wait.");
+            return;
+        }
+        // Reset editing state to exit edit mode
+        setEditingMessageId(null);
+        setMessageInput(''); // Clear the input text
+        setActionError(null); // Clear any error related to starting/saving edit
+        // Note: If you implemented an 'editing' status on the message, you'd reset it here.
+   }, [editingMessageId, sendingMessage, setMessageInput]); // Added sendingMessage to dependencies
 
 
   // --- Render ---
@@ -1299,108 +1856,68 @@ const ChatPage = () => {
 
 
    // Render normal UI when authenticated and no critical error
- return (
-   <div className={`chat-page-container ${isMobileChatActive ? 'chat-active-mobile' : ''}`}>
-
-     {/* Conversation List Panel (always visible except maybe on mobile when chat is active) */}
-     <ConversationListPanel
-         groups={filteredGroups} // Use filtered lists
-         friends={filteredFriends} // Use filtered lists
-         onSearchChange={handleSearchChange}
-         onItemClick={handleConversationClick}
-         activeChat={activeChat} // Pass active chat down for highlighting
-         searchTerm={searchTerm} // Pass search term down if needed for highlighting matches
-     />
-
-     {/* Chat Window (visible when a chat is active) */}
-     <ChatWindow
-          activeContact={activeChat}
-          messages={messages} // messages state contains messages with trimmed senderId and status
-          onMobileBack={handleMobileBack}
-          isMobile={isMobileChatActive}
-          // Pass input state and setter down
-          messageInput={messageInput} // <<< Pass input value
-          setMessageInput={setMessageInput} // <<< Pass input setter
-          // Pass handlers for sending/saving/cancelling
-          onSendTextMessage={handleSendTextMessage} // For new messages
-          onSendFile={handleSendFile} // For files
-          onSaveEditedMessage={handleSaveEditedMessage} // <<< New handler for saving edit
-          onCancelEdit={handleCancelEdit} // <<< New handler for cancelling edit
-          isLoadingMessages={isLoadingMessages}
-          onOpenSettings={activeChat?.isGroup ? handleOpenSettings : null}
-          onDeleteMessage={handleDeleteMessage}
-          // Pass the initiate edit handler (called from MessageBubble)
-          onEditMessage={handleInitiateEditMessage} // <<< Use the handler that STARTS the edit
-          currentUserId={currentUserIdRef.current} // Pass currentUserId (trimmed)
-          sendingMessage={sendingMessage} // Pass sending state (disables input/buttons)
-          editingMessageId={editingMessageId} // <<< Pass editingMessageId down (controls input area mode)
-     />
-
-      {/* Chat Settings Overlay (Conditionally rendered) */}
-      {isSettingsOpen && activeChat?.isGroup && activeChat.detailedMembers && (
-          <ChatSettingsOverlay
-              group={activeChat}
-              currentUserId={currentUserIdRef.current}
-              onClose={handleCloseSettings}
-              onRemoveUser={handleRemoveUser}
-              onChangeLeader={handleChangeLeader}
-              onStepDownLeader={handleStepDownLeader}
-              onAddUserSearch={handleAddUserSearch}
-              onAddUserConfirm={handleAddUserConfirm}
-              isPerformingAction={isPerformingAction} // Pass performing action state for settings
-              actionError={actionError} // Pass action error for settings/search
-              searchResults={addUserSearchResults} // Pass search results
-              onLeaveGroup={handleLeaveGroup}
-              onDeleteGroup={handleDeleteGroup}
-              onUpdateGroupName={handleUpdateGroupName} // Pass update name handler
-              isEditingName={isEditingName} // Pass state for name edit input
-              editingGroupName={editingGroupName} // Pass state for name edit input value
-              onStartEditGroupName={handleStartEditGroupName} // Pass handler to start name edit
-              onCancelEditGroupName={handleCancelEditGroupName} // Pass handler to cancel name edit
-              onSaveEditGroupName={handleSaveEditGroupName} // Pass handler to save name edit
-          />
-      )}
-
-        {/* Remove the Message Edit Dialog rendering */}
-        {/* {editingMessageId && (
-            <MessageEditDialog
-                messageId={editingMessageId}
-                initialText={editingMessageText}
-                onSave={handleSaveEdit}
-                onCancel={handleCancelEdit}
-                isLoading={isSavingEdit}
-            />
-        )} */}
-
-        {/* Optional: Global Action Error Display */}
-        {/* Consider displaying actionError here if it's not specific to an overlay */}
-        {/* {actionError && !isSettingsOpen && !editingMessageId && (
-            <div className="action-error-message">{actionError}</div> // Add styling for this
-        )} */}
-
-
-   </div>
- );
-};
-
-export default ChatPage;
-
-// >>> Helper Functions (Defined ONCE outside the component) <<<
-// (No changes needed here)
-/*
-const fetchUserDetailsFromId = async (userId) => {
-   try {
-        // Assuming userId passed to this helper is already trimmed
-        const userDetails = await getUserDetailsApi(userId); // API might receive original or trimmed ID
-        if (userDetails && userDetails._id) {
-             return { ...userDetails, _id: String(userDetails._id).trim() };
-        } else {
-             console.error(`API returned invalid data for user ${userId}:`, userDetails);
-            return { _id: userId, name: 'Unknown User', avatar: null }; // Return with potentially untrimmed ID or null
-        }
-   } catch (error) {
-       console.error(`Failed to fetch user details for ${userId}:`, error);
-       return { _id: userId, name: 'Unknown User', avatar: null };
-   }
-};
-*/
+   return (
+    <div className={`chat-page-container ${isMobileChatActive ? 'chat-active-mobile' : ''}`}>
+ 
+      {/* Conversation List Panel (always visible except maybe on mobile when chat is active) */}
+      <ConversationListPanel
+          groups={filteredGroups} // Use filtered lists
+          friends={filteredFriends} // Use filtered lists
+          onSearchChange={handleSearchChange}
+          onItemClick={handleConversationClick}
+          activeChat={activeChat} // Pass active chat down for highlighting
+          searchTerm={searchTerm} // Pass search term down if needed for highlighting matches
+      />
+ 
+      {/* Chat Window (visible when a chat is active) */}
+      <ChatWindow
+           activeContact={activeChat}
+           messages={messages} // messages state contains messages with trimmed senderId and status
+           onMobileBack={handleMobileBack}
+           isMobile={isMobileChatActive}
+           // Pass input state and setter down
+           messageInput={messageInput} // <<< Pass input value
+           setMessageInput={setMessageInput} // <<< Pass input setter
+           // Pass handlers for sending/saving/cancelling
+           onSendTextMessage={handleSendTextMessage} // For new messages (now reads from messageInput)
+           onSendFile={handleSendFile} // For files (still receives file object)
+           onSaveEditedMessage={handleSaveEditedMessage} // <<< New handler for saving edit (reads from messageInput)
+           onCancelEdit={handleCancelEdit} // <<< New handler for cancelling edit
+           isLoadingMessages={isLoadingMessages}
+           onOpenSettings={activeChat?.isGroup ? handleOpenSettings : null}
+           onDeleteMessage={handleDeleteMessage}
+           // Pass the initiate edit handler (called from MessageBubble)
+           onEditMessage={handleInitiateEditMessage} // <<< Use the handler that STARTS the edit
+           currentUserId={currentUserIdRef.current} // Pass currentUserId (trimmed)
+           sendingMessage={sendingMessage} // Pass sending state (disables input/buttons)
+           editingMessageId={editingMessageId} // <<< Pass editingMessageId down (controls input area mode)
+      />
+ 
+       {isSettingsOpen && activeChat?.isGroup && activeChat.detailedMembers && (
+           <ChatSettingsOverlay
+               group={activeChat}
+               currentUserId={currentUserIdRef.current}
+               onClose={handleCloseSettings}
+               onRemoveUser={handleRemoveUser}
+               onChangeLeader={handleChangeLeader}
+               onStepDownLeader={handleStepDownLeader}
+               onAddUserSearch={handleAddUserSearch}
+               onAddUserConfirm={handleAddUserConfirm}
+               isPerformingAction={isPerformingAction} // Pass performing action state for settings
+               actionError={actionError} // Pass action error for settings/search
+               searchResults={addUserSearchResults} // Pass search results
+               onLeaveGroup={handleLeaveGroup}
+               onDeleteGroup={handleDeleteGroup}
+               onUpdateGroupName={handleUpdateGroupName} // Pass update name handler
+               isEditingName={isEditingName} // Pass state for name edit input
+               editingGroupName={editingGroupName} // Pass state for name edit input value
+               onStartEditGroupName={handleStartEditGroupName} // Pass handler to start name edit
+               onCancelEditGroupName={handleCancelEditGroupName} // Pass handler to cancel name edit
+               onSaveEditGroupName={handleSaveEditGroupName} // Pass handler to save name edit
+           />
+       )}
+    </div>
+  );
+ };
+ 
+ export default ChatPage;

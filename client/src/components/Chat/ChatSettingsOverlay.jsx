@@ -68,10 +68,12 @@ const ChatSettingsOverlay = ({
      const handleAddUserClick = () => {
          // selectedUserToAdd should be a user object from search results { _id, fullName, avatar }
          if (selectedUserToAdd && group && group.id) {
-             onAddUserConfirm(group.id, selectedUserToAdd._id); // Pass conversationId và user ID (_id string) to add
-             // Reset form fields immediately (optimistic UX)
+            const userIdToAdd = selectedUserToAdd._id;
+             const conversationId = group.id;
              setAddUserInput('');
              setSelectedUserToAdd(null);
+             onAddUserConfirm(conversationId, userIdToAdd);
+             // Reset form fields immediately (optimistic UX)
              // searchResults will likely be cleared by ChatPage after successful add
          }
      };
@@ -195,41 +197,35 @@ const ChatSettingsOverlay = ({
                     {/* Chỉ leader mới có thể thêm thành viên */}
                     <div className="add-user-section">
                          <h4>Add Member</h4>
-                         {isCurrentUserLeader ? (
-                             <>
-                                 <form className="add-user-search-form" onSubmit={handleSearchSubmit}>
-                                     <input type="text" placeholder="Search user to add..." value={addUserInput} onChange={handleSearchInputChange} disabled={isPerformingAction} />
-                                     <button type="submit" disabled={isPerformingAction || !addUserInput.trim()}>{isPerformingAction && !actionError ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-search"></i>}</button>
-                                 </form>
-                                 {/* Hiển thị kết quả tìm kiếm */}
-                                 {searchResults && searchResults.length > 0 && (
-                                     <div className="search-results-list">
-                                         {searchResults.map(user => (
-                                              // user object from search results: { _id, fullName, avatar, ... }
-                                              // Sử dụng user._id làm key DUY NHẤT
-                                              <div
-                                                  key={user._id} // <-- SỬA LỖI KEY: Sử dụng user._id
-                                                  className={`search-result-item ${selectedUserToAdd?._id === user._id ? 'selected' : ''}`}
-                                                  onClick={() => setSelectedUserToAdd(user)}
-                                              >
-                                                   <img src={user.avatar || defaultAvatarPlaceholder} alt={user.fullName || 'User Avatar'} className="avatar tiny" />
-                                                   <span>{user.fullName || user.email || user._id}</span> {/* Hiển thị tên, email, hoặc ID */}
-                                              </div>
-                                         ))}
-                                     </div>
-                                 )}
-                                  {searchResults && searchResults.length === 0 && addUserInput.trim() && !isPerformingAction && !actionError && (
-                                     <div className="info-message">No users found.</div>
-                                  )}
-                                 {selectedUserToAdd && (
-                                     <button className="add-user-confirm-button" onClick={handleAddUserClick} disabled={isPerformingAction}>
-                                          {isPerformingAction ? 'Adding...' : `Add ${selectedUserToAdd.fullName || selectedUserToAdd._id}`}
-                                     </button>
-                                 )}
-                             </>
-                         ) : (
-                             <p className="info-message">Only the group leader can add new members.</p>
-                         )}
+                        <form className="add-user-search-form" onSubmit={handleSearchSubmit}>
+                            <input type="text" placeholder="Search user to add..." value={addUserInput} onChange={handleSearchInputChange} disabled={isPerformingAction} />
+                            <button type="submit" disabled={isPerformingAction || !addUserInput.trim()}>{isPerformingAction && !actionError ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-search"></i>}</button>
+                        </form>
+                        {/* Hiển thị kết quả tìm kiếm */}
+                        {searchResults && searchResults.length > 0 && (
+                            <div className="search-results-list">
+                                {searchResults.map(user => (
+                                    // user object from search results: { _id, fullName, avatar, ... }
+                                    // Sử dụng user._id làm key DUY NHẤT
+                                    <div
+                                        key={user._id} // <-- SỬA LỖI KEY: Sử dụng user._id
+                                        className={`search-result-item ${selectedUserToAdd?._id === user._id ? 'selected' : ''}`}
+                                        onClick={() => setSelectedUserToAdd(user)}
+                                    >
+                                        <img src={user.avatar || defaultAvatarPlaceholder} alt={user.fullName || 'User Avatar'} className="avatar tiny" />
+                                        <span>{user.fullName || user.email || user._id}</span> {/* Hiển thị tên, email, hoặc ID */}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        {searchResults && searchResults.length === 0 && addUserInput.trim() && !isPerformingAction && !actionError && (
+                            <div className="info-message">No users found.</div>
+                        )}
+                        {selectedUserToAdd && (
+                            <button className="add-user-confirm-button" onClick={handleAddUserClick} disabled={isPerformingAction}>
+                                {isPerformingAction ? 'Adding...' : `Add ${selectedUserToAdd.fullName || selectedUserToAdd._id}`}
+                            </button>
+                        )}
                     </div>
 
 
