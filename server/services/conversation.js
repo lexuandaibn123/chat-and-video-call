@@ -10,9 +10,7 @@ class ConversationService {
     if (mustBeGroup && !conversation.isGroup) {
       throw new Error("Conversation must be a group conversation");
     }
-    conversation.members = conversation.members.filter(
-      (member) => member.leftAt === null
-    );
+
     return conversation;
   }
 
@@ -39,18 +37,28 @@ class ConversationService {
     }
   }
 
-  _isMemberOfConversation(conversation, userId) {
+  _isMemberOfConversation(conversation, userId, allowLeft = false) {
     return conversation.members.find((member) => {
       return (
         (typeof member.id == "object"
           ? member.id._id.toString() == userId
-          : member.id.toString() == userId) && member.leftAt == null
+          : member.id.toString() == userId) &&
+        (allowLeft || member.leftAt == null)
       );
     });
   }
 
-  _mustBeMemberOfConversation(conversation, userId, errorMsg = "") {
-    const member = this._isMemberOfConversation(conversation, userId);
+  _mustBeMemberOfConversation(
+    conversation,
+    userId,
+    errorMsg = "",
+    allowLeft = false
+  ) {
+    const member = this._isMemberOfConversation(
+      conversation,
+      userId,
+      allowLeft
+    );
     if (!member) {
       if (errorMsg.length > 0) throw new Error(errorMsg);
       throw new Error(`User ${userId} is not a member of the conversation`);
@@ -166,10 +174,48 @@ class ConversationService {
 
       return res.status(200).json({
         success: true,
-        data: conversations.map((conversation) => {
-          this._filterMembersLeft(conversation);
-          return conversation;
-        }),
+        data: conversations
+          .map((conversation) => {
+            const conversationHandle = conversation.toObject();
+            const leftAt = this._isMemberOfConversation(
+              conversationHandle,
+              userId,
+              true
+            ).leftAt;
+
+            if (leftAt) {
+              conversationHandle.members = conversationHandle.members.filter(
+                (member) => {
+                  return member.joinedAt <= leftAt && member.leftAt == null;
+                }
+              );
+
+              if (
+                typeof conversationHandle.latestMessage === "object" &&
+                conversationHandle.latestMessage.datetime_created > leftAt
+              ) {
+                conversationHandle.latestMessage = {
+                  _id: conversationHandle.latestMessage._id,
+                  conversationId:
+                    conversationHandle.latestMessage.conversationId,
+                  content: null,
+                  datetime_created: null,
+                  last_updated: null,
+                  type: null,
+                  replyToMessageId: null,
+                  isEdited: null,
+                  isDeleted: null,
+                  senderId: null,
+                };
+              }
+            }
+
+            return conversationHandle;
+          })
+          .map((conversation) => {
+            this._filterMembersLeft(conversation);
+            return conversation;
+          }),
       });
     } catch (error) {
       console.error(error);
@@ -300,10 +346,11 @@ class ConversationService {
           "You must be a leader of the conversation to remove a member"
         );
 
-        const updatedConversation = await ConversationRepository.removeMember(
-          conversationId,
-          memberId
-        );
+        const updatedConversation =
+          await ConversationRepository.leaveConversation(
+            conversationId,
+            memberId
+          );
 
         return res.status(200).json({
           success: true,
@@ -361,7 +408,10 @@ class ConversationService {
             "leader"
           );
         }
-        await ConversationRepository.removeMember(conversationId, userInfo.id);
+        await ConversationRepository.leaveConversation(
+          conversationId,
+          userInfo.id
+        );
 
         return res.status(200).json({
           success: true,
@@ -553,17 +603,21 @@ class ConversationService {
         const userObj = this._mustBeMemberOfConversation(
           conversation,
           userInfo.id,
-          "You are not a member of the conversation"
+          "You are not a member of the conversation",
+          true
         );
 
         const latestDeletedAt = userObj.latestDeletedAt;
+
+        const leftAt = userObj.leftAt;
 
         const messages = await MessageRepository.findByConversationIdAndUserId(
           conversationId,
           userInfo.id,
           limit,
           skip,
-          latestDeletedAt
+          latestDeletedAt,
+          leftAt
         );
 
         return res.status(200).json({

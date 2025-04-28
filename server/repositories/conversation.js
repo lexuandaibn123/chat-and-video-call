@@ -80,19 +80,6 @@ class ConversationRepository {
     );
   }
 
-  async removeMember(conversationId, userId) {
-    const conversation = await this.findById(conversationId);
-    const memberIndex = conversation.members.findIndex(
-      (member) => member.id.toString() === userId.toString()
-    );
-
-    if (memberIndex !== -1) {
-      conversation.members[memberIndex].leftAt = new Date();
-      await conversation.save();
-    }
-    return conversation;
-  }
-
   async updateRole(conversationId, userId, newRole) {
     const conversation = await Conversation.findById(conversationId);
     if (!conversation) {
@@ -111,7 +98,7 @@ class ConversationRepository {
     return conversation;
   }
 
-  async deleteConversationByMemberId(conversationId, userId) {
+  async leaveConversation(conversationId, userId) {
     return await Conversation.findByIdAndUpdate(
       conversationId,
       {
