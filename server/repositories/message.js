@@ -28,12 +28,19 @@ class MessageRepository {
     userId,
     limit = 30,
     skip = 0,
-    latestDeletedAt = null
+    latestDeletedAt = null,
+    leftAt = null
   ) {
     let query = { conversationId };
 
-    if (latestDeletedAt) {
-      query.last_updated = { $gt: latestDeletedAt };
+    if (latestDeletedAt || leftAt) {
+      query.last_updated = {};
+      if (latestDeletedAt) {
+        query.last_updated.$gte = latestDeletedAt; // Greater than or equal to latestDeletedAt
+      }
+      if (leftAt) {
+        query.last_updated.$lte = leftAt; // Less than or equal to leftAt
+      }
     }
 
     const messages = await Message.find(query)
