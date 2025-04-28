@@ -1,5 +1,5 @@
 // src/api/auth.js
-const API_BASE_URL = 'http://localhost:8080'; // Hoặc lấy từ file config
+const API_BASE_URL = 'http://localhost:8080/api'; // Hoặc lấy từ file config
 
 // --- Hàm xử lý response chung ---
 const handleApiResponse = async (response) => {
