@@ -107,7 +107,7 @@ class AuthService {
 
   async resendVerificationEmail(req, res) {
     try {
-      const { email } = req.body;
+      const { email } = req.query;
 
       const user = await UserRepository.findByEmail(email);
       if (!user) {
@@ -140,7 +140,7 @@ class AuthService {
 
   async forgotPassword(req, res) {
     try {
-      const { email } = req.body;
+      const { email } = req.query;
 
       const user = await UserRepository.findByEmail(email);
       if (!user) {
