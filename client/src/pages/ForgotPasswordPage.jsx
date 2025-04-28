@@ -19,7 +19,7 @@ const ForgotPasswordPage = () => {
 
     try {
       // --- GỌI HÀM API ---
-      const data = await forgotPasswordApi({ email });
+      const data = await forgotPasswordApi(email);
       // -------------------
       setMessage('If the email exists, a password reset link has been sent. Check your mail!');
       setMessageType('success');

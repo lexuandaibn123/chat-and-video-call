@@ -100,15 +100,22 @@ export const infoApi = async () => {
 };
 
 
-export const forgotPasswordApi = async (emailData) => {
+export const forgotPasswordApi = async (email) => { 
   try {
-    const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(emailData),
-      // credentials: 'include' KHÔNG cần thiết ở đây
+    // const params = new URLSearchParams({ email: email });
+
+    const url = `${API_BASE_URL}/auth/forgot-password?email=${encodeURIComponent(email)}`;
+
+    const response = await fetch(url, {
+      method: 'GET', 
+      headers: {
+          'Accept': 'application/json'
+      },
+      // credentials: 'include', // Giữ lại nếu cần thiết cho cookie/credential
     });
+
     return handleApiResponse(response);
+
   } catch (error) {
     console.error("API Forgot Password Error:", error);
      if (error instanceof TypeError) {
@@ -153,15 +160,21 @@ export const verifyEmailApi = async (token) => {
   }
 };
 
-export const resendVerificationEmailApi = async (emailData) => {
+export const resendVerificationEmailApi = async (email) => { // Nhận trực tiếp chuỗi email
   try {
-    const response = await fetch(`${API_BASE_URL}/auth/resend-verification-email`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(emailData),
-      // credentials: 'include' KHÔNG cần thiết ở đây
+    const path = '/auth/resend-verification-email';
+    const params = new URLSearchParams({ email: email });
+    const url = `${API_BASE_URL}${path}?${params.toString()}`;
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+          'Accept': 'application/json'
+      },
+      // credentials: 'include' KHÔNG cần thiết ở đây (đã bỏ comment) - giữ lại nếu logic ứng dụng cần
     });
     return handleApiResponse(response);
+
   } catch (error) {
     console.error("API Resend Verification Error:", error);
      if (error instanceof TypeError) {
