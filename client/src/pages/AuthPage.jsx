@@ -34,7 +34,6 @@ const AuthPage = () => {
     setIsTransitionActive(!isTransitionActive);
     setConfirmPasswordError('');
     setPopupMessage('');
-    setShowResendVerification(false);
   };
 
   const togglePasswordVisibility = (field) => {
