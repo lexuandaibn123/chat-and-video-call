@@ -14,6 +14,8 @@ const { Server } = require("socket.io");
 const path = require("path");
 const ConversationService = require("./services/conversation");
 const { instrument } = require("@socket.io/admin-ui");
+const { uploadRouter } = require("./utils/uploadthing");
+const { createRouteHandler } = require("uploadthing/express");
 
 const PORT = process.env.PORT || 8080;
 
@@ -27,15 +29,35 @@ const nodeEnv = process.env.NODE_ENV;
 
 const SESSION_RELOAD_INTERVAL = 30 * 1000;
 
+const UPLOADTHING_TOKEN = process.env.UPLOADTHING_TOKEN;
+
 db.connect();
+
+/* Session */
+const sessionMiddleware = session({
+  secret: authSecret,
+  saveUninitialized: true,
+  resave: true,
+  cookie: {
+    secure: false,
+  },
+});
+app.use(sessionMiddleware);
+
+// Parses the text as json
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
+app.use(express.static(path.join(__dirname, "public")));
+app.set("view engine", "ejs");
 
 const options = {
   definition: {
     openapi: "3.1.0",
     info: {
-      title: "API Documentation",
+      title: "Chat and Video all API Documentation",
       version: "0.1.0",
-      description: "This is a sample API documentation",
+      description: "Documentation for Chat and Video all API",
       license: {
         name: "MIT",
         url: "https://spdx.org/licenses/MIT.html",
@@ -54,41 +76,35 @@ const specs = swaggerJsdoc(options);
 app.use(
   "/api-docs",
   swaggerUi.serve,
-  swaggerUi.setup(specs, { explorer: true })
+  swaggerUi.setup(specs, {
+    customSiteTitle: "Chat and Video all API Documentation",
+    explorer: true,
+  })
 );
 
 app.use(
   cors({
     origin: [clientUrl, "http://localhost:3000"],
     methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "x-uploadthing-version",
+      "x-uploadthing-package",
+    ],
     credentials: true,
   })
 );
 
-/* Session */
-const sessionMiddleware = session({
-  secret: authSecret,
-  saveUninitialized: true,
-  resave: true,
-  cookie: {
-    secure: false,
-  },
-});
-app.use(sessionMiddleware);
-
-app.use(bodyParser.urlencoded({ extended: true }));
-
-// Parses the text as json
-app.use(bodyParser.json());
-
-// Setup test
-app.use(express.static(path.join(__dirname, "public")));
-app.set("view engine", "ejs");
-
-app.get("/", (req, res) => {
-  res.render("index.ejs");
-});
+app.use(
+  "/api/uploadthing",
+  createRouteHandler({
+    router: uploadRouter,
+    config: {
+      token: UPLOADTHING_TOKEN,
+    },
+  })
+);
 
 app.get("/admin-socket", (req, res) => {
   res.render("admin.socket.ejs");

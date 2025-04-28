@@ -3,8 +3,10 @@ const route = express.Router();
 
 /**
  * @openapi
- * /healthz:
+ * /api/healthz:
  *   get:
+ *     tags:
+ *       - Default
  *     summary: Health check endpoint
  *     operationId: healthCheck
  *     responses:
