@@ -36,7 +36,7 @@ class ConversationRepository {
       .populate("latestMessage");
   }
 
-  async findByUserId(userId, page = 1, limit = 10) {
+  async findByUserId(userId, page = 1, limit = 10, query = {}) {
     return Conversation.find({
       isDeleted: false,
       members: {
@@ -44,6 +44,7 @@ class ConversationRepository {
           id: userId,
         },
       },
+      ...query,
     })
       .skip((page - 1) * limit)
       .limit(limit)

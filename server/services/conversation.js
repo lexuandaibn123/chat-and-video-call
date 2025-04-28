@@ -144,10 +144,7 @@ class ConversationService {
 
       return res.status(200).json({
         success: true,
-        data: {
-          ...conversation.toObject(),
-          messages,
-        },
+        data: conversation,
       });
     } catch (error) {
       console.error(error);
@@ -543,7 +540,7 @@ class ConversationService {
 
   async fetchMessages(req, res) {
     try {
-      const { conversationId, limit = 30, skip = 0 } = req.body;
+      const { conversationId, limit = 30, skip = 0 } = req.query;
 
       const userInfo = req.session.userInfo;
 
@@ -687,7 +684,7 @@ class ConversationService {
 
       let messageObj = {
         conversationId: conversationId,
-        senderId: userId,
+        senderId: userInfo.id,
         replyToMessageId,
       };
 
