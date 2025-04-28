@@ -62,17 +62,31 @@ const handleApiResponse = async (response) => {
 // Tạo cuộc trò chuyện mới (Chưa dùng trong ChatPage hiện tại)
 // URL trong screenshot: POST /conversation/create-conversation
 export const createConversationApi = async ({ members = [], name = "" }) => {
+  if (!Array.isArray(members)) {
+    throw new Error("Members must be an array");
+  }
+  if (members.some(member => typeof member !== 'string' || !/^[a-fA-F0-9]{24}$/.test(member))) {
+    throw new Error("All members must be valid ObjectIDs (24-character hex strings)");
+  }
+  if (typeof name !== 'string') {
+    throw new Error("Name must be a string");
+  }
+
   try {
     const response = await fetch(`${API_BASE_URL}/conversation/create-conversation`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // Cần gửi session cookie
-      body: JSON.stringify({ members, name }), // members là mảng user IDs
+      credentials: 'include',
+      body: JSON.stringify({ members, name }),
     });
     const result = await handleApiResponse(response);
-     // API trả về { success: true, data: { ...conversation, messages: [...] } } ? Cần xác nhận lại API spec này.
-     // Dựa trên code backend, có vẻ data: updatedConversation
-    return result.data; // Trả về conversation object
+    
+    // Kiểm tra cấu trúc response
+    if (!result.data || typeof result.data !== 'object' || !result.data._id) {
+      throw new Error("Invalid conversation data returned from API");
+    }
+    
+    return result.data;
   } catch (error) {
     console.error("Error creating conversation:", error);
     throw error;
@@ -156,21 +170,26 @@ export const removeMemberApi = async ({ conversationId, memberId }) => {
 // Cập nhật vai trò thành viên (bao gồm đổi leader)
 // URL trong screenshot: POST /conversation/update-member-role
 export const updateMemberRoleApi = async ({ conversationId, memberId, newRole }) => {
-    try {
-        const response = await fetch(`${API_BASE_URL}/conversation/update-member-role`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include', // Cần gửi session cookie
-            body: JSON.stringify({ conversationId, memberId, newRole }),
-        });
-        const result = await handleApiResponse(response);
-         // API trả về { success, message, conversation: updatedConversation } <-- Lưu ý trường 'conversation'
-        return result.conversation; // Trả về conversation object
-    } catch (error) {
-        console.error("Error updating member role:", error);
-        throw error;
-    }
+  try {
+      const response = await fetch(`${API_BASE_URL}/conversation/update-member-role`, {
+          method: 'PUT', 
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include', 
+          body: JSON.stringify({ conversationId, memberId, newRole }),
+      });
+      const result = await handleApiResponse(response);
+      
+      if (!result.success) {
+          throw new Error(result.message || "Failed to update member role");
+      }
+      
+      return result; 
+  } catch (error) {
+      console.error("Error updating member role:", error);
+      throw error;
+  }
 };
+
 
 
 // Rời khỏi cuộc trò chuyện (chỉ nhóm)
@@ -233,40 +252,51 @@ export const deleteGroupApi = async ({ conversationId }) => {
 // Cập nhật tên nhóm
 // URL trong screenshot: POST /conversation/update-conversation-name
 export const updateConversationNameApi = async ({ conversationId, newName }) => {
-     try {
-        const response = await fetch(`${API_BASE_URL}/conversation/update-conversation-name`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include', // Cần gửi session cookie
-            body: JSON.stringify({ conversationId, newName }),
-        });
-        const result = await handleApiResponse(response);
-         // API trả về { success, message, conversation: updatedConversation } <-- Lưu ý trường 'conversation'
-        return result.conversation; // Trả về conversation object
-    } catch (error) {
-        console.error("Error updating group name:", error);
-        throw error;
-    }
+  try {
+      const response = await fetch(`${API_BASE_URL}/conversation/update-conversation-name`, {
+          method: 'PUT', // Đúng theo API
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ conversationId, newName }),
+      });
+      const result = await handleApiResponse(response);
+      // API mới trả về { success, message }, không còn 'conversation' nữa
+      if (!result.success) {
+          throw new Error(result.message || "Failed to update group name");
+      }
+      return result; // ✅ Trả về { success, message }
+  } catch (error) {
+      console.error("Error updating group name:", error);
+      throw error;
+  }
 };
+
+
 
 // Lấy danh sách tin nhắn cho conversation (Endpoint mới)
 // URL trong screenshot: POST /conversation/get-messages
-export const getMessagesByRoomIdApi = async ({ conversationId, limit = 30, skip = 0 }) => { // Tên hàm giữ nguyên để ít thay đổi ChatPage
+export const getMessagesByRoomIdApi = async ({ conversationId, limit = 30, skip = 0 }) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/conversation/get-messages`, { // Endpoint mới
-      method: 'POST', // Phương thức POST
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // Cần gửi session cookie
-      body: JSON.stringify({ conversationId, limit, skip }), // Body với các tham số
+    const url = new URL(`${API_BASE_URL}/conversation/get-messages`);
+    url.searchParams.append('conversationId', conversationId);
+    url.searchParams.append('limit', limit);
+    url.searchParams.append('skip', skip);
+
+    const response = await fetch(url, {
+      method: 'GET',
+      credentials: 'include', // Gửi cookie kèm theo
     });
+
     const result = await handleApiResponse(response);
-     // API trả về { success: true, data: [messages] }
-    return Array.isArray(result.data) ? result.data : []; // Trả về mảng data
+    console.log(result)
+    // API trả về dạng JSON array các message
+    return result.data; // Vì theo ảnh, trả về array trực tiếp, không phải { success: true, data: [...] }
   } catch (error) {
     console.error(`Error fetching messages for conversation ${conversationId}:`, error);
     throw error;
   }
 };
+
 
 
 // Gửi tin nhắn mới (Endpoint mới)
@@ -291,12 +321,13 @@ export const sendMessageApi = async ({ conversationId, data, type, replyToMessag
 // URL trong screenshot: POST /conversation/edit-message
 export const editMessageApi = async ({ messageId, newData }) => { // Tên hàm giữ nguyên
   try {
-    const response = await fetch(`${API_BASE_URL}/conversation/edit-message`, { // Endpoint mới
-      method: 'POST',
+    const response = await fetch(`${API_BASE_URL}/conversation/edit-message`, {
+      method: 'PUT', 
       headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // Cần gửi session cookie
+      credentials: 'include', 
       body: JSON.stringify({ messageId, newData }),
     });
+
     const result = await handleApiResponse(response);
     return result.data; // API trả về { success: true, data: updatedMessage }
   } catch (error) {
@@ -304,6 +335,7 @@ export const editMessageApi = async ({ messageId, newData }) => { // Tên hàm g
     throw error;
   }
 };
+
 
 // Xoá tin nhắn (Endpoint mới)
 // URL trong screenshot: POST /conversation/delete-message

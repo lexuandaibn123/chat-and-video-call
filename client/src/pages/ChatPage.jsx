@@ -5,6 +5,7 @@ import ChatWindow from '../components/Chat/ChatWindow';
 import ChatSettingsOverlay from '../components/Chat/ChatSettingsOverlay';
 
 import {
+    createConversationApi,
     getMyRoomsApi,
     addNewMemberApi,
     removeMemberApi,
@@ -19,7 +20,7 @@ import {
     deleteMessageApi,
 } from '../api/conversations';
 
-import { searchUsersApi } from '../api/users';
+import { searchUsersApi, getUserByEmailApi, getUserDetailsApi } from '../api/users';
 import { infoApi } from '../api/auth';
 
 import { mockUploadFileApi } from '../api/upload';
@@ -440,61 +441,89 @@ const fetchInitialData = useCallback(async () => {
         }
    }, [activeChat, performSettingsAction, currentUserIdRef, updateMemberRoleApi, setConversations, setActiveChat, setActionError]);
 
-    const handleStepDownLeader = useCallback(async (conversationId, leaderId) => {
-         const currentUserId = currentUserIdRef.current;
-         if (!activeChat || activeChat.id !== conversationId || !activeChat.isGroup || activeChat.leader !== currentUserId || leaderId !== currentUserId || !currentUserId) return;
+   const handleStepDownLeader = useCallback(async (conversationId, leaderId) => {
+    const currentUserId = currentUserIdRef.current;
+    if (!activeChat || activeChat.id !== conversationId || !activeChat.isGroup || activeChat.leader !== currentUserId || leaderId !== currentUserId || !currentUserId) return;
 
-         const membersList = activeChat.detailedMembers;
-         const totalActiveLeaders = membersList.filter(m => m.role === 'leader' && m.leftAt === null).length;
-         const totalActiveMembers = membersList.filter(m => m.leftAt === null).length || 0;
+    const membersList = activeChat.detailedMembers;
+    const totalActiveLeaders = membersList.filter(m => m.role === 'leader' && m.leftAt === null).length;
+    const totalActiveMembers = membersList.filter(m => m.leftAt === null).length || 0;
 
-         if (totalActiveLeaders <= 1 && totalActiveMembers > 1) {
-              setActionError("You cannot step down as the only leader. Please assign a new leader first.");
-              return;
-         }
+    if (totalActiveLeaders <= 1 && totalActiveMembers > 1) {
+        setActionError("You cannot step down as the only leader. Please assign a new leader first.");
+        return;
+    }
+
+    if (window.confirm("Are you sure you want to step down as leader? A new leader will be assigned if you are the only one left.")) {
+        await performSettingsAction(
+            async () => {
+                await updateMemberRoleApi({ conversationId, memberId: leaderId, newRole: 'member' });
+                return {}; // ⚡ Không cần trả gì cả
+            },
+            "Step down as leader",
+            () => {
+                const oldLeaderId = currentUserId;
+                let newLeaderId = null;
+                
+                // Nếu chỉ còn 1 người thì tự assign
+                const remainingLeaders = membersList
+                    .filter(m => m.leftAt === null && m.id !== leaderId)
+                    .map(m => m.id);
+
+                if (remainingLeaders.length > 0) {
+                    newLeaderId = remainingLeaders[0]; // assign đại cho người còn lại
+                }
+
+                setConversations(prevConvs => updateConversationsAfterLeaderChanged(prevConvs, conversationId, newLeaderId, oldLeaderId));
+                setActiveChat(prevActive => updateActiveChatAfterLeaderChanged(prevActive, conversationId, newLeaderId, oldLeaderId));
+            }
+        );
+    } else {
+        setActionError(null);
+    }
+}, [activeChat, currentUserIdRef, performSettingsAction, updateMemberRoleApi, setActionError, setConversations, setActiveChat]);
 
 
-         if (window.confirm("Are you sure you want to step down as leader? A new leader will be assigned if you are the only one left.")) {
-              await performSettingsAction(
-                   () => updateMemberRoleApi({ conversationId, memberId: leaderId, newRole: 'member' }),
-                   "Step down as leader",
-                   (apiResponse) => {
-                       const newLeaderId = apiResponse?.conversation?.leader ? apiResponse.conversation.leader : null;
-                       const oldLeaderId = currentUserId;
 
-                        setConversations(prevConvs => updateConversationsAfterLeaderChanged(prevConvs, conversationId, newLeaderId || null, oldLeaderId));
-                        setActiveChat(prevActive => updateActiveChatAfterLeaderChanged(prevActive, conversationId, newLeaderId || null, oldLeaderId));
-                   }
-               );
-         } else {
-             setActionError(null);
-         }
-    }, [activeChat, currentUserIdRef, performSettingsAction, updateMemberRoleApi, setActionError, setConversations, setActiveChat]);
+const handleAddUserSearch = useCallback(async (searchTerm) => {
+    const trimmedTerm = searchTerm.trim();
+    if (!trimmedTerm) {
+        setAddUserSearchResults([]);
+        setActionError(null);
+        return;
+    }
 
+    setIsPerformingAction(true);
+    setActionError(null);
+    setAddUserSearchResults([]);
 
-   const handleAddUserSearch = useCallback(async (searchTerm) => {
-        const trimmedTerm = searchTerm.trim();
-        if (!trimmedTerm) {
-            setAddUserSearchResults([]);
-            setActionError(null);
-            return;
+    try {
+        let user = null;
+        const isEmailFormat = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedTerm); // Kiểm tra email
+        const isIdFormat = /^[a-fA-F0-9]{24}$/.test(trimmedTerm); // Kiểm tra ObjectID (24 ký tự hex)
+
+        if (!isEmailFormat && !isIdFormat) {
+            throw new Error("Invalid search term: Must be a valid email or ObjectID.");
         }
-       setIsPerformingAction(true);
-       setActionError(null);
-       setAddUserSearchResults([]);
-       try {
-           const results = await searchUsersApi(trimmedTerm);
-           const filteredResults = filterAddUserSearchResults(results, activeChat?.detailedMembers);
-           setAddUserSearchResults(filteredResults);
 
-       } catch (err) {
-           console.error("Search users API call failed:", err);
-           setActionError(err.message || "An API error occurred during search.");
-            setAddUserSearchResults([]);
-       } finally {
-           setIsPerformingAction(false);
-       }
-   }, [activeChat?.detailedMembers, setIsPerformingAction, setActionError, searchUsersApi, setAddUserSearchResults]);
+        if (isEmailFormat) {
+            user = await getUserByEmailApi(trimmedTerm);
+        } else if (isIdFormat) {
+            user = await getUserDetailsApi(trimmedTerm);
+        }
+
+        const userArray = user ? [user] : [];
+        const filteredResults = filterAddUserSearchResults(userArray, activeChat?.detailedMembers);
+        setAddUserSearchResults(filteredResults);
+
+    } catch (err) {
+        console.error("Search users API call failed:", err);
+        setActionError(err.message || "An API error occurred during search.");
+        setAddUserSearchResults([]);
+    } finally {
+        setIsPerformingAction(false);
+    }
+}, [activeChat?.detailedMembers, setIsPerformingAction, setActionError, setAddUserSearchResults, getUserByEmailApi, getUserDetailsApi]);
 
 
    const handleAddUserConfirm = useCallback(async (conversationId, userIdToAdd) => {

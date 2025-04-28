@@ -41,7 +41,7 @@ const ChatWindow = ({
     useEffect(() => {
          // Only scroll if not currently editing a message
          if (!isLoadingMessages && editingMessageId === null) {
-             messageListEndRef.current?.scrollIntoView({ behavior: "smooth" });
+             messageListEndRef.current?.scrollIntoView({ behavior: "auto" });
          }
     }, [messages, isLoadingMessages, editingMessageId]); // Add editingMessageId to dependencies
 

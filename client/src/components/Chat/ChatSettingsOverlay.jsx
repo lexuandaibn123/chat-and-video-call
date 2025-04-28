@@ -59,9 +59,11 @@ const ChatSettingsOverlay = ({
 
     const handleSearchSubmit = (e) => {
         e.preventDefault();
-        if (addUserInput.trim()) {
-            onAddUserSearch(addUserInput.trim()); // Calls ChatPage's search handler
-            setSelectedUserToAdd(null); // Reset selection when searching again
+        const trimmedInput = addUserInput.trim();
+        console.log("Submitting search with term:", trimmedInput);
+        if (trimmedInput) {
+            onAddUserSearch(trimmedInput);
+            setSelectedUserToAdd(null);
         }
     };
 
@@ -248,16 +250,13 @@ const ChatSettingsOverlay = ({
                                     Leave Group
                                 </button>
                            )}
-                           {/* Nút Xoá nhóm (Chỉ leader) */}
-                           {isCurrentUserLeader && (
-                                <button
-                                     className="button secondary danger"
-                                     onClick={() => onDeleteGroup(group.id)}
-                                     disabled={isPerformingAction}
-                                >
-                                    Delete Group
-                                </button>
-                           )}
+                            <button
+                                    className="button secondary danger"
+                                    onClick={() => onDeleteGroup(group.id)}
+                                    disabled={isPerformingAction}
+                            >
+                                Delete Group
+                            </button>
                            {/* Nút Delete Conversation (for member who left) - TODO */}
                      </div>
 

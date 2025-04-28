@@ -47,15 +47,22 @@
   border-radius: $border-radius-lg;
   padding: $spacing-lg;
   box-sizing: border-box;
-  overflow: hidden; // Ngăn nội dung panel tràn ra
+  overflow: hidden;
+
+  .search-bar-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: $spacing-lg;
+    gap: $spacing-md; // Khoảng cách giữa search-bar-container và nút Add
+  }
 
   .search-bar-container {
     display: flex;
     align-items: center;
-    background-color: $container-bg-color; // Nền xám nhạt cho search bar
+    background-color: $container-bg-color;
     border-radius: $border-radius-md;
-    padding: $spacing-sm $spacing-md;
-    margin-bottom: $spacing-lg;
+    padding: 0px $spacing-md;
+    flex-grow: 1; // Search bar chiếm phần còn lại của hàng
 
     .search-icon {
       color: $text-muted-color;
@@ -69,6 +76,7 @@
       outline: none;
       background-color: transparent;
       font-size: $font-size-base;
+      font-weight: $font-weight-medium;
       color: $text-color;
       &::placeholder {
         color: $text-muted-color;
@@ -76,13 +84,34 @@
     }
   }
 
+  .add-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: $border-radius-sm;
+    border: none;
+    background-color: $primary-color; // Màu chính (thường là màu xanh)
+    color: $secondary-color; // Màu chữ/icon (thường là trắng)
+    cursor: pointer;
+    transition: background-color $transition-fast ease-out;
+
+    &:hover {
+      background-color: color.adjust($primary-color, $lightness: -10%); // Tối hơn khi hover
+    }
+
+    .fa-plus {
+      font-size: $font-size-large;
+    }
+  }
+
   .conversation-section {
     margin-bottom: $spacing-lg;
-    flex-grow: 1; // Cho phép section giãn ra
-    overflow: hidden; // Ngăn nội dung tràn ra khỏi section
+    flex-grow: 1;
+    overflow: hidden;
     display: flex;
-    flex-direction: column; // Thiết lập section như flex column container
-    // Cho phép section cuối cùng giãn ra nếu cần
+    flex-direction: column;
     &:last-child {
       margin-bottom: 0;
     }
@@ -93,17 +122,16 @@
       color: $text-color;
       margin-bottom: $spacing-md;
       padding-left: $spacing-xs;
-      flex-shrink: 0; // Ngăn tiêu đề co lại
+      flex-shrink: 0;
     }
 
     .conversation-list {
       list-style: none;
       padding: 0;
       margin: 0;
-      overflow-y: auto; // Cho phép cuộn list
-      flex-grow: 1; // Cho list trong section cuối giãn ra
+      overflow-y: auto;
+      flex-grow: 1;
 
-      // --- Custom scrollbar (optional) ---
       &::-webkit-scrollbar { width: 6px; }
       &::-webkit-scrollbar-track { background: transparent; }
       &::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
@@ -112,18 +140,15 @@
       .conversation-list-item {
         display: flex;
         align-items: center;
-        padding: $spacing-sm $spacing-xs; // Padding nhẹ
+        padding: $spacing-sm $spacing-xs;
         border-radius: $border-radius-sm;
         margin-bottom: $spacing-xs;
         cursor: pointer;
         transition: background-color $transition-fast ease-out;
 
         &:hover {
-          background-color: $container-bg-color; // Nền hover nhẹ
+          background-color: $container-bg-color;
         }
-        // &.active { // Style khi item được chọn
-        //   background-color: color.adjust($primary-color, $alpha: -0.9); // Nền xanh rất nhạt
-        // }
 
         .avatar {
           width: 45px;
@@ -136,7 +161,7 @@
 
         .conversation-details {
           flex-grow: 1;
-          overflow: hidden; // Ngăn text dài tràn ra
+          overflow: hidden;
           margin-right: $spacing-sm;
 
           .conversation-name {
@@ -173,8 +198,8 @@
           }
 
           .unread-badge {
-            background-color: $error-color; // Màu đỏ cho badge
-            color: $secondary-color; // Chữ trắng
+            background-color: $error-color;
+            color: $secondary-color;
             border-radius: 50%;
             width: 18px;
             height: 18px;
@@ -187,7 +212,7 @@
 
           .message-status-icon {
             font-size: 12px;
-            color: $primary-color; // Màu xanh cho tick
+            color: $primary-color;
           }
         }
       }
