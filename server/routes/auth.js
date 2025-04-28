@@ -257,23 +257,21 @@ router.get("/verify-email", AuthService.verifyEmail);
 /**
  * @openapi
  * /api/auth/resend-verification-email:
- *   post:
+ *   get:
  *     tags:
  *       - Authentication
  *     summary: Resend email verification endpoint
  *     operationId: resendVerificationEmail
  *     description: Resends a verification email to the provided email address if the email is not yet verified.
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               email:
- *                 type: string
- *                 format: email
- *                 example: user@example.com
+ *     parameters:
+ *       - in: query
+ *         name: email
+ *         schema:
+ *           type: string
+ *           format: email
+ *         required: true
+ *         description: The email address to resend the verification email to
+ *         example: user@example.com
  *     responses:
  *       200:
  *         description: Verification email sent successfully
@@ -327,9 +325,15 @@ router.get("/verify-email", AuthService.verifyEmail);
  *                   type: string
  *                   example: Internal server error
  */
-router.post(
+router.get(
   "/resend-verification-email",
-  [check("email").isEmail().withMessage("Invalid email format")],
+  [
+    check("email")
+      .exists()
+      .withMessage("Email is required")
+      .isEmail()
+      .withMessage("Invalid email format"),
+  ],
   validateMiddleware,
   AuthService.resendVerificationEmail
 );
@@ -337,23 +341,21 @@ router.post(
 /**
  * @openapi
  * /api/auth/forgot-password:
- *   post:
+ *   get:
  *     tags:
  *       - Authentication
  *     summary: Forgot password endpoint
  *     operationId: forgotPassword
  *     description: Initiates a password reset by sending a reset link to the provided email.
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               email:
- *                 type: string
- *                 format: email
- *                 example: user@example.com
+ *     parameters:
+ *       - in: query
+ *         name: email
+ *         schema:
+ *           type: string
+ *           format: email
+ *         required: true
+ *         description: The email address to send the password reset link to
+ *         example: user@example.com
  *     responses:
  *       200:
  *         description: Password reset email sent successfully
@@ -367,7 +369,7 @@ router.post(
  *                   example: true
  *                 message:
  *                   type: string
- *                   example: Password reset successful
+ *                   example: Password reset email sent
  *       400:
  *         description: Validation error
  *         content:
@@ -404,9 +406,15 @@ router.post(
  *                   type: string
  *                   example: Internal server error
  */
-router.post(
+router.get(
   "/forgot-password",
-  [check("email").isEmail().withMessage("Invalid email format")],
+  [
+    check("email")
+      .exists()
+      .withMessage("Email is required")
+      .isEmail()
+      .withMessage("Invalid email format"),
+  ],
   validateMiddleware,
   AuthService.forgotPassword
 );
@@ -499,7 +507,7 @@ router.post(
 /**
  * @openapi
  * /api/auth/change-password:
- *   post:
+ *   put:
  *     tags:
  *       - Authentication
  *     summary: Change password endpoint
@@ -572,7 +580,7 @@ router.post(
  *                   type: string
  *                   example: Internal server error
  */
-router.post(
+router.put(
   "/change-password",
   [
     check("email").isEmail().withMessage("Invalid email format"),

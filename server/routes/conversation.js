@@ -516,7 +516,7 @@ router.post(
 /**
  * @openapi
  * /api/conversation/update-member-role:
- *   post:
+ *   put:
  *     tags:
  *       - Conversation
  *     summary: Update a member's role in a conversation
@@ -569,7 +569,7 @@ router.post(
  *                 error:
  *                   type: string
  */
-router.post(
+router.put(
   "/update-member-role",
   [
     check("conversationId")
@@ -589,7 +589,7 @@ router.post(
 /**
  * @openapi
  * /api/conversation/update-conversation-name:
- *   post:
+ *   put:
  *     tags:
  *       - Conversation
  *     summary: Update the name of a conversation
@@ -638,7 +638,7 @@ router.post(
  *                 error:
  *                   type: string
  */
-router.post(
+router.put(
   "/update-conversation-name",
   [
     check("conversationId")
@@ -653,31 +653,30 @@ router.post(
 /**
  * @openapi
  * /api/conversation/get-messages:
- *   post:
+ *   get:
  *     tags:
  *       - Conversation
  *     summary: Fetch messages from a conversation
  *     description: Retrieves a list of messages from the specified conversation for the authenticated user, with pagination support.
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               conversationId:
- *                 type: string
- *                 description: ID of the conversation
- *               limit:
- *                 type: integer
- *                 default: 30
- *                 description: Number of messages to retrieve
- *               skip:
- *                 type: integer
- *                 default: 0
- *                 description: Number of messages to skip for pagination
- *             required:
- *               - conversationId
+ *     parameters:
+ *       - in: query
+ *         name: conversationId
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID of the conversation
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 30
+ *         description: Number of messages to retrieve
+ *       - in: query
+ *         name: skip
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: Number of messages to skip for pagination
  *     responses:
  *       200:
  *         description: Messages fetched successfully
@@ -711,17 +710,19 @@ router.post(
  *                 error:
  *                   type: string
  */
-router.post(
+
+router.get(
   "/get-messages",
   [
     check("conversationId")
-      .isLength({ min: 1 })
-      .withMessage("conversationId must be string"),
+      .exists()
+      .withMessage("conversationId is required")
+      .isString()
+      .withMessage("conversationId must be a string"),
   ],
   validateMiddleware,
   ConversationService.fetchMessages.bind(ConversationService)
 );
-
 /**
  * @openapi
  * /api/conversation/create-new-message:
@@ -821,7 +822,7 @@ router.post(
 /**
  * @openapi
  * /api/conversation/edit-message:
- *   post:
+ *   put:
  *     tags:
  *       - Conversation
  *     summary: Edit a message
@@ -875,7 +876,7 @@ router.post(
  *                 error:
  *                   type: string
  */
-router.post(
+router.put(
   "/edit-message",
   [
     check("messageId")
