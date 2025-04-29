@@ -6,6 +6,7 @@
 
 // Hàm trợ giúp xử lý ID người dùng nhất quán (vì nó có thể là object._id hoặc string)
 const getProcessedUserId = (userData) => {
+    console.log("userData: ", userData);
     if (!userData) return null;
     if (typeof userData === 'object' && userData._id) {
         return String(userData._id).trim();
@@ -14,6 +15,27 @@ const getProcessedUserId = (userData) => {
         return String(userData).trim();
     }
     return null;
+};
+
+const processSenderData = (rawSenderData, currentUserId) => {
+    // Sử dụng helper chung để lấy ID đã chuẩn hóa
+    const id = getProcessedUserId(rawSenderData);
+
+    // Lấy tên người gửi: nếu rawSenderData là object và có fullName, lấy fullName.
+    // Nếu không có fullName (rawSenderData là chuỗi ID hoặc object không có fullName),
+    // kiểm tra xem ID đã chuẩn hóa có phải currentUserId không để hiển thị 'You',
+    // nếu không thì hiển thị 'Unknown User'.
+    const name = rawSenderData?.fullName || (id === currentUserId ? 'You' : 'Unknown User');
+
+    // Lấy avatar người gửi: nếu rawSenderData là object và có avatar, lấy avatar.
+    // Nếu không, trả về null.
+    const avatar = rawSenderData?.avatar || null;
+
+    return {
+        id: id,
+        name: name,
+        avatar: avatar
+    };
 };
 
 // Hàm xử lý danh sách phòng chat thô từ API
