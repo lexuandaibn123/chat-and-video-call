@@ -71,6 +71,7 @@ const options = {
   },
   apis: ["./routes/*.js", "./models/*.js"],
 };
+
 const specs = swaggerJsdoc(options);
 
 app.use(
@@ -96,7 +97,6 @@ app.use(
   })
 );
 
-
 app.use(
   "/api/uploadthing",
   createRouteHandler({
@@ -112,8 +112,6 @@ app.get("/admin-socket", (req, res) => {
 });
 
 route(app);
-
-// ----------------------------------deploy----------------------------------
 
 const server = createServer(app);
 
@@ -217,7 +215,6 @@ io.on("connection", (client) => {
 const adminNamespace = io.of("/admin");
 
 adminNamespace.use((socket, next) => {
-  // ensure the user has sufficient rights
   next();
 });
 
