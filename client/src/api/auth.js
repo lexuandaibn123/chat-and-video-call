@@ -1,5 +1,5 @@
 // src/api/auth.js
-const API_BASE_URL = 'http://localhost:8080/api'; // Hoặc lấy từ file config
+const API_BASE_URL = `${import.meta.env.VITE_SERVER_URL}/api`;
 
 // --- Hàm xử lý response chung ---
 const handleApiResponse = async (response) => {

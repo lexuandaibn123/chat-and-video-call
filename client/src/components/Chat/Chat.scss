@@ -1,0 +1,1365 @@
+// src/pages/ChatPage.scss
+@use '../../styles/variables' as *; // Đảm bảo import biến
+@use "sass:color";
+@use "sass:math";
+
+.chat-page-container {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  gap: $spacing-lg;
+  padding: 0;
+  box-sizing: border-box;
+  background-color: transparent;
+  position: relative; // Cần cho overlay loading
+
+  // Styles cho overlay loading
+  .loading-overlay, .error-message {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba($secondary-color, 0.8); // Nền mờ
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: $font-size-large;
+      font-weight: $font-weight-bold;
+      color: $primary-color;
+      z-index: 10; // Đảm bảo hiển thị trên các panel
+      border-radius: $border-radius-lg;
+  }
+
+  .error-message {
+      color: $error-color; // Màu đỏ cho lỗi
+  }
+}
+
+// ===== CỘT BÊN TRÁI: DANH SÁCH CUỘC TRÒ CHUYỆN =====
+.conversation-list-panel {
+  display: flex;
+  flex-direction: column;
+  flex-basis: 320px;
+  flex-shrink: 0;
+  height: 100%;
+  background-color: $secondary-color;
+  border-radius: $border-radius-lg;
+  padding: $spacing-lg;
+  box-sizing: border-box;
+  overflow: hidden;
+
+  .search-bar-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: $spacing-lg;
+    gap: $spacing-md; // Khoảng cách giữa search-bar-container và nút Add
+  }
+
+  .search-bar-container {
+    display: flex;
+    align-items: center;
+    background-color: $container-bg-color;
+    border-radius: $border-radius-md;
+    padding: 0px $spacing-md;
+    flex-grow: 1; // Search bar chiếm phần còn lại của hàng
+
+    .search-icon {
+      color: $text-muted-color;
+      margin-right: $spacing-sm;
+      font-size: $font-size-large;
+    }
+
+    .search-input {
+      flex-grow: 1;
+      border: none;
+      outline: none;
+      background-color: transparent;
+      font-size: $font-size-base;
+      font-weight: $font-weight-medium;
+      color: $text-color;
+      &::placeholder {
+        color: $text-muted-color;
+      }
+    }
+  }
+
+  .add-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: $border-radius-sm;
+    border: none;
+    background-color: $primary-color; // Màu chính (thường là màu xanh)
+    color: $secondary-color; // Màu chữ/icon (thường là trắng)
+    cursor: pointer;
+    transition: background-color $transition-fast ease-out;
+
+    &:hover {
+      background-color: color.adjust($primary-color, $lightness: -10%); // Tối hơn khi hover
+    }
+
+    .fa-plus {
+      font-size: $font-size-large;
+    }
+  }
+
+  .conversation-section {
+    margin-bottom: $spacing-lg;
+    flex-grow: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    .section-title {
+      font-size: $font-size-large;
+      font-weight: $font-weight-bold;
+      color: $text-color;
+      margin-bottom: $spacing-md;
+      padding-left: $spacing-xs;
+      flex-shrink: 0;
+    }
+
+    .conversation-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      overflow-y: auto;
+      flex-grow: 1;
+
+      &::-webkit-scrollbar { width: 6px; }
+      &::-webkit-scrollbar-track { background: transparent; }
+      &::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+      &::-webkit-scrollbar-thumb:hover { background: #aaa; }
+
+      .conversation-list-item {
+        display: flex;
+        align-items: center;
+        padding: $spacing-sm $spacing-xs;
+        border-radius: $border-radius-sm;
+        margin-bottom: $spacing-xs;
+        cursor: pointer;
+        transition: background-color $transition-fast ease-out;
+
+        &:hover {
+          background-color: $container-bg-color;
+        }
+
+        .avatar {
+          width: 45px;
+          height: 45px;
+          border-radius: 50%;
+          object-fit: cover;
+          margin-right: $spacing-md;
+          flex-shrink: 0;
+        }
+
+        .conversation-details {
+          flex-grow: 1;
+          overflow: hidden;
+          margin-right: $spacing-sm;
+
+          .conversation-name {
+            display: block;
+            font-weight: $font-weight-bold;
+            color: $text-color;
+            font-size: $font-size-base;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          .last-message {
+            display: block;
+            font-size: $font-size-small;
+            color: $text-muted-color;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+        }
+
+        .conversation-meta {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
+          font-size: $font-size-small;
+          color: $text-muted-color;
+          flex-shrink: 0;
+
+          .timestamp {
+            margin-bottom: 3px;
+            white-space: nowrap;
+          }
+
+          .unread-badge {
+            background-color: $error-color;
+            color: $secondary-color;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+          }
+
+          .message-status-icon {
+            font-size: 12px;
+            color: $primary-color;
+          }
+        }
+      }
+    }
+  }
+}
+
+
+// ===== CỘT BÊN PHẢI: CỬA SỔ CHAT ĐANG HOẠT ĐỘNG =====
+.active-chat-panel {
+  flex-grow: 1;
+  height: 100%;
+  background-color: $secondary-color; // Assuming this is the chat background
+  border-radius: $border-radius-lg;
+  overflow: hidden; // Crucial for containing absolute elements and scrollbar
+
+  // Default flex column layout for header, list, input
+  display: flex;
+  flex-direction: column;
+
+  // Style for placeholder state when no chat is selected
+  &.placeholder {
+      display: flex; // Override to flex for centering
+      flex-direction: column; // Stack items vertically
+      align-items: center; // Center horizontally
+      justify-content: center; // Center vertically
+      color: $text-muted-color;
+      font-size: $font-size-large;
+      flex-grow: 1; // Ensure placeholder takes up available space
+
+      .placeholder-icon {
+          font-size: 4em;
+          margin-bottom: $spacing-lg;
+      }
+      span {
+          font-weight: $font-weight-medium;
+      }
+      // Hide other parts when placeholder is active
+      ~ .chat-header, ~ .message-list-container, ~ .chat-input-area {
+           display: none;
+      }
+  }
+
+
+  // --- Header ---
+  .chat-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: $spacing-md $spacing-lg;
+      border-bottom: 1px solid $input-border-color;
+      flex-shrink: 0; // Prevent header from shrinking
+
+      .contact-info {
+          display: flex;
+          align-items: center;
+
+          .avatar {
+              width: 40px;
+              height: 40px;
+              border-radius: 50%;
+              object-fit: cover;
+              margin-right: $spacing-md;
+          }
+
+          .name-status {
+              display: flex;
+              flex-direction: column;
+              text-align: left;
+
+              .contact-name {
+                  font-weight: $font-weight-bold;
+                  color: $text-color;
+                  font-size: $font-size-large;
+              }
+              .contact-status {
+                  font-size: $font-size-small;
+                  color: $text-muted-color;
+              }
+          }
+      }
+
+      .chat-actions {
+          display: flex;
+          gap: $spacing-sm;
+
+          .icon-button {
+              background: none;
+              border: none;
+              color: $text-muted-color;
+              font-size: 18px;
+              cursor: pointer;
+              padding: $spacing-xs;
+              border-radius: 50%;
+              transition: background-color $transition-fast ease-out, color $transition-fast ease-out;
+
+              &:hover {
+                  color: $primary-color;
+                  background-color: $container-bg-color;
+              }
+               &:disabled {
+                   opacity: 0.6;
+                   cursor: not-allowed;
+               }
+          }
+      }
+  }
+
+  // --- Message List Area ---
+  .message-list-container {
+      flex-grow: 1; // Takes remaining vertical space
+      overflow-y: auto; // Enable vertical scrolling
+      padding: $spacing-lg;
+      display: flex;
+      flex-direction: column; // Stack message wrappers vertically
+
+      // --- Custom scrollbar (optional) ---
+      &::-webkit-scrollbar { width: 8px; }
+      &::-webkit-scrollbar-track { background: transparent; }
+      &::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+      &::-webkit-scrollbar-thumb:hover { background: #aaa; }
+
+
+      // Message wrapper (contains options, bubble, timestamp, sender info)
+      .message-bubble-wrapper {
+          position: relative; // Crucial for absolute positioning of options
+          display: flex;
+          flex-direction: column; // Stack sender info (group) above content area
+          margin-bottom: $spacing-md;
+          max-width: 80%; // Limit the maximum width of the message block
+
+          // Positioning wrapper based on sender
+          &.received {
+              align-self: flex-start; // Align wrapper to the left
+               // Position options container for received messages (on the right)
+              .message-options-container.other {
+                   right: 0;
+                   transform: translateX(100%); // Move fully outside the wrapper to the right
+                   padding-left: $spacing-xs; // Space between options and bubble
+              }
+          }
+          &.sent {
+              align-self: flex-end; // Align wrapper to the right
+               // Position options container for sent messages (on the left)
+              .message-options-container.self {
+                   left: 0;
+                   transform: translateX(-100%); // Move fully outside the wrapper to the left
+                   padding-right: $spacing-xs; // Space between options and bubble
+              }
+          }
+
+          // Visual states for wrapper (loading, failed)
+          &.uploading { opacity: 0.8; }
+          &.failed {
+              // You might add a subtle visual cue here, like a light border or shadow
+               // box-shadow: 0 0 3px rgba($error-color, 0.5);
+          }
+
+
+          // Group chat sender information (only for received messages in group)
+          // This block is rendered conditionally in the MessageBubble component
+          .message-sender-info {
+              display: flex;
+              align-items: center;
+              gap: $spacing-xs;
+              margin-bottom: $spacing-xs; // Space between sender info and bubble
+              font-size: $font-size-small;
+              color: $text-muted-color;
+              // Align sender info left within its wrapper
+              align-self: flex-start; // Even for sent messages, the sender info block (if shown) would align left
+
+               .sender-avatar {
+                   width: 20px;
+                   height: 20px;
+                   border-radius: 50%;
+                   object-fit: cover;
+               }
+                .sender-name {
+                    font-weight: $font-weight-medium;
+                }
+          }
+
+          // Container for the actual bubble and timestamp (stacks them)
+          .message-content-area {
+              display: flex;
+              flex-direction: column; // Bubble above timestamp
+              gap: 4px; // Space between bubble and timestamp
+               // Alignment within the wrapper is handled by the parent (.received, .sent)
+               // Items (bubble, timestamp) alignment within this column is handled below
+          }
+          
+          .edited-indicator {
+            font-size: 10px;
+            color: color.adjust($text-muted-color, $lightness: -10%);
+            margin-left: $spacing-xs;
+            vertical-align: bottom;
+            white-space: nowrap;
+            position: relative;
+            bottom: -2px;
+          }
+
+          // The actual message bubble (contains text, image, file)
+          .message-bubble {
+              padding: $spacing-sm $spacing-md;
+              word-wrap: break-word; // Break long words
+              white-space: pre-wrap; // Preserve whitespace and newlines
+              position: relative; // Needed for overlays/indicators inside
+              z-index: 0; // Ensure it's below the options menu
+              // Default border radius - overridden by sent/received
+              border-radius: $border-radius-md;
+
+
+              // Text content inside bubble
+              .message-text {
+                  margin: 0;
+                  line-height: $line-height-base;
+                  font-size: $font-size-base;
+                  // Space between multiple lines in the same bubble
+                  &:not(:last-child) {
+                      margin-bottom: math.div($spacing-xs, 2);
+                  }
+              }
+
+               // Overlays for uploading/failed (image/file)
+                .uploading-overlay, .error-message-overlay {
+                    position: absolute;
+                    top: 0; left: 0; right: 0; bottom: 0;
+                    background-color: rgba(255, 255, 255, 0.7);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: $font-size-small;
+                    font-weight: $font-weight-medium;
+                    z-index: 1;
+                    border-radius: $border-radius-sm; // Match inner content radius
+                }
+
+                .uploading-overlay { color: $text-muted-color; }
+                .error-message-overlay { color: $error-color; }
+
+
+              // Image container
+              .message-image-container {
+                  display: flex;
+                  flex-direction: column; // Stack images if multiple
+                  gap: $spacing-xs; // Space between multiple images
+                  margin-top: $spacing-xs; // Optional: space above if text/sender info precedes
+                   position: relative; // For overlay positioning
+              }
+
+              .message-image {
+                  max-width: 100%;
+                  max-height: 150px; // Example height limit
+                  object-fit: cover;
+                  border-radius: $border-radius-sm;
+                  display: block;
+                  position: relative; z-index: 0; // Ensure image is below overlay
+              }
+
+              // File link
+              .message-file-link {
+                  display: flex;
+                  align-items: center;
+                  gap: $spacing-xs;
+                  color: $primary-color; // Link color
+                  text-decoration: none;
+                  font-weight: $font-weight-medium;
+                  padding: $spacing-xs $spacing-sm;
+                  background-color: color.adjust($primary-color, $alpha: -0.95); // Light background
+                  border-radius: $border-radius-sm;
+                  max-width: 100%;
+                  overflow: hidden; // Hide overflowing text
+                  position: relative; // For positioning status icon
+
+                  &:hover:not(.disabled-link) { text-decoration: underline; }
+
+                  &.disabled-link {
+                      cursor: default;
+                      opacity: 0.8;
+                  }
+
+                  .fas {
+                      font-size: $font-size-large;
+                      color: $primary-color;
+                      flex-shrink: 0; // Prevent icon from shrinking
+                  }
+
+                  .file-name {
+                      overflow: hidden;
+                      text-overflow: ellipsis;
+                      white-space: nowrap;
+                      flex-grow: 1; // Allow name to fill space
+                      color: $text-color;
+                      font-weight: $font-size-small;
+                  }
+                  .file-size {
+                      font-size: $font-size-small;
+                      color: color.adjust($text-muted-color, $lightness: -10%);
+                      flex-shrink: 0; // Prevent size text from shrinking
+                  }
+
+                  .file-status-icon {
+                       font-size: $font-size-base;
+                       margin-left: $spacing-xs;
+                       flex-shrink: 0;
+                       &.failed { color: $error-color; }
+                  }
+              }
+          }
+
+          // Timestamp (below the bubble, inside message-content-area)
+          .message-timestamp {
+              font-size: 10px;
+              color: $text-muted-color;
+              white-space: nowrap;
+               // Alignment handled by the parent .message-content-area based on sender
+          }
+
+
+          // Styles for sent bubble/content/timestamp
+          &.sent {
+              .message-content-area {
+                  align-items: flex-end; // Align bubble and timestamp right within the column
+              }
+              .message-bubble {
+                  background-color: $primary-color; // Your primary color
+                  color: $secondary-color; // Often white/light color for text
+                  border-radius: $border-radius-md $border-radius-md $border-radius-sm $border-radius-md; // Tail bottom-right
+              }
+              .message-timestamp { // Timestamp for the deleted message
+                text-align: right; // Center the timestamp below the deleted bubble
+                // No absolute positioning needed here; flows normally within message-content-area
+              }
+               // align-self isn't strictly necessary on timestamp here if parent has align-items
+          }
+
+          // Styles for received bubble/content/timestamp
+          &.received {
+              .message-content-area {
+                  align-items: flex-start; // Align bubble and timestamp left within the column
+              }
+              .message-bubble {
+                  background-color: $container-bg-color; // Light grey/white
+                  color: $text-color;
+                  border: 1px solid $input-border-color; // Often border for received
+                  border-radius: $border-radius-md $border-radius-md $border-radius-md $border-radius-sm; // Tail bottom-left
+              }
+              .message-timestamp { // Timestamp for the deleted message
+                text-align: left; // Center the timestamp below the deleted bubble
+                // No absolute positioning needed here; flows normally within message-content-area
+              }
+               // align-self isn't strictly necessary on timestamp here if parent has align-items
+          }
+
+
+          // --- Options Button & Menu Styles ---
+          .message-options-container {
+              position: absolute;
+              top: 50%; // Vertically align with the middle of the wrapper
+              transform: translateY(-50%); // Adjust for the container's own height
+              display: flex;
+              align-items: center;
+              z-index: 2; // Ensure options are above the bubble
+              opacity: 0; // Hide by default
+              transition: opacity 0.2s ease-in-out;
+              pointer-events: none; // Disable clicks when hidden
+          }
+
+          // Show options container on hover of the message wrapper OR if menu is active
+          &:hover .message-options-container,
+          .message-options-container.active-menu { // 'active-menu' class can be added by JS when menu is open
+              opacity: 1;
+              pointer-events: auto; // Enable clicks when visible
+          }
+
+          .message-options-button {
+              background: none;
+              border: none;
+              cursor: pointer;
+              font-size: 1em;
+              color: $text-muted-color; // Icon color
+              padding: 5px; // Make clickable area larger
+              display: flex;
+              align-items: center;
+               // Add subtle hover effect if desired
+               &:hover {
+                   color: $primary-color; // Color change on hover
+               }
+          }
+
+          // Options Menu (Conditionally rendered by JS)
+          .message-options-menu {
+              position: absolute;
+              background: white;
+              border: 1px solid $input-border-color; // Use a variable for consistency
+              border-radius: 5px;
+              box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+              padding: 5px 0;
+              min-width: 120px;
+              z-index: 10; // Ensure menu is above everything
+              bottom: 100%; // Position above the button
+              margin-bottom: 5px; // Space between button and menu
+              white-space: nowrap;
+
+              // Position menu relative to the options button based on sender
+              &.self {
+                  right: 0; // Align right edge of menu with right edge of button (for sent messages, button is on the left)
+              }
+              &.other {
+                  left: 0; // Align left edge of menu with left edge of button (for received messages, button is on the right)
+              }
+          }
+
+          .option-item {
+              padding: 8px 15px;
+              cursor: pointer;
+              font-size: 0.9em;
+              color: $text-color;
+              transition: background-color 0.1s ease;
+
+              &:hover {
+                  background-color: $container-bg-color; // Light hover background
+              }
+          }
+
+
+          // --- Deleted Message Styles ---
+           &.deleted { // Style for the wrapper when message is deleted
+               opacity: 0.8; // Slightly transparent
+               max-width: fit-content; // Allow the wrapper to shrink to fit the deleted message content
+
+               .message-content-area { // Center the deleted bubble and timestamp within its container
+                    gap: $spacing-xs; // Adjust gap for deleted look if needed
+               }
+
+               .message-bubble.deleted-message { // Style for the deleted message placeholder bubble
+                   background-color: $container-bg-color;
+                   color: $text-muted-color;
+                   font-style: italic;
+                   border: 1px dashed $input-border-color;
+                   padding: $spacing-sm $spacing-md;
+                   display: flex; // Use flex to align icon and text inside
+                   align-items: center;
+                   gap: $spacing-xs;
+                   border-radius: $border-radius-md; // Use a standard border radius
+                   .fas { font-size: $font-size-base; } 
+               }
+               // Hide original bubble content, options, and sender info for deleted messages
+               .message-bubble:not(.deleted-message),
+               .message-options-container,
+               .message-sender-info {
+                   display: none;
+               }
+           }
+
+      }
+  }
+
+  // --- Khu vực nhập liệu ---
+  .chat-input-area {
+    display: flex;
+    align-items: center;
+    padding: $spacing-sm $spacing-lg;
+    border-top: 1px solid $input-border-color;
+    background-color: $secondary-color;
+    flex-shrink: 0;
+
+    // --- General Styles for ALL Icon-like elements in the input area ---
+    // Targets standard buttons (Emoji, Cancel, Send) AND the wrapper divs for UploadButton.
+    & > button.icon-button,
+    & > div.icon-button { // This now includes the Uploadthing wrapper divs
+        background: none;
+        border: none;
+        color: $text-muted-color; // Default icon color
+        cursor: pointer;
+        padding: $spacing-sm; // Controls clickable area size
+        border-radius: 50%;
+        transition: background-color $transition-fast ease-out, color $transition-fast ease-out;
+        flex-shrink: 0;
+        display: flex; // Use flexbox to center content inside
+        align-items: center;
+        justify-content: center;
+        // Optional: fixed size
+        // width: 40px; height: 40px; // Example
+
+        &:hover:not(:disabled) {
+            color: $primary-color; // Hover icon color
+            background-color: $container-bg-color; // Hover background
+        }
+
+        &:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            // pointer-events: none;
+        }
+
+        // Style for the FontAwesome icon when it's a direct child
+        // This applies to standard buttons AND potentially the icon inside the Uploadthing LABEL
+         & > i {
+             font-size: 1em; // Inherit size from parent (20px of .icon-button)
+             line-height: 1;
+             display: block;
+             transform: none !important; // Remove rotation from icon if wrapper is rotated
+             color: inherit; // Icon inherits color
+         }
+    }
+
+    // Specific style for the attach (paperclip) wrapper div
+     & > div.icon-button.attach-button {
+       margin-right: $spacing-xs;
+       transform: rotate(45deg); // Apply rotation to the WRAPPER DIV
+    }
+
+    // --- Styles for the Uploadthing wrapper and its content ---
+    // Target the div wrapper specifically
+    & > div.icon-button.uploadthing-wrapper {
+         // It already gets general .icon-button styles.
+         // If you used fixed width/height above, you might need to override padding: 0;
+    }
+
+    // Target the clickable LABEL element rendered by Uploadthing inside the wrapper div
+    // This is the crucial part to make Uploadthing look like your icon button
+    & > div.icon-button.uploadthing-wrapper label[data-ut-element="button"] {
+        all: unset; // Remove all default styles from Uploadthing/browser
+        display: flex; // Use flexbox to center the icon inside this label
+        align-items: center;
+        justify-content: center;
+        width: 100%; // Make label fill the wrapper div
+        height: 100%;
+        cursor: pointer; // Restore cursor
+        color: inherit; // Inherit color from the wrapper div (.icon-button)
+
+        // Override Uploadthing's inline styles / default Tailwind styles if necessary
+        // !important might be needed if inline styles are strong
+        // display: flex !important; // Already set by all: unset? Redundant maybe.
+        // flex-direction: row !important; // Ensure it's not column like Uploadthing default
+        // gap: 0 !important; // Remove gap between potential default Uploadthing elements
+        // background: none !important; // Remove background
+        // padding: 0 !important; // Remove padding
+
+        &:disabled {
+            cursor: not-allowed;
+        }
+
+         // Style for the FontAwesome icon (<i>) which is a child of this LABEL
+         // This selector is more specific than the general `& > i` rule, but either might work.
+         // Using `!important` ensures these styles are applied.
+         i {
+             font-size: 1em !important; // Kích thước icon bằng kích thước font của label (kế thừa từ div bọc 20px)
+             line-height: 1 !important;
+             display: block !important;
+             transform: none !important; // Bỏ xoay từ wrapper
+             color: inherit !important; // Kế thừa màu từ label/wrapper
+         }
+          // Hide any default Uploadthing icons (like the upload arrow SVG) if they exist
+          // Inspect HTML to confirm if there's a default icon element alongside your <i>
+         .ut-upload-icon, // Uploadthing default icon class
+         svg { // Common tag for default icons
+            display: none !important;
+         }
+    }
+
+    // Hide the default text element rendered by Uploadthing
+    & > div.icon-button.uploadthing-wrapper div[data-ut-element="allowed-content"] {
+        display: none !important; // Hide the text "Images, pdfs..."
+    }
+    // --- END NEW Uploadthing Styles ---
+
+
+    .message-input {
+      flex-grow: 1;
+      border: none;
+      outline: none;
+      background-color: transparent;
+      padding: $spacing-sm $spacing-md;
+      font-size: $font-size-base;
+      color: $text-color;
+      margin: 0 $spacing-xs;
+       &::placeholder {
+         color: $text-muted-color;
+       }
+       &:disabled {
+            cursor: not-allowed;
+            opacity: 0.8;
+       }
+       &.editing-mode {
+           // Styles specific to editing mode
+       }
+       resize: vertical; // Controlled by inline style in JSX, but good to have here
+    }
+
+    // Style for the cancel edit button (standard button)
+     & > button.icon-button.cancel-edit-button {
+         margin-left: $spacing-xs;
+     }
+
+    // Styles for the send/save button (standard button)
+    & > button.icon-button.send-button {
+       background-color: $primary-color;
+       color: $secondary-color;
+       margin-left: $spacing-sm;
+       &:hover:not(:disabled) {
+          background-color: color.adjust($primary-color, $lightness: -5%);
+       }
+        &:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .fas.fa-spinner {
+            font-size: 1em;
+        }
+    }
+  }
+
+  // Overlay for message editing dialog (if used)
+  .message-edit-dialog-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+}
+
+// Keyframes for spinner animation
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.message-edit-dialog {
+  background-color: $secondary-color;
+  padding: $spacing-lg;
+  border-radius: $border-radius-md;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  width: 90%; // Dialog takes 90% width on small screens
+  max-width: 400px; // Maximum width on larger screens
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+
+  h4 {
+      margin: 0;
+      font-size: $font-size-large;
+      color: $text-color;
+      text-align: center;
+  }
+
+  textarea {
+      width: 100%;
+      padding: $spacing-sm;
+      border: 1px solid $input-border-color;
+      border-radius: $border-radius-sm;
+      font-size: $font-size-base;
+      color: $text-color;
+      background-color: $container-bg-color; // Match input background
+      resize: vertical; // Allow vertical resizing
+      outline: none; // Remove default outline
+
+      &:focus {
+          border-color: $primary-color; // Highlight on focus
+      }
+      &:disabled {
+           opacity: 0.8;
+           cursor: not-allowed;
+           background-color: $input-border-color;
+      }
+  }
+
+.dialog-actions {
+      display: flex;
+      justify-content: flex-end; // Align buttons to the right
+      gap: $spacing-sm;
+
+       // Basic button styles (you should replace these with your actual button classes)
+       .button {
+           padding: $spacing-sm $spacing-md;
+           border: none;
+           border-radius: $border-radius-button-main; // Match your button radius
+           cursor: pointer;
+           font-size: $font-size-base;
+           transition: background-color $transition-fast ease-out, opacity $transition-fast ease-out;
+
+           &.primary {
+               background-color: $primary-color;
+               color: $secondary-color;
+               &:hover:not(:disabled) {
+                   background-color: color.adjust($primary-color, $lightness: -5%);
+               }
+           }
+
+           &.secondary {
+               background-color: $container-bg-color; // Light background
+               color: $text-color;
+               border: 1px solid $input-border-color;
+               &:hover:not(:disabled) {
+                   background-color: color.adjust($container-bg-color, $lightness: -5%);
+               }
+           }
+
+           &:disabled {
+               opacity: 0.5;
+               cursor: not-allowed;
+           }
+       }
+  }
+}
+
+.chat-settings-overlay {
+  position: fixed; // Cố định trên màn hình
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba($text-color, 0.6); // Nền tối mờ
+  display: flex;
+  align-items: center; // Căn giữa dọc
+  justify-content: center; // Căn giữa ngang
+  z-index: 1000; // Đảm bảo hiển thị trên tất cả các phần tử khác
+
+  .settings-content {
+    background-color: $secondary-color; // Nền trắng
+    border-radius: $border-radius-lg;
+    width: 90%; // Chiếm 90% chiều rộng màn hình
+    max-width: 500px; // Giới hạn chiều rộng tối đa
+    max-height: 90vh; // Giới hạn chiều cao tối đa
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; // Ngăn nội dung tràn ra khi cuộn
+
+    .settings-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: $spacing-md $spacing-lg;
+      border-bottom: 1px solid $input-border-color;
+      flex-shrink: 0;
+
+      h2 {
+        margin: 0;
+        font-size: $font-size-large;
+        color: $text-color;
+      }
+
+      .icon-button { // Nút đóng
+        background: none;
+        border: none;
+        color: $text-muted-color;
+        font-size: 20px;
+        cursor: pointer;
+        padding: $spacing-xs;
+        border-radius: 50%;
+        transition: color $transition-fast ease-out;
+        &:hover:not(:disabled) { // Add not(:disabled)
+          color: $error-color; // Màu đỏ khi hover nút đóng
+          background-color: $container-bg-color;
+        }
+         &:disabled { opacity: 0.5; cursor: not-allowed; } // Add disabled style
+      }
+
+      .group-name-edit { // Style for the name edit mode in header
+        display: flex;
+        align-items: center;
+        flex-grow: 1;
+        margin-right: $spacing-md;
+
+        input[type="text"] {
+            flex-grow: 1;
+            padding: $spacing-xs $spacing-sm;
+            border: 1px solid $input-border-color;
+            border-radius: $border-radius-sm;
+            font-size: $font-size-base; // Smaller font for edit mode
+            margin-right: $spacing-sm;
+        }
+        .icon-button {
+            font-size: $font-size-base; // Smaller icon buttons
+            padding: $spacing-xs;
+        }
+      }
+
+      .edit-name-button { // Style for the edit icon button
+        font-size: $font-size-base;
+        padding: $spacing-xs;
+        margin-left: $spacing-sm;
+        color: $text-muted-color;
+        &:hover:not(:disabled) { color: $primary-color; } // Add not(:disabled)
+         &:disabled { opacity: 0.5; cursor: not-allowed; } // Add disabled style
+      }
+    }
+
+    .settings-body {
+      flex-grow: 1; // Chiếm hết không gian còn lại cho nội dung cuộn
+      overflow-y: auto; // Cho phép cuộn nội dung
+      padding: $spacing-lg;
+
+      // --- Custom scrollbar (optional) ---
+      &::-webkit-scrollbar { width: 8px; }
+      &::-webkit-scrollbar-track { background: transparent; }
+      &::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+      &::-webkit-scrollbar-thumb:hover { background: #aaa; }
+
+
+      .group-info {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-bottom: $spacing-lg;
+        padding-bottom: $spacing-lg;
+        border-bottom: 1px solid $input-border-color;
+
+        .avatar.large {
+          width: 80px;
+          height: 80px;
+          border-radius: 50%;
+          object-fit: cover;
+          margin-bottom: $spacing-md;
+        }
+
+        h3 {
+          margin: 0;
+          font-size: $font-size-large;
+          color: $text-color;
+        }
+      }
+
+      .member-list-section {
+        margin-bottom: $spacing-lg;
+        padding-bottom: $spacing-lg;
+        border-bottom: 1px solid $input-border-color;
+
+        h4 {
+          font-size: $font-size-large;
+          color: $text-color;
+          margin-top: 0;
+          margin-bottom: $spacing-md;
+        }
+
+        .member-list {
+          list-style: none;
+          padding: 0;
+          margin: 0;
+
+          .member-item {
+            display: flex;
+            align-items: center;
+            padding: $spacing-sm 0;
+            border-bottom: 1px solid $container-bg-color; // Đường kẻ nhẹ giữa các thành viên
+            &:last-child { border-bottom: none; } // Bỏ đường kẻ cuối cùng
+             // Add hover effect
+             &:hover {
+                background-color: $container-bg-color;
+             }
+
+
+            .avatar.small {
+              width: 30px;
+              height: 30px;
+              border-radius: 50%;
+              object-fit: cover;
+              margin-right: $spacing-md;
+              flex-shrink: 0;
+            }
+
+            .member-name {
+              flex-grow: 1;
+              color: $text-color;
+              font-size: $font-size-base; // Increase font size for better readability
+              font-weight: $font-weight-medium; // Adjust font weight
+              // Add space for roles/you/left indicators
+              span { font-weight: $font-weight-normal; font-size: $font-size-small; color: $text-muted-color; margin-left: $spacing-xs; }
+            }
+
+            .member-actions {
+              display: flex;
+              gap: $spacing-xs;
+
+              .icon-button.small { // Style for small action buttons
+                font-size: 14px; // Smaller icon size
+                padding: $spacing-xs;
+                border-radius: 50%;
+                transition: background-color $transition-fast ease-out;
+                &:hover:not(:disabled) {
+                    background-color: $container-bg-color;
+                }
+                 &.warning:hover:not(:disabled) { color: $error-color; }
+                 &.primary:hover:not(:disabled) { color: $primary-color; }
+                 &.secondary:hover:not(:disabled) { color: $text-color; }
+                 &:disabled { opacity: 0.5; cursor: not-allowed; }
+              }
+            }
+          }
+        }
+      }
+
+      .add-user-section {
+          margin-bottom: $spacing-lg;
+          padding-bottom: $spacing-lg;
+          border-bottom: 1px solid $input-border-color;
+
+           h4 {
+              font-size: $font-size-large;
+              color: $text-color;
+              margin-top: 0;
+              margin-bottom: $spacing-md;
+            }
+
+          .add-user-search-form {
+              display: flex;
+              gap: $spacing-sm;
+              margin-bottom: $spacing-md;
+
+              input {
+                  flex-grow: 1;
+                  padding: $spacing-sm $spacing-md;
+                  border: 1px solid $input-border-color;
+                  border-radius: $border-radius-md;
+                  font-size: $font-size-base;
+                   &:disabled { opacity: 0.8; cursor: not-allowed; }
+              }
+              button {
+                  background-color: $primary-color;
+                  color: $secondary-color;
+                  border: none;
+                  border-radius: $border-radius-md;
+                  cursor: pointer;
+                  transition: background-color $transition-fast ease-out;
+                  display: flex; // Use flex to center icon/spinner
+                  align-items: center;
+                  justify-content: center;
+                  width: 35px; // Fixed width for button
+                  height: 35px; // Fixed height for button
+                  padding: 0; // Remove padding
+                  &:hover:not(:disabled) {
+                      background-color: color.adjust($primary-color, $lightness: -5%);
+                  }
+                   &:disabled {
+                       opacity: 0.5;
+                       cursor: not-allowed;
+                   }
+              }
+          }
+
+           .search-results-list {
+               border: 1px solid $input-border-color;
+               border-radius: $border-radius-md;
+               max-height: 150px; // Giới hạn chiều cao kết quả
+               overflow-y: auto; // Cho phép cuộn kết quả
+               margin-bottom: $spacing-md;
+
+               .search-result-item {
+                  display: flex;
+                  align-items: center;
+                  padding: $spacing-sm $spacing-md;
+                  cursor: pointer;
+                  border-bottom: 1px solid $container-bg-color;
+                  transition: background-color $transition-fast ease-out;
+
+                  &:last-child { border-bottom: none; }
+
+                  &:hover {
+                      background-color: $container-bg-color;
+                  }
+                  &.selected {
+                      background-color: color.adjust($primary-color, $alpha: -0.9); // Nền xanh nhạt khi chọn
+                  }
+
+                  .avatar.tiny {
+                    width: 20px; // Even smaller avatar in search results
+                    height: 20px;
+                    margin-right: $spacing-sm; // Space between avatar and name
+                  }
+                  span { font-size: $font-size-base; } // Match member name font size
+                  }
+           }
+
+           .add-user-confirm-button {
+                display: block; // Chiếm toàn bộ chiều rộng
+                width: 100%;
+                padding: $spacing-sm;
+                background-color: $success-color; // Màu xanh cho nút thêm
+                color: $secondary-color;
+                border: none;
+                border-radius: $border-radius-md;
+                cursor: pointer;
+                font-size: $font-size-base;
+                transition: background-color $transition-fast ease-out;
+                 &:hover:not(:disabled) {
+                      background-color: color.adjust($success-color, $lightness: -5%);
+                  }
+                   &:disabled {
+                       opacity: 0.5;
+                       cursor: not-allowed;
+                   }
+           }
+      }
+
+        .info-message {
+             font-size: $font-size-small;
+             color: $text-muted-color;
+             text-align: center;
+             margin-top: $spacing-md;
+        }
+
+      .action-status {
+         color: $primary-color;
+         text-align: center;
+         margin-top: $spacing-md;
+         .fas.fa-spinner { margin-left: $spacing-xs; } // Khoảng cách icon spinner
+      }
+
+      .action-error {
+         color: $error-color;
+         text-align: center;
+         margin-top: $spacing-md;
+      }
+
+      .group-actions-footer { // Container for leave/delete buttons
+        display: flex;
+        gap: $spacing-md; // Space between buttons
+        justify-content: center; // Center the buttons
+        margin-top: $spacing-lg;
+        padding-top: $spacing-lg;
+        border-top: 1px solid $input-border-color; // Separator
+      }
+
+      .button {
+        // ... (Existing button styles) ...
+        padding: $spacing-sm $spacing-md;
+        border-radius: $border-radius-md;
+        cursor: pointer;
+        font-size: $font-size-base;
+        font-weight: $font-weight-medium;
+        transition: background-color $transition-fast ease-out, color $transition-fast ease-out, border-color $transition-fast ease-out;
+        &:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        &.secondary {
+             background-color: $container-bg-color;
+             color: $text-color;
+             border: 1px solid $input-border-color;
+             &:hover:not(:disabled) {
+                  background-color: color.adjust($container-bg-color, $lightness: -5%);
+             }
+             &.warning { color: $error-color; } // Text color red for warning secondary
+        }
+        &.danger {
+             background-color: $error-color;
+             color: $secondary-color;
+             border: none;
+             &:hover:not(:disabled) {
+                  background-color: color.adjust($error-color, $lightness: -5%);
+             }
+        }
+      }
+
+      // Remove the redundant .leave-group-section, .delete-group-section rules if using .group-actions-footer
+      // .leave-group-section, .delete-group-section {
+      //      margin-top: $spacing-lg;
+      //      text-align: center;
+      //      .button { ... }
+      // }
+
+    }
+  }
+}
+
+
+// --- Responsive Anpassungen (Beispiel) ---
+@media (max-width: $breakpoint-medium) {
+  .chat-page-container {
+    flex-direction: column; padding: 0; gap: 0; background-color: $secondary-color;
+    // Đảm bảo container chiếm hết chiều cao nếu cần (thường MainLayout đã xử lý)
+    // height: 100%;
+
+    > aside, > section { border-radius: 0; box-shadow: none; height: 100%; width: 100%; }
+
+    // --- State mặc định (mobile): chỉ hiện list ---
+    .conversation-list-panel {
+       display: flex; // HIỆN mặc định
+       flex-basis: auto; // Không cần fixed basis trên mobile list view
+    }
+    .active-chat-panel {
+       display: none; // ẨN mặc định
+       &.placeholder { display: none; } // Ẩn placeholder trên mobile khi chỉ hiện list
+    }
+
+
+    // --- State khi chat active (class chat-active-mobile được thêm bởi JS) ---
+    &.chat-active-mobile {
+      .conversation-list-panel {
+         display: none; // ẨN list
+      }
+      .active-chat-panel {
+        display: flex; // HIỆN chat window
+        // ... (các style khác của chat panel mobile, bao gồm nút back)
+        .chat-header .back-button {
+            display: flex; // Sử dụng flex để căn giữa icon
+            align-items: center;
+            justify-content: center;
+            margin-right: $spacing-md; // Khoảng cách với avatar
+        }
+        .chat-header {
+          // Điều chỉnh padding header trên mobile
+          padding: $spacing-sm $spacing-md; // Giảm nhẹ padding
+        }
+        .message-list-container {
+            padding: $spacing-md; // Giảm padding khu vực tin nhắn
+        }
+        .chat-input-area {
+            padding: $spacing-sm $spacing-md; // Giảm padding input area
+        }
+        // Styles cho loading messages trên mobile nếu cần khác
+        .loading-messages, .no-messages {
+             font-size: $font-size-base; // Có thể giảm font size
+        }
+      }
+       // Ẩn overlay loading/error trang khi active chat trên mobile
+       .loading-overlay, .error-message {
+          display: none;
+      }
+    }
+  }
+  .conversation-list-panel {
+    flex-basis: 100%; // Chiếm toàn bộ chiều rộng nếu chỉ hiện list
+    // Hoặc ẩn đi nếu chỉ hiện chat window
+  }
+  .chat-settings-overlay {
+    .settings-content {
+      width: 100%; // Chiếm toàn bộ chiều rộng trên mobile
+      height: 100%; // Chiếm toàn bộ chiều cao trên mobile
+      max-width: none; // Bỏ giới hạn max-width
+      max-height: none; // Bỏ giới hạn max-height
+      border-radius: 0; // Bỏ bo góc
+        // Nếu container đã có padding thì bỏ padding ở đây, nếu không thì thêm padding cho body
+      .settings-body {
+        padding: $spacing-lg; // Ensure padding is applied if no page padding
+        .group-actions-footer {
+            flex-direction: column; // Stack buttons vertically on mobile
+            gap: $spacing-sm;
+        }
+        .button { width: 100%; } // Make buttons full width
+      }
+      .settings-header {
+          padding: $spacing-sm $spacing-md;
+      }
+    }
+  }
+}
+
