@@ -1,0 +1,61 @@
+name: Build and Push Docker Image For Server
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'server/**'
+
+jobs:
+  build-and-push:
+    name: Build and Push Docker Image For Server
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          file: ./Dockerfile
+          tags: lexuandaibn123/chat-and-video-call-server:latest
+
+  pull-and-deploy:
+    name: Pull and Deploy Docker Image For Server
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    steps:
+      - name: Deploy to server
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USERNAME }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            docker pull lexuandaibn123/chat-and-video-call-server:latest
+            docker stop chat-and-video-call-server || true
+            docker rm chat-and-video-call-server || true
+            docker run -d -p 3000:3000 --name chat-and-video-call-server \
+              -e NODE_ENV=production \
+              -e PORT=8080 \
+              -e SERVER_URL= \
+              -e DATABASE_URL=${{ secrets.DATABASE_URL }} \
+              -e SMTP_SERVER_USERNAME=${{ secrets.SMTP_SERVER_USERNAME }} \
+              -e SMTP_SERVER_PASSWORD=${{ secrets.SMTP_SERVER_PASSWORD }} \
+              -e SMTP_SERVER_HOST=${{ secrets.SMTP_SERVER_HOST }} \
+              -e AUTH_SECRET=${{ secrets.AUTH_SECRET }} \
+              -e UPLOADTHING_TOKEN=${{ secrets.UPLOADTHING_TOKEN }} \
+              -e CLIENT_URL=${{ secrets.CLIENT_URL }} \
+              lexuandaibn123/chat-and-video-call-server:latest
