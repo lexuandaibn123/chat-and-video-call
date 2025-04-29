@@ -44,8 +44,6 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
 app.set("view engine", "ejs");
 
-route(app);
-
 const options = {
   definition: {
     openapi: "3.1.0",
@@ -106,6 +104,8 @@ app.use(
 app.get("/api/admin-socket", (req, res) => {
   res.render("admin.socket.ejs");
 });
+
+route(app);
 
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
