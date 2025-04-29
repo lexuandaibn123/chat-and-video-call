@@ -5,8 +5,10 @@ on:
     branches:
       - master
     paths:
+      - "client/**"
       - "server/**"
-      - ".github/workflows/deploy-docker-for-server.yml"
+      - "Dockerfile"
+      - ".github/workflows/deploy.yml"
 
 jobs:
   build-and-push:
@@ -32,6 +34,9 @@ jobs:
           push: true
           file: ./Dockerfile
           tags: lexuandaibn123/chat-and-video-call-server:latest
+          build-args: |
+            VITE_SERVER_URL=${{ secrets.SERVER_URL }}
+            VITE_CLIENT_URL=${{ secrets.CLIENT_URL }}
 
   pull-and-deploy:
     name: Pull and Deploy Docker Image For Server

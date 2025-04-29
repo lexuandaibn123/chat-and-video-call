@@ -738,7 +738,7 @@ class ConversationService {
 
       let messageObj = {
         conversationId: conversationId,
-        senderId: userInfo.id,
+        senderId: userId,
         replyToMessageId,
       };
 
@@ -822,6 +822,43 @@ class ConversationService {
     }
   }
 
+  async editMessageByWs({ userId, messageId, newData }) {
+    try {
+      try {
+        const message = await this._mustBeValidMessage(messageId);
+
+        if (message.type != "text")
+          throw new Error("Cannot edit this type of message");
+
+        this._mustBeOwnerOfMessage(
+          message,
+          userId,
+          "You are not the owner of this message"
+        );
+
+        const newContent = {
+          text: {
+            type: "text",
+            data: newData,
+          },
+        };
+
+        const updatedMessage = await MessageRepository.updateById(messageId, {
+          content: { ...newContent },
+          isEdited: true,
+        });
+
+        return updatedMessage;
+      } catch (error) {
+        console.error(error);
+        throw error;
+      }
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  }
+
   async deleteMessage(req, res) {
     try {
       const { messageId } = req.body;
@@ -854,6 +891,33 @@ class ConversationService {
     } catch (error) {
       console.error(error);
       return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+
+  async deleteMessageByWs({ userId, messageId }) {
+    try {
+      try {
+        const message = await this._mustBeValidMessage(messageId);
+
+        this._mustBeOwnerOfMessage(
+          message,
+          userId,
+          "You are not the owner of this message"
+        );
+
+        const updatedMessage = await MessageRepository.updateById(messageId, {
+          isDeleted: true,
+          content: null,
+        });
+
+        return updatedMessage;
+      } catch (error) {
+        console.error(error);
+        throw error;
+      }
+    } catch (error) {
+      console.error(error);
+      throw error;
     }
   }
 }
