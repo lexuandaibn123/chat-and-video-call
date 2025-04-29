@@ -6,6 +6,7 @@ on:
       - master
     paths:
       - "server/**"
+      - ".github/workflows/deploy-docker-for-server.yml"
 
 jobs:
   build-and-push:
@@ -47,10 +48,11 @@ jobs:
             docker pull lexuandaibn123/chat-and-video-call-server:latest
 
             docker stop chat-and-video-call-server || true
+            docker rm   chat-and-video-call-server || true
 
-            docker rm chat-and-video-call-server || true
-
-            docker run -d -p 8080:8080 --name chat-and-video-call-server \
+            docker run -d \
+              --name chat-and-video-call-server \
+              -p 127.0.0.1:8080:8080 \
               -e NODE_ENV=production \
               -e PORT=8080 \
               -e SERVER_URL="${{ secrets.SERVER_URL }}" \
@@ -62,3 +64,6 @@ jobs:
               -e UPLOADTHING_TOKEN="${{ secrets.UPLOADTHING_TOKEN }}" \
               -e CLIENT_URL="${{ secrets.CLIENT_URL }}" \
               lexuandaibn123/chat-and-video-call-server:latest
+
+            sudo nginx -t
+            sudo systemctl reload nginx
