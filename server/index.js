@@ -214,7 +214,6 @@ io.on("connection", (client) => {
 const adminNamespace = io.of("/admin");
 
 adminNamespace.use((socket, next) => {
-  // ensure the user has sufficient rights
   next();
 });
 
