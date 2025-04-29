@@ -50,7 +50,7 @@ jobs:
 
             docker rm chat-and-video-call-server || true
 
-            docker run -d -p 3000:3000 --name chat-and-video-call-server \
+            docker run -d -p 8080:8080 --name chat-and-video-call-server \
               -e NODE_ENV=production \
               -e PORT=8080 \
               -e SERVER_URL="${{ secrets.SERVER_URL }}" \
