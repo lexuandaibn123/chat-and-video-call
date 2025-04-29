@@ -96,7 +96,6 @@ app.use(
   })
 );
 
-
 app.use(
   "/api/uploadthing",
   createRouteHandler({
