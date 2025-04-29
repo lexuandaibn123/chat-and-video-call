@@ -69,6 +69,7 @@ jobs:
               -e SMTP_SERVER_HOST="${{ secrets.SMTP_SERVER_HOST }}" \
               -e AUTH_SECRET="${{ secrets.AUTH_SECRET }}" \
               -e UPLOADTHING_TOKEN="${{ secrets.UPLOADTHING_TOKEN }}" \
+              -e UPLOADTHING_CALLBACK_URL="${{ secrets.SERVER_URL }}/api/uploadthing" \
               -e CLIENT_URL="${{ secrets.SERVER_URL }}" \
               lexuandaibn123/chat-and-video-call:latest
 
