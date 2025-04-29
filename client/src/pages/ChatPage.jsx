@@ -39,7 +39,7 @@ const ChatPage = () => {
   }, [user, isAuthenticated, isAuthLoading]);
 
   // --- Socket.IO ---
-  const socket = useSocket({
+  const { socket, sendMessage, isConnected } = useSocket({
     isAuthenticated,
     userId: user?._id,
     activeChatId: activeChat?.id,
@@ -64,6 +64,8 @@ const ChatPage = () => {
     isEditingName,
     editingGroupName,
     socket,
+    sendMessage, // Truyền sendMessage vào handlers
+    isConnected, // Truyền isConnected vào handlers
     setConversations,
     setActiveChat,
     setMessages,

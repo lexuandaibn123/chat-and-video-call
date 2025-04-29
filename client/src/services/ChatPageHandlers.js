@@ -54,6 +54,8 @@ export const getHandlers = ({
   isEditingName,
   editingGroupName,
   socket,
+  sendMessage, // Thêm sendMessage
+  isConnected, // Thêm isConnected
   setConversations,
   setActiveChat,
   setMessages,
@@ -746,53 +748,43 @@ const handleCreateConversation = useCallback(
     async () => {
       const currentUserId = currentUserIdRef.current;
       const newMessageText = messageInput.trim();
-
+  
       if (
         !activeChat?.id ||
         !currentUserId ||
         sendingMessage ||
         editingMessageId !== null ||
-        !newMessageText
+        !newMessageText ||
+        !isConnected
       ) {
-        console.warn('Cannot send text message: Invalid state');
+        console.warn('Cannot send text message: Invalid state or socket not connected');
+        setActionError('Cannot send message: Socket not connected or invalid state.');
         return;
       }
-
+  
       setSendingMessage(true);
       setActionError(null);
       const tempId = `temp-${Date.now()}-${Math.random().toString(36).substring(7)}`;
-
+  
       const newMessageOptimistic = createOptimisticTextMessage(tempId, newMessageText, currentUserId, user);
       setMessages((prevMessages) => [...prevMessages, newMessageOptimistic]);
       setMessageInput('');
-
+  
       try {
-        const messagePayload = buildTextMessagePayload(activeChat.id, newMessageText, tempId);
-
-        // Emit message via Socket.IO
-        if (socket) {
-          socket.emit('message', messagePayload);
+        const messagePayload = {
+          conversationId: activeChat.id,
+          data: newMessageText,
+          type: 'text',
+          replyToMessageId: null,
+        };
+  
+        // Gửi tin nhắn qua sendMessage
+        const sent = sendMessage(messagePayload);
+        if (!sent) {
+          throw new Error('Socket is not connected.');
         }
-
-        // Keep HTTP API call for consistency
-        const sentMessage = await sendMessageApi(messagePayload);
-        console.log('Text message sent successfully:', sentMessage);
-
-        if (sentMessage && sentMessage._id) {
-          const formattedSentMessage = formatReceivedMessage(sentMessage, currentUserId);
-
-          setMessages((prevMessages) =>
-            prevMessages.map((msg) =>
-              msg.id === tempId ? { ...formattedSentMessage, sender: 'self' } : msg
-            )
-          );
-
-          setConversations((prevConversations) =>
-            updateConversationsListLatestMessage(prevConversations, activeChat.id, sentMessage)
-          );
-        } else {
-          throw new Error(sentMessage?.message || 'Failed to send text message.');
-        }
+  
+        console.log('Message sent via Socket.IO:', messagePayload);
       } catch (err) {
         console.error('Failed to send text message:', err);
         setActionError(err.message || 'Failed to send text message.');
@@ -812,11 +804,11 @@ const handleCreateConversation = useCallback(
       messageInput,
       currentUserIdRef,
       user,
-      socket,
+      sendMessage,
+      isConnected,
       setMessages,
       setMessageInput,
       setActionError,
-      setConversations,
       setSendingMessage,
     ]
   );
