@@ -108,7 +108,7 @@ app.get("/api/admin-socket", (req, res) => {
 });
 
 app.get("*", (req, res) => {
-  res.sendFile("index.html");
+  res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
 const server = createServer(app);
