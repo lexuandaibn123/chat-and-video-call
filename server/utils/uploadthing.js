@@ -28,6 +28,13 @@ const uploadRouter = {
       maxFileCount: 10,
     },
   }).onUploadComplete(({ file }) => {
+    console.log("File uploaded:", {
+      url: file.ufsUrl,
+      fileHash: file.fileHash,
+      name: file.name,
+      size: file.size,
+      type: file.type,
+    });
     return {
       success: true,
       url: file.ufsUrl,
@@ -44,6 +51,13 @@ const uploadRouter = {
       maxFileCount: 1,
     },
   }).onUploadComplete(({ file }) => {
+    console.log("File uploaded:", {
+      url: file.ufsUrl,
+      fileHash: file.fileHash,
+      name: file.name,
+      size: file.size,
+      type: file.type,
+    });
     return {
       success: true,
       url: file.ufsUrl,
