@@ -82,7 +82,7 @@ export const processRawRooms = (rawRooms, currentUserId) => {
             name: conversationName || 'Unknown Conversation',
             avatar: conversationAvatar,
             lastMessage: latestMessage ?
-                (latestMessage.type === 'text' ? latestMessage.content?.text?.data || '' : `[${latestMessage.type.toUpperCase()}]`)
+                (latestMessage.type === 'text' ? latestMessage.content?.text?.data || '' : `[${latestMessage.type}]`)
                 : '',
             time: lastMessageTime,
             createdAt: room.datetime_created,
