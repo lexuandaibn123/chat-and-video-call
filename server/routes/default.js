@@ -41,4 +41,8 @@ route.get("/healthz", (req, res) => {
   res.json({ status: "OK" });
 });
 
+route.get("/", (req, res) => {
+  res.json({ message: "Welcome to the Chat and Video all API" });
+});
+
 module.exports = route;
