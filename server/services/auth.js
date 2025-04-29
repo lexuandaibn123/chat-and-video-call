@@ -3,7 +3,7 @@ const crypto = require("crypto");
 const UserRepository = require("../repositories/user");
 const { sendMail } = require("../config/nodemailer");
 
-const clientUrl = process.env.CLIENT_URL;
+const { CLIENT_URL, SERVER_URL, NODE_ENV } = require("../constants");
 
 class AuthService {
   async login(req, res) {
@@ -58,7 +58,9 @@ class AuthService {
         verificationToken,
       });
 
-      const verificationUrl = `${clientUrl}/auth/verify-email?token=${verificationToken}`;
+      const verificationUrl = `${
+        NODE_ENV == "development" ? CLIENT_URL : SERVER_URL
+      }/auth/verify-email?token=${verificationToken}`;
 
       const message = {
         to: email,
@@ -120,7 +122,9 @@ class AuthService {
 
       const verificationToken = user.verificationToken;
 
-      const verificationUrl = `${clientUrl}/auth/verify-email?token=${verificationToken}`;
+      const verificationUrl = `${
+        NODE_ENV == "development" ? CLIENT_URL : SERVER_URL
+      }/auth/verify-email?token=${verificationToken}`;
 
       const message = {
         to: email,
@@ -154,7 +158,9 @@ class AuthService {
         resetTokenExpiry,
       });
 
-      const resetUrl = `${clientUrl}/auth/reset-password?token=${resetToken}`;
+      const resetUrl = `${
+        NODE_ENV == "development" ? CLIENT_URL : SERVER_URL
+      }/auth/reset-password?token=${resetToken}`;
 
       const message = {
         to: email,

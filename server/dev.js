@@ -1,8 +1,6 @@
-require("dotenv").config();
-
 const nodemon = require("nodemon");
 const ngrok = require("ngrok");
-const port = process.env.PORT || 3000;
+const { PORT } = require("./constants");
 
 nodemon({
   script: "index.js",
@@ -14,7 +12,7 @@ let url = null;
 nodemon
   .on("start", async () => {
     if (!url) {
-      url = await ngrok.connect({ port: port });
+      url = await ngrok.connect({ port: PORT });
       console.log(`Server now available at ${url}`);
     }
   })

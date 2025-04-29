@@ -1,5 +1,3 @@
-require("dotenv").config();
-
 const express = require("express");
 const app = express();
 const bodyParser = require("body-parser");
@@ -16,26 +14,21 @@ const ConversationService = require("./services/conversation");
 const { instrument } = require("@socket.io/admin-ui");
 const { uploadRouter } = require("./utils/uploadthing");
 const { createRouteHandler } = require("uploadthing/express");
-
-const PORT = process.env.PORT || 8080;
-
-const serverUrl = process.env.SERVER_URL;
-
-const clientUrl = process.env.CLIENT_URL;
-
-const authSecret = process.env.AUTH_SECRET;
-
-const nodeEnv = process.env.NODE_ENV;
-
-const SESSION_RELOAD_INTERVAL = 30 * 1000;
-
-const UPLOADTHING_TOKEN = process.env.UPLOADTHING_TOKEN;
+const {
+  PORT,
+  SERVER_URL,
+  CLIENT_URL,
+  AUTH_SECRET,
+  NODE_ENV,
+  SESSION_RELOAD_INTERVAL,
+  UPLOADTHING_TOKEN,
+} = require("./constants");
 
 db.connect();
 
 /* Session */
 const sessionMiddleware = session({
-  secret: authSecret,
+  secret: AUTH_SECRET,
   saveUninitialized: true,
   resave: true,
   cookie: {
@@ -65,7 +58,7 @@ const options = {
     },
     servers: [
       {
-        url: serverUrl,
+        url: SERVER_URL,
       },
     ],
   },
@@ -75,7 +68,7 @@ const options = {
 const specs = swaggerJsdoc(options);
 
 app.use(
-  "/api-docs",
+  "/api/api-docs",
   swaggerUi.serve,
   swaggerUi.setup(specs, {
     customSiteTitle: "Chat and Video all API Documentation",
@@ -83,20 +76,21 @@ app.use(
   })
 );
 
-app.use(
-  cors({
-    origin: [clientUrl, "http://localhost:3000"],
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: [
-      "Content-Type",
-      "Authorization",
-      "x-uploadthing-version",
-      "x-uploadthing-package",
-    ],
-    credentials: true,
-  })
-);
-
+if (NODE_ENV === "development") {
+  app.use(
+    cors({
+      origin: [CLIENT_URL],
+      methods: ["GET", "POST", "PUT", "DELETE"],
+      allowedHeaders: [
+        "Content-Type",
+        "Authorization",
+        "x-uploadthing-version",
+        "x-uploadthing-package",
+      ],
+      credentials: true,
+    })
+  );
+}
 app.use(
   "/api/uploadthing",
   createRouteHandler({
@@ -107,7 +101,7 @@ app.use(
   })
 );
 
-app.get("/admin-socket", (req, res) => {
+app.get("/api/admin-socket", (req, res) => {
   res.render("admin.socket.ejs");
 });
 
@@ -115,20 +109,24 @@ route(app);
 
 const server = createServer(app);
 
-const io = new Server(server, {
-  cors: {
-    origin: [clientUrl, "http://localhost:3000"],
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: true,
-  },
-});
+const ioOptions =
+  NODE_ENV === "development"
+    ? {
+        cors: {
+          origin: [CLIENT_URL, "https://admin.socket.io"],
+          methods: ["GET", "POST", "PUT", "DELETE"],
+          allowedHeaders: ["Content-Type", "Authorization"],
+          credentials: true,
+        },
+      }
+    : {};
 
+const io = new Server(server, ioOptions);
 io.engine.use(sessionMiddleware);
 
 instrument(io, {
   auth: false,
-  mode: nodeEnv,
+  mode: NODE_ENV,
 });
 
 io.on("connection", (client) => {
@@ -301,5 +299,5 @@ adminNamespace.on("connection", (socket) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`Server is running at ${serverUrl}`);
+  console.log(`Server is running at ${SERVER_URL}`);
 });
