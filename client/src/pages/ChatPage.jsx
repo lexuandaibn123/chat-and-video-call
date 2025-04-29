@@ -262,6 +262,7 @@ const ChatPage = () => {
       isMobileChatActive={isMobileChatActive}
       isSettingsOpen={isSettingsOpen}
       addUserSearchResults={addUserSearchResults}
+      setAddUserSearchResults={setAddUserSearchResults}
       messageInput={messageInput}
       editingMessageId={editingMessageId}
       isEditingName={isEditingName}

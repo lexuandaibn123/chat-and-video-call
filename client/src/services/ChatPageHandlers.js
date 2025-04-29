@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import {
+  createConversationApi,
   sendMessageApi,
   editMessageApi,
   deleteMessageApi,
@@ -12,7 +13,6 @@ import {
   updateConversationNameApi,
 } from '../api/conversations';
 import { getUserByEmailApi, getUserDetailsApi } from '../api/users';
-import { mockUploadFileApi } from '../api/upload';
 import {
   createOptimisticTextMessage,
   buildTextMessagePayload,
@@ -37,6 +37,7 @@ import {
   updateMessagesEditSuccess,
   updateConversationsListAfterMessageAction,
 } from './chatService';
+import { formatTime } from '../utils/helpers';
 
 export const getHandlers = ({
   user,
@@ -217,6 +218,53 @@ export const getHandlers = ({
     },
     [activeChat, performSettingsAction, currentUserIdRef, setConversations, setActiveChat, setActionError]
   );
+
+  // --- Handler for creating a new conversation ---
+const handleCreateConversation = useCallback(
+  async (members, name) => {
+    const currentUserId = currentUserIdRef.current;
+    if (!isAuthenticated || !currentUserId) {
+      console.warn('User not authenticated. Cannot create conversation.');
+      setActionError('Please login to create a conversation.');
+      return;
+    }
+
+    if (!members || members.length === 0) {
+      console.warn('No members provided to create conversation.');
+      setActionError('Please select at least one user to create a conversation.');
+      return;
+    }
+
+    await performSettingsAction(
+      () => createConversationApi({ members, name }),
+      'Create conversation',
+      (response) => {
+        const newConversation = {
+          id: response.conversationId || response._id, // Adjust based on API response
+          name: name || response.name || '',
+          isGroup: members.length > 1 || !!name, // Consider it a group if more than 1 member or a name is provided
+          members: [...members, currentUserId], // Include current user
+          detailedMembers: response.detailedMembers || [], // Adjust based on API response
+          lastMessage: null,
+          unread: 0,
+          time: formatTime(new Date()),
+        };
+        setConversations((prevConvs) => [...prevConvs, newConversation]);
+        setActiveChat(newConversation); // Auto-select the new conversation
+        setIsMobileChatActive(window.innerWidth <= 768);
+      }
+    );
+  },
+  [
+    isAuthenticated,
+    currentUserIdRef,
+    performSettingsAction,
+    setConversations,
+    setActiveChat,
+    setIsMobileChatActive,
+    setActionError,
+  ]
+);
 
   // --- Handler for updating group name ---
   const handleUpdateGroupName = useCallback(
@@ -852,7 +900,7 @@ const handleUploadComplete = useCallback(async (res) => {
 
         try {
             // Build the final message payload
-            const messagePayload = buildFileMessagePayload(activeChat.id, fileType, uploadedFileDetails, tempId);
+            const messagePayload = buildFileMessagePayload(activeChat.id, fileType, uploadedFileDetails);
 
             // Emit via Socket.IO
             if (socket) {
@@ -1337,6 +1385,7 @@ const handleUploadError = useCallback((error) => {
     handleOpenSettings,
     handleCloseSettings,
     handleRemoveUser,
+    handleCreateConversation,
     handleUpdateGroupName,
     handleChangeLeader,
     handleStepDownLeader,

@@ -199,74 +199,106 @@ export const buildTextMessagePayload = (conversationId, text, replyToMessageId =
     };
 };
 
-// Hàm tạo tin nhắn file/image lạc quan (optimistic update)
+// localPreviewUrl: URL tạm thời (chỉ dùng cho ảnh)
 export const createOptimisticFileMessage = (tempId, file, currentUserId, user, localPreviewUrl = null) => {
+    // Xác định loại file dựa trên MIME type gốc
     const fileType = file.type.startsWith('image/') ? 'image' : 'file';
 
-    const optimisticContent = fileType === 'image'
-        ? { image: [{ data: localPreviewUrl, metadata: { fileName: file.name, size: file.size, mimeType: file.type }, type: 'image' }] }
-        : { file: { data: null, metadata: { fileName: file.name, size: file.size, mimeType: file.type }, type: 'file' } }; // data là null cho file thường, URL tạm cho image
+    // Tạo object metadata theo FileMetaDataSchema từ File object gốc
+    const optimisticMetadata = {
+         fileName: file.name,
+         // fileHash: null, // Chưa có hash lúc optimistic
+         mimeType: file.type,
+         size: file.size,
+    };
+
+    let optimisticContent; // Cấu trúc content lạc quan
+
+    if (fileType === 'image') {
+        // Cấu trúc content image mong muốn: { image: [{ metadata: {...}, data: url, type: 'image' }] }
+        optimisticContent = {
+            image: [{ // Mảng chứa các image parts
+                metadata: optimisticMetadata, // Sử dụng object metadata đã tạo
+                data: localPreviewUrl, // Dùng localPreviewUrl làm URL tạm thời cho trường 'data'
+                type: 'image', // Loại part là 'image'
+            }]
+        };
+    } else { // fileType === 'file'
+        // Cấu trúc content file mong muốn: { file: { metadata: {...}, data: url, type: 'file' } }
+        optimisticContent = {
+            file: { // Object chứa thông tin file
+                metadata: optimisticMetadata, // Sử dụng object metadata đã tạo
+                data: null, // URL tạm thời cho file thường là null
+                type: 'file', // Loại part là 'file'
+            }
+        };
+    }
 
     return {
         id: tempId,
         sender: 'self', // Dùng cho CSS
-        type: fileType,
-        content: optimisticContent, // Cấu trúc content lạc quan
+        type: fileType, // 'image' or 'file'
+        content: optimisticContent, // Sử dụng cấu trúc content đã chuẩn hóa
         time: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase(),
         createdAt: new Date().toISOString(),
-        status: 'uploading', // Trạng thái upload
+        status: 'uploading', // Trạng thái ban đầu
         isEdited: false,
         isDeleted: false,
-        senderId: currentUserId, // ID người gửi
-        senderName: user?.fullName || 'You', // Tên người gửi
-        senderAvatar: user?.avatar || null, // Avatar người gửi
+        senderId: currentUserId,
+        senderName: user?.fullName || 'You',
+        senderAvatar: user?.avatar || null,
     };
 };
 
-// Hàm tạo payload gửi tin nhắn file/image cho API sau khi upload
 export const buildFileMessagePayload = (conversationId, fileType, uploadedFileDetails, replyToMessageId = null) => {
 
+    // Lấy dữ liệu chính xác đã được xử lý và trả về từ backend Uploadthing
     const serverFileDetails = uploadedFileDetails.serverData;
+
+    // Tạo object metadata theo FileMetaDataSchema
+    const metadata = {
+        fileName: serverFileDetails.name,
+        fileHash: serverFileDetails.fileHash,
+        mimeType: serverFileDetails.type, // Uploadthing type là mimeType
+        size: serverFileDetails.size,
+    };
 
     let dataForBackend; // <-- Đây sẽ là giá trị của trường 'data' ở level ngoài
 
     if (fileType === 'image') {
-         // Backend mong đợi [...data] khi type là image.
-         // Nếu data là mảng [{ url, ... }], backend [...mảng] sẽ là mảng.
-         // => dataForBackend cần là mảng [{ url, ... }]
-         dataForBackend = [{
-             url: serverFileDetails.url,
-             // ... map các trường khác từ serverFileDetails sang ImagePartSchema ...
-             name: serverFileDetails.name,
-             size: serverFileDetails.size,
-             contentType: serverFileDetails.type,
-             fileHash: serverFileDetails.fileHash,
+         // Backend cần MẢNG các ImagePartSchema objects cho trường 'data' (level ngoài)
+         // ImagePartSchema: { metadata: FileMetaDataSchema, data: url, type: "image" }
+         dataForBackend = [{ // Bọc trong mảng
+             metadata: metadata, // Sử dụng object metadata đã tạo
+             data: serverFileDetails.url, // URL là trường 'data' trong schema
+             type: 'image', // Loại part là 'image'
+             // Thêm các trường khác nếu ImagePartSchema yêu cầu
          }];
     } else if (fileType === 'file') {
-         // Backend mong đợi { ...data } khi type là file.
-         // Nếu data là object { url, name, ... }, backend { ...object } sẽ là object.
-         // => dataForBackend cần là object { url, name, ... }
-         dataForBackend = {
-             url: serverFileDetails.url,
-             name: serverFileDetails.name,
-             size: serverFileDetails.size,
-             contentType: serverFileDetails.type,
-             fileHash: serverFileDetails.fileHash,
-             // ... map các trường khác ...
+         // Backend cần OBJECT FilePartSchema cho trường 'data' (level ngoài)
+         // FilePartSchema (dựa trên cấu trúc image): { metadata: FileMetaDataSchema, data: url, type: "file" }
+         dataForBackend = { // Không bọc trong mảng
+             metadata: metadata, // Sử dụng object metadata đã tạo
+             data: serverFileDetails.url, // URL là trường 'data' trong schema
+             type: 'file', // Loại part là 'file'
+             // Thêm các trường khác nếu FilePartSchema yêu cầu
          };
     } else {
-         console.error("Unsupported file type for message payload:", fileType);
-         // Fallback
-         dataForBackend = { url: serverFileDetails.url, name: serverFileDetails.name, size: serverFileDetails.size, contentType: serverFileDetails.type };
+        console.error("Unsupported file type for message payload:", fileType);
+        // Fallback: gửi như file object hoặc throw error
+        dataForBackend = { // Gửi cấu trúc file
+            metadata: metadata,
+            data: serverFileDetails.url,
+            type: 'file',
+        };
     }
-    console.log(dataForBackend);
 
-    // Xây dựng cấu trúc payload - KHÔNG CÓ OBJECT data { data, type } trung gian nữa
+    // Xây dựng cấu trúc payload cuối cùng
     return {
         conversationId: conversationId,
         type: fileType, // 'image' or 'file' (outer type)
-        data: dataForBackend, // <--- dataForBackend là mảng hoặc object trực tiếp
-        replyToMessageId: replyToMessageId,
+        data: dataForBackend, // <--- dataForBackend là mảng hoặc object TRỰC TIẾP
+        replyToMessageId: replyToMessageId, // null theo mặc định nếu không truyền
     };
 };
 

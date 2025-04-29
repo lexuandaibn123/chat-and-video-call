@@ -1,6 +1,6 @@
 // src/api/users.js
 
-const API_BASE_URL = 'http://localhost:8080/api'; // Cập nhật để trỏ đến server backend
+const API_BASE_URL = `${import.meta.env.VITE_SERVER_URL}/api`;
 
 // Hàm helper xử lý response (giữ nguyên)
 const handleApiResponse = async (response) => {

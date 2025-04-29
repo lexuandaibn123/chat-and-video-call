@@ -3,6 +3,8 @@ import io from 'socket.io-client';
 import { getMessagesByRoomIdApi } from '../api/conversations';
 import { processRawMessages, formatReceivedMessage } from '../services/chatService';
 
+const SOCKET_ADMIN_URL = `${import.meta.env.VITE_SERVER_URL}/admin`;
+
 // Ensure the hook is only called in a React context
 if (typeof useState !== 'function' || typeof useEffect !== 'function' || typeof useRef !== 'function') {
   throw new Error('useSocketIO: Hooks can only be called inside a React functional component or another hook.');
@@ -32,7 +34,7 @@ const useSocketIO = (conversationId, userId) => {
     console.log('Initializing Socket.IO connection for user:', userId, 'conversation:', conversationId);
 
     const token = localStorage.getItem('authToken') || 'your-auth-token';
-    const socket = io('http://localhost:8080/admin', {
+    const socket = io(SOCKET_ADMIN_URL, {
       query: { token },
       transports: ['websocket'],
       reconnection: true,

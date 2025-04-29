@@ -20,6 +20,7 @@ const ChatPageLayout = ({
   isMobileChatActive,
   isSettingsOpen,
   addUserSearchResults,
+  setAddUserSearchResults,
   messageInput,
   editingMessageId,
   isEditingName,
@@ -92,6 +93,10 @@ const ChatPageLayout = ({
         onSearchChange={handlers.handleSearchChange}
         onItemClick={handlers.handleConversationClick}
         activeChat={activeChat}
+        onAddClick={() => setAddUserSearchResults([])}
+        onAddUserSearch={handlers.handleAddUserSearch} // Thêm prop
+        onCreateConversation={handlers.handleCreateConversation} // Thêm prop
+        addUserSearchResults={addUserSearchResults}
         searchTerm={searchTerm}
       />
 

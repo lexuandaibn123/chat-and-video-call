@@ -6,7 +6,7 @@ import { generateUploadButton } from "@uploadthing/react"; // Import hàm từ t
 // Đây là URL endpoint của backend Uploadthing của bạn.
 // Frontend sẽ gửi yêu cầu upload đến URL này.
 // Đảm bảo URL này khớp với URL mà server bạn lắng nghe cho Uploadthing.
-const backendUrl = "http://localhost:8080/api/uploadthing"; // URL từ cấu hình backend
+const backendUrl = `${import.meta.env.VITE_SERVER_URL}/api/uploadthing`;
 
 export const UploadButton = generateUploadButton({
   url: backendUrl,

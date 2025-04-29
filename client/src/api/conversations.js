@@ -1,7 +1,7 @@
 // src/api/conversations.js
 
 // const API_BASE_URL = '/api/conversations'; // <<< Điều chỉnh để khớp URL mới
-const API_BASE_URL = 'http://localhost:8080/api'; // <<< Base URL chung
+const API_BASE_URL = `${import.meta.env.VITE_SERVER_URL}/api`; // <<< Base URL chung
 
 // Hàm helper xử lý response (Sao chép từ auth.js, đảm bảo nhất quán)
 const handleApiResponse = async (response) => {
