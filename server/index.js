@@ -113,8 +113,6 @@ app.get("/admin-socket", (req, res) => {
 
 route(app);
 
-// ----------------------------------deploy----------------------------------
-
 const server = createServer(app);
 
 const io = new Server(server, {
