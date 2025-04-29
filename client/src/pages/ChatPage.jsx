@@ -27,6 +27,7 @@ const ChatPage = () => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [editingGroupName, setEditingGroupName] = useState('');
   const currentUserIdRef = useRef(null);
+  const optimisticMessagesRef = useRef({});
 
   // --- Mock Auth ---
   const [mockAuth, setMockAuth] = useState({ user: null, isAuthenticated: false, isLoading: true });
@@ -77,6 +78,7 @@ const ChatPage = () => {
     setIsEditingName,
     setEditingGroupName,
     setSearchTerm,
+    optimisticMessagesRef,
   });
 
   // --- Effect 1: Check Auth Status ---
@@ -268,6 +270,9 @@ const ChatPage = () => {
       handlers={handlers}
       setMessageInput={setMessageInput}
       setSearchTerm={setSearchTerm}
+      onUploadBeforeBegin={handlers.handleUploadBeforeBegin}
+      onClientUploadComplete={handlers.handleUploadComplete}
+      onUploadError={handlers.handleUploadError}
     />
   );
 };

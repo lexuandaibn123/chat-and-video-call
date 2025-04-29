@@ -28,6 +28,9 @@ const ChatPageLayout = ({
   handlers,
   setMessageInput, // Added to fix ChatWindow prop
   setSearchTerm,
+  onUploadBeforeBegin,
+  onClientUploadComplete,
+  onUploadError,
 }) => {
   // Filter conversations for groups and friends
   const filteredConversations = conversations.filter((conv) => {
@@ -110,6 +113,9 @@ const ChatPageLayout = ({
         currentUserId={currentUserId}
         sendingMessage={sendingMessage}
         editingMessageId={editingMessageId}
+        onUploadBeforeBegin={onUploadBeforeBegin}
+        onClientUploadComplete={onClientUploadComplete}
+        onUploadError={onUploadError}
       />
 
       {isSettingsOpen && activeChat?.isGroup && activeChat.detailedMembers && (

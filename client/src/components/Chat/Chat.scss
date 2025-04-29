@@ -505,6 +505,8 @@
                       text-overflow: ellipsis;
                       white-space: nowrap;
                       flex-grow: 1; // Allow name to fill space
+                      color: $text-color;
+                      font-weight: $font-size-small;
                   }
                   .file-size {
                       font-size: $font-size-small;
@@ -675,77 +677,172 @@
     align-items: center;
     padding: $spacing-sm $spacing-lg;
     border-top: 1px solid $input-border-color;
-    background-color: $secondary-color; // Có thể cần màu nền riêng nếu khác
-    flex-shrink: 0; // Không co lại
+    background-color: $secondary-color;
+    flex-shrink: 0;
 
-    .icon-button {
-      background: none;
-      border: none;
-      color: $text-muted-color;
-      font-size: 20px; // Icon to hơn chút
-      cursor: pointer;
-      padding: $spacing-sm; // Vùng bấm lớn hơn
-      border-radius: 50%;
-      transition: background-color $transition-fast ease-out, color $transition-fast ease-out;
-       flex-shrink: 0;
+    // --- General Styles for ALL Icon-like elements in the input area ---
+    // Targets standard buttons (Emoji, Cancel, Send) AND the wrapper divs for UploadButton.
+    & > button.icon-button,
+    & > div.icon-button { // This now includes the Uploadthing wrapper divs
+        background: none;
+        border: none;
+        color: $text-muted-color; // Default icon color
+        cursor: pointer;
+        padding: $spacing-sm; // Controls clickable area size
+        border-radius: 50%;
+        transition: background-color $transition-fast ease-out, color $transition-fast ease-out;
+        flex-shrink: 0;
+        display: flex; // Use flexbox to center content inside
+        align-items: center;
+        justify-content: center;
+        // Optional: fixed size
+        // width: 40px; height: 40px; // Example
 
-      &:hover {
-        color: $primary-color;
-        background-color: $container-bg-color;
-      }
+        &:hover:not(:disabled) {
+            color: $primary-color; // Hover icon color
+            background-color: $container-bg-color; // Hover background
+        }
 
-      &.attach-button {
-         margin-right: $spacing-xs;
-         transform: rotate(45deg); // Xoay icon kẹp giấy
-      }
-      // Nút mic/send cuối cùng
-      &.send-button { // <-- Đổi tên class từ .mic-button sang .send-button
-         background-color: $primary-color; // Nền tím
-         color: $secondary-color; // Icon trắng
-         margin-left: $spacing-sm;
-         &:hover:not(:disabled) {
-            background-color: color.adjust($primary-color, $lightness: -5%);
+        &:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            // pointer-events: none;
+        }
+
+        // Style for the FontAwesome icon when it's a direct child
+        // This applies to standard buttons AND potentially the icon inside the Uploadthing LABEL
+         & > i {
+             font-size: 1em; // Inherit size from parent (20px of .icon-button)
+             line-height: 1;
+             display: block;
+             transform: none !important; // Remove rotation from icon if wrapper is rotated
+             color: inherit; // Icon inherits color
          }
-          &:disabled {
-              opacity: 0.5;
-              cursor: not-allowed;
-          }
-          .fas.fa-spinner {
-              font-size: 1em; // Giữ kích thước spinner bằng với icon gửi
-          }
-      }
     }
+
+    // Specific style for the attach (paperclip) wrapper div
+     & > div.icon-button.attach-button {
+       margin-right: $spacing-xs;
+       transform: rotate(45deg); // Apply rotation to the WRAPPER DIV
+    }
+
+    // --- Styles for the Uploadthing wrapper and its content ---
+    // Target the div wrapper specifically
+    & > div.icon-button.uploadthing-wrapper {
+         // It already gets general .icon-button styles.
+         // If you used fixed width/height above, you might need to override padding: 0;
+    }
+
+    // Target the clickable LABEL element rendered by Uploadthing inside the wrapper div
+    // This is the crucial part to make Uploadthing look like your icon button
+    & > div.icon-button.uploadthing-wrapper label[data-ut-element="button"] {
+        all: unset; // Remove all default styles from Uploadthing/browser
+        display: flex; // Use flexbox to center the icon inside this label
+        align-items: center;
+        justify-content: center;
+        width: 100%; // Make label fill the wrapper div
+        height: 100%;
+        cursor: pointer; // Restore cursor
+        color: inherit; // Inherit color from the wrapper div (.icon-button)
+
+        // Override Uploadthing's inline styles / default Tailwind styles if necessary
+        // !important might be needed if inline styles are strong
+        // display: flex !important; // Already set by all: unset? Redundant maybe.
+        // flex-direction: row !important; // Ensure it's not column like Uploadthing default
+        // gap: 0 !important; // Remove gap between potential default Uploadthing elements
+        // background: none !important; // Remove background
+        // padding: 0 !important; // Remove padding
+
+        &:disabled {
+            cursor: not-allowed;
+        }
+
+         // Style for the FontAwesome icon (<i>) which is a child of this LABEL
+         // This selector is more specific than the general `& > i` rule, but either might work.
+         // Using `!important` ensures these styles are applied.
+         i {
+             font-size: 1em !important; // Kích thước icon bằng kích thước font của label (kế thừa từ div bọc 20px)
+             line-height: 1 !important;
+             display: block !important;
+             transform: none !important; // Bỏ xoay từ wrapper
+             color: inherit !important; // Kế thừa màu từ label/wrapper
+         }
+          // Hide any default Uploadthing icons (like the upload arrow SVG) if they exist
+          // Inspect HTML to confirm if there's a default icon element alongside your <i>
+         .ut-upload-icon, // Uploadthing default icon class
+         svg { // Common tag for default icons
+            display: none !important;
+         }
+    }
+
+    // Hide the default text element rendered by Uploadthing
+    & > div.icon-button.uploadthing-wrapper div[data-ut-element="allowed-content"] {
+        display: none !important; // Hide the text "Images, pdfs..."
+    }
+    // --- END NEW Uploadthing Styles ---
+
 
     .message-input {
       flex-grow: 1;
       border: none;
       outline: none;
-      background-color: transparent; // Hoặc $container-bg-color nếu muốn có nền riêng
+      background-color: transparent;
       padding: $spacing-sm $spacing-md;
       font-size: $font-size-base;
       color: $text-color;
       margin: 0 $spacing-xs;
-      // border-radius: $border-radius-button-main; // Bo tròn input nếu muốn
-      // background-color: $container-bg-color;
-      &::placeholder {
-        color: $text-muted-color;
-      }
+       &::placeholder {
+         color: $text-muted-color;
+       }
        &:disabled {
             cursor: not-allowed;
             opacity: 0.8;
-            // background-color: $container-bg-color; // Optional: Thêm nền xám khi disabled
        }
+       &.editing-mode {
+           // Styles specific to editing mode
+       }
+       resize: vertical; // Controlled by inline style in JSX, but good to have here
+    }
+
+    // Style for the cancel edit button (standard button)
+     & > button.icon-button.cancel-edit-button {
+         margin-left: $spacing-xs;
+     }
+
+    // Styles for the send/save button (standard button)
+    & > button.icon-button.send-button {
+       background-color: $primary-color;
+       color: $secondary-color;
+       margin-left: $spacing-sm;
+       &:hover:not(:disabled) {
+          background-color: color.adjust($primary-color, $lightness: -5%);
+       }
+        &:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .fas.fa-spinner {
+            font-size: 1em;
+        }
     }
   }
+
+  // Overlay for message editing dialog (if used)
   .message-edit-dialog-overlay {
-    position: fixed; // Or absolute relative to chat container if preferred
+    position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
-    background-color: rgba(0, 0, 0, 0.4); // Semi-transparent background overlay
+    background-color: rgba(0, 0, 0, 0.4);
     display: flex;
-    align-items: center; // Center vertically
-    justify-content: center; // Center horizontally
-    z-index: 1000; // Ensure it's above everything else
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
   }
+}
+
+// Keyframes for spinner animation
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .message-edit-dialog {

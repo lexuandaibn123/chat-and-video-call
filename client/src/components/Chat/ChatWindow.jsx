@@ -2,121 +2,92 @@
 import React, { useState, useRef, useEffect } from 'react';
 import MessageBubble from './MessageBubble';
 import defaultAvatarPlaceholder from '../../assets/images/avatar_placeholder.jpg';
+import { UploadButton } from '../../utils/uploadthing'; // <<< Import UploadButton
 
 const ChatWindow = ({
     activeContact,
     messages,
     onMobileBack,
     isMobile,
-    // Input state and setter (lifted to parent)
-    messageInput, // <<< Receive messageInput value
-    setMessageInput, // <<< Receive messageInput setter
-    // Handlers for sending/saving/cancelling
-    onSendTextMessage, // For new messages
-    onSendFile, // For files/images
-    onSaveEditedMessage, // <<< New prop for saving edited text
-    onCancelEdit, // <<< New prop for cancelling edit
+    messageInput,
+    setMessageInput,
+    onSendTextMessage,
+    // onSendFile, // <<< REMOVE THIS PROP
+    onSaveEditedMessage,
+    onCancelEdit,
     isLoadingMessages,
     onOpenSettings,
     onDeleteMessage,
-    // onEditMessage prop is now the handler to *start* the edit
-    onEditMessage, // <<< This prop now calls the handler in ChatPage to SET editingMessageId
-    sendingMessage, // Pass sending state down (disables input/buttons)
-    currentUserId, // Pass current user ID down
-    editingMessageId // <<< Pass editingMessageId down (controls input area mode and bubble state)
+    onEditMessage,
+    sendingMessage,
+    currentUserId,
+    editingMessageId,
+    // <<< ADD NEW Uploadthing Handlers as props >>>
+    onUploadBeforeBegin,
+    onClientUploadComplete,
+    onUploadError,
+    // <<< End ADD >>>
 }) => {
-    // Remove local state and ref if lifted
-    // const [messageInput, setMessageInput] = useState(''); // REMOVE
     const messageListEndRef = useRef(null);
 
-    // Refs for hidden file inputs
-    const fileInputRef = useRef(null); // For general files (paperclip)
-    const imageInputRef = useRef(null); // For images (camera)
+    // REMOVE Refs for hidden file inputs
+    // const fileInputRef = useRef(null);
+    // const imageInputRef = useRef(null);
 
     // Ref for the message input field to manage focus
     const messageInputRef = useRef(null);
 
 
-    // EFFECT: Scroll to bottom when messages change, UNLESS editing
+    // EFFECT: Scroll to bottom (remains the same)
     useEffect(() => {
-         // Only scroll if not currently editing a message
          if (!isLoadingMessages && editingMessageId === null) {
              messageListEndRef.current?.scrollIntoView({ behavior: "auto" });
          }
-    }, [messages, isLoadingMessages, editingMessageId]); // Add editingMessageId to dependencies
+    }, [messages, isLoadingMessages, editingMessageId]);
 
 
-    // EFFECT: Focus input when editing starts
+    // EFFECT: Focus input when editing starts (remains the same)
     useEffect(() => {
         if (editingMessageId !== null) {
             messageInputRef.current?.focus();
-            // Move cursor to end of text? textarea.setSelectionRange(end, end)
             const input = messageInputRef.current;
             if (input) {
                  const end = input.value.length;
-                 // Using setTimeout to ensure focus happens after render
                  setTimeout(() => {
                       input.setSelectionRange(end, end);
                  }, 0);
             }
         }
-    }, [editingMessageId]); // Re-run when editingMessageId changes
+    }, [editingMessageId]);
 
 
-    // Handle form submission (either send new or save edit)
+    // Handle form submission (remains the same)
     const handleFormSubmit = (event) => {
         event.preventDefault();
         const messageText = messageInput.trim();
 
         if (editingMessageId !== null) {
-             // If in edit mode, call the save handler
-             // Basic validation: cannot save empty message (backend should also validate)
              if (messageText) {
-                  onSaveEditedMessage(); // Call the handler in ChatPage
+                  onSaveEditedMessage();
              } else {
-                  // Optionally show an error to the user
                  console.warn("Cannot save empty message.");
              }
         } else {
-            // If not in edit mode, call the send handler for new text message
             if (messageText) {
-                onSendTextMessage(messageText); // Call the handler in ChatPage
+                onSendTextMessage(messageText);
             }
         }
-         // Input clearing handled by parent component handlers (onSend/onSave/onCancel)
     };
 
-    // Handle input change (calls setter from parent)
+    // Handle input change (remains the same)
     const handleInputChange = (e) => {
          setMessageInput(e.target.value);
     };
 
-
-    // Handle file input change (for paperclip icon)
-    const handleFileChange = (event) => {
-        const file = event.target.files[0]; // Get the first selected file
-        if (file) {
-            // Use the file send handler
-            onSendFile(file); // <<< Call file handler
-        }
-        // Reset the input value so the same file can be selected again
-        event.target.value = null;
-    };
-
-    // Handle image input change (for camera icon)
-    const handleImageChange = (event) => {
-        const files = event.target.files; // Get all selected files (as FileList)
-        if (files && files.length > 0) {
-             for (let i = 0; i < files.length; i++) {
-                 onSendFile(files[i]); // <<< Call file handler for each image
-             }
-        }
-        // Reset the input value
-        event.target.value = null;
-    };
+    // REMOVE handleFileChange and handleImageChange
 
 
-    // Placeholder if no chat selected
+    // Placeholder if no chat selected (remains the same)
     if (!activeContact) {
         return (
             <section className="active-chat-panel placeholder">
@@ -132,6 +103,7 @@ const ChatWindow = ({
     return (
         <section className="active-chat-panel">
             <header className="chat-header">
+                {/* ... (header content remains the same) ... */}
                 {isMobile && (
                     <button className="icon-button back-button" title="Back" onClick={onMobileBack}>
                         <i className="fas fa-arrow-left"></i>
@@ -145,11 +117,10 @@ const ChatWindow = ({
                     </div>
                 </div>
                 <div className="chat-actions">
-                    {/* Keep existing action buttons or add new ones */}
-                    <button className="icon-button" title="Call" disabled={isEditingMode}><i className="fas fa-phone-alt"></i></button>
-                    <button className="icon-button" title="Video Call" disabled={isEditingMode}><i className="fas fa-video"></i></button>
+                    <button className="icon-button" title="Call" disabled={isEditingMode || sendingMessage}><i className="fas fa-phone-alt"></i></button>
+                    <button className="icon-button" title="Video Call" disabled={isEditingMode || sendingMessage}><i className="fas fa-video"></i></button>
                     {isGroupChat && onOpenSettings && (
-                         <button className="icon-button" title="More Options" onClick={onOpenSettings} disabled={isEditingMode}>
+                         <button className="icon-button" title="More Options" onClick={onOpenSettings} disabled={isEditingMode || sendingMessage}>
                               <i className="fas fa-ellipsis-v"></i>
                          </button>
                     )}
@@ -157,6 +128,7 @@ const ChatWindow = ({
             </header>
 
             <div className="message-list-container">
+                 {/* ... (message list rendering remains the same) ... */}
                 {isLoadingMessages ? (
                      <div className="loading-messages">Loading messages...</div>
                 ) : messages.length === 0 ? (
@@ -176,10 +148,10 @@ const ChatWindow = ({
                             senderAvatar={msg.senderAvatar}
                             isGroupChat={isGroupChat}
                             currentUserId={currentUserId}
-                            status={msg.status}
+                            status={msg.status} // Pass status for optimistic updates
                             onDeleteMessage={onDeleteMessage}
-                            onEditMessage={onEditMessage} // This now calls handleInitiateEditMessage in ChatPage
-                            editingMessageId={editingMessageId} // Pass down which message is being edited
+                            onEditMessage={onEditMessage}
+                            editingMessageId={editingMessageId}
                         />
                     ))
                 )}
@@ -187,105 +159,101 @@ const ChatWindow = ({
             </div>
 
             {/* Form nhập liệu */}
-            {/* Use onSubmit for both sending new text and saving edited text */}
-            <form className="chat-input-area" onSubmit={handleFormSubmit}> {/* <<< Use handleFormSubmit */}
+            <form className="chat-input-area" onSubmit={handleFormSubmit}>
 
-                {/* Hidden file inputs (should be disabled while editing) */}
-                <input
-                    type="file"
-                    ref={fileInputRef}
-                    style={{ display: 'none' }}
-                    onChange={handleFileChange}
-                    disabled={sendingMessage || !activeContact || isEditingMode} // Disable while sending/uploading OR editing
-                />
-                <input
-                    type="file"
-                    ref={imageInputRef}
-                    style={{ display: 'none' }}
-                    accept="image/*"
-                    multiple
-                    onChange={handleImageChange}
-                    disabled={sendingMessage || !activeContact || isEditingMode} // Disable while sending/uploading OR editing
-                />
+                {/* REMOVE hidden file inputs */}
 
-                {/* Button to trigger file input (should be disabled while editing) */}
-                <button
-                    type="button"
-                    className="icon-button attach-button"
-                    title="Attach File"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={sendingMessage || !activeContact || isEditingMode} // Disable while sending/uploading OR editing
-                >
-                    <i className="fas fa-paperclip"></i>
-                </button>
+                {/* <<< START NEW UploadButton COMPONENTS >>> */}
 
-                {/* Input for message text or edited text */}
-                {/* Use ref for focus management */}
+                {/* Paperclip Button (Files) */}
+                 <div className="icon-button attach-button uploadthing-wrapper"> {/* Use a wrapper for styling */}
+                    <UploadButton
+                        endpoint={"conversationUploader"} // Match your backend endpoint name
+                        key="file-uploader" // Unique key
+                        disabled={sendingMessage || !activeContact || isEditingMode} // Disable when busy or editing
+                        content={{
+                            button: <i className="fas fa-paperclip"></i>, // Use your icon
+                            // allowedContent: "Any file, max 4MB", // Optional hint
+                        }}
+                        // Add appearance styles to match your existing icon buttons
+                        appearance={{
+                             button: { padding: 0, height: 'auto', lineHeight: 'normal', pointerEvents: 'all' },
+                             container: { display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' },
+                             // label: { display: 'none' },
+                        }}
+                        // Wire up the handlers passed from parent
+                        onBeforeUploadBegin={onUploadBeforeBegin}
+                        onClientUploadComplete={onClientUploadComplete}
+                        onUploadError={onUploadError}
+                    />
+                 </div>
+
+                 {/* Camera Button (Images) */}
+                  <div className="icon-button uploadthing-wrapper"> {/* Wrapper for styling */}
+                    <UploadButton
+                        endpoint={"conversationUploader"} // Match your backend endpoint name
+                        key="image-uploader" // Unique key
+                        multiple={true} // Allow multiple image selection
+                        accept="image/*" // Only accept image files
+                        disabled={sendingMessage || !activeContact || isEditingMode} // Disable when busy or editing
+                        content={{
+                            button: <i className="fas fa-camera"></i>, // Use your icon
+                            // allowedContent: "Images only, max 4MB each", // Optional hint
+                        }}
+                         appearance={{
+                             button: { padding: 0, height: 'auto', lineHeight: 'normal', pointerEvents: 'all' },
+                             container: { display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' },
+                             // label: { display: 'none' },
+                        }}
+                        // Wire up the handlers passed from parent
+                        onBeforeUploadBegin={onUploadBeforeBegin}
+                        onClientUploadComplete={onClientUploadComplete}
+                        onUploadError={onUploadError}
+                    />
+                 </div>
+                {/* >>> END NEW UploadButton COMPONENTS >>> */}
+
+
+                {/* Input for message text or edited text (remains the same) */}
                  <textarea
-                     ref={messageInputRef} // <<< Use ref here
-                     value={messageInput} // <<< Use prop value
-                     onChange={handleInputChange} // <<< Use prop setter via local handler
-                     placeholder={isEditingMode ? "Editing message..." : "Type your message here..."} // Change placeholder
-                     className={`message-input ${isEditingMode ? 'editing-mode' : ''}`} // Add class for styling
+                     ref={messageInputRef}
+                     value={messageInput}
+                     onChange={handleInputChange}
+                     placeholder={isEditingMode ? "Editing message..." : "Type your message here..."}
+                     className={`message-input ${isEditingMode ? 'editing-mode' : ''}`}
                      name="messageInput"
                      autoComplete="off"
-                     disabled={isLoadingMessages || !activeContact || sendingMessage} // Disable while loading messages, no chat, or sending/saving
-                     rows={isEditingMode ? 2 : 1} // Adjust rows maybe? Or rely on CSS resize
-                     style={{ resize: isEditingMode ? 'vertical' : 'none' }} // Allow vertical resize when editing
+                     disabled={isLoadingMessages || !activeContact || sendingMessage}
+                     rows={isEditingMode ? 2 : 1}
+                     style={{ resize: isEditingMode ? 'vertical' : 'none' }}
                  />
-                 {/* Or keep it as <input type="text"> if you prefer single line initially */}
-                 {/*
-                <input
-                    ref={messageInputRef}
-                    type="text"
-                    placeholder={isEditingMode ? "Editing message..." : "Type your message here..."}
-                    className={`message-input ${isEditingMode ? 'editing-mode' : ''}`}
-                    name="messageInput"
-                    autoComplete="off"
-                    disabled={isLoadingMessages || !activeContact || sendingMessage}
-                    value={messageInput}
-                    onChange={handleInputChange}
-                />
-                 */}
 
 
-                {/* Button to trigger image input (should be disabled while editing) */}
-                 <button
-                     type="button"
-                     className="icon-button"
-                     title="Attach Photo"
-                     onClick={() => imageInputRef.current?.click()}
-                     disabled={sendingMessage || !activeContact || isEditingMode} // Disable while sending/uploading OR editing
-                 >
-                     <i className="fas fa-camera"></i>
-                 </button>
-
-                 {/* Emoji button (should be disabled while editing) */}
+                 {/* Emoji button (remains the same) */}
                 <button type="button" className="icon-button" title="Emoji" disabled={sendingMessage || !activeContact || isEditingMode}><i className="far fa-smile"></i></button>
 
-                {/* Cancel Edit Button (appears only in editing mode) */}
+                {/* Cancel Edit Button (remains the same) */}
                  {isEditingMode && (
                       <button
-                           type="button" // Important: prevent form submission
-                           className="icon-button cancel-edit-button" // Add a specific class
+                           type="button"
+                           className="icon-button cancel-edit-button"
                            title="Cancel Edit"
-                           onClick={onCancelEdit} // Calls handler in ChatPage
-                           disabled={sendingMessage} // Disable if saving is in progress
+                           onClick={onCancelEdit}
+                           disabled={sendingMessage}
                       >
-                           <i className="fas fa-times"></i> {/* Close/Cancel icon */}
+                           <i className="fas fa-times"></i>
                       </button>
                  )}
 
 
-                {/* Send/Save Button (Submits the form) */}
+                {/* Send/Save Button (remains the same) */}
                 <button
-                    type="submit" // This button submits the form
+                    type="submit"
                     className="icon-button send-button"
-                    title={isEditingMode ? "Save Edit" : "Send Message"} // Change title
-                    // Disabled if loading, no active chat, sending/saving, or text input is empty
-                    disabled={isLoadingMessages || !activeContact || sendingMessage || !messageInput.trim()}
+                    title={isEditingMode ? "Save Edit" : "Send Message"}
+                    disabled={isLoadingMessages || !activeContact || sendingMessage || (!isEditingMode && !messageInput.trim())}
                 >
-                     {sendingMessage ? <i className="fas fa-spinner fa-spin"></i> : (isEditingMode ? <i className="fas fa-check"></i> : <i className="fas fa-paper-plane"></i>)} {/* Change icon */}
+                     {sendingMessage ? <i className="fas fa-spinner fa-spin"></i> : (isEditingMode ? <i className="fas fa-check"></i> : <i className="fas fa-paper-plane"></i>)}
                 </button>
             </form>
         </section>

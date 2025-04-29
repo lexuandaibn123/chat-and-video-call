@@ -302,6 +302,7 @@ export const getMessagesByRoomIdApi = async ({ conversationId, limit = 30, skip 
 // Gửi tin nhắn mới (Endpoint mới)
 // URL trong screenshot: POST /conversation/create-new-message
 export const sendMessageApi = async ({ conversationId, data, type, replyToMessageId = null }) => { // Tên hàm giữ nguyên để ít thay đổi ChatPage
+  console.log(JSON.stringify({ conversationId, data, type, replyToMessageId }));
   try {
     const response = await fetch(`${API_BASE_URL}/conversation/create-new-message`, { // Endpoint mới
       method: 'POST',

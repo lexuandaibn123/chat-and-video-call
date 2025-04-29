@@ -67,6 +67,7 @@ export const getHandlers = ({
   setIsEditingName,
   setEditingGroupName,
   setSearchTerm,
+  optimisticMessagesRef,
 }) => {
   // --- Generic handler for settings API actions ---
   const performSettingsAction = useCallback(
@@ -772,114 +773,276 @@ export const getHandlers = ({
     ]
   );
 
-  // --- Handler for sending file ---
-  const handleSendFile = useCallback(
-    async (file) => {
-      const currentUserId = currentUserIdRef.current;
+  const handleUploadBeforeBegin = useCallback((files) => {
+    const currentUserId = currentUserIdRef.current;
 
-      if (
-        !activeChat?.id ||
-        !currentUserId ||
-        sendingMessage ||
-        editingMessageId !== null ||
-        !file
-      ) {
-        console.warn('Cannot send file: Invalid state');
-        return;
-      }
+    if (!activeChat?.id || !currentUserId || sendingMessage || editingMessageId !== null || !files || files.length === 0) {
+        console.warn('Cannot upload file(s): Invalid state or no files selected.');
+        setActionError('Cannot send file(s) now.');
+        return null; // Cancel the upload
+    }
 
-      setSendingMessage(true);
-      setActionError(null);
-      const tempId = `temp-${Date.now()}-${Math.random().toString(36).substring(7)}`;
-      const fileType = file.type.startsWith('image/') ? 'image' : 'file';
+    setSendingMessage(true);
+    setActionError(null);
 
-      let localPreviewUrl = null;
-      if (fileType === 'image') {
-        try {
-          localPreviewUrl = URL.createObjectURL(file);
-        } catch (e) {
-          console.error('Error creating object URL for image preview:', e);
-        }
-      }
-
-      const newFileMessageOptimistic = createOptimisticFileMessage(
-        tempId,
-        file,
-        currentUserId,
-        user,
-        localPreviewUrl
-      );
-      setMessages((prevMessages) => [...prevMessages, newFileMessageOptimistic]);
-
-      let uploadedFileDetails = null;
-      try {
-        const formData = new FormData();
-        formData.append('file', file);
-        const uploadResponse = await mockUploadFileApi(formData);
-
-        if (!uploadResponse || !uploadResponse.success || !uploadResponse.data) {
-          throw new Error(uploadResponse?.message || 'File upload failed.');
-        }
-        uploadedFileDetails = uploadResponse.data;
-
-        const messagePayload = buildFileMessagePayload(activeChat.id, fileType, uploadedFileDetails, tempId);
-
-        // Emit file message via Socket.IO
-        if (socket) {
-          socket.emit('message', messagePayload);
+    const newOptimisticMessages = files.map(file => {
+        const tempId = `temp-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+        const fileType = file.type.startsWith('image/') ? 'image' : 'file';
+        let localPreviewUrl = null;
+        if (fileType === 'image') {
+            try {
+                localPreviewUrl = URL.createObjectURL(file);
+            } catch (e) {
+                console.error('Error creating object URL for image preview:', e);
+            }
         }
 
-        // Keep HTTP API call
-        const sentMessage = await sendMessageApi(messagePayload);
-        console.log('File message sent successfully:', sentMessage);
-
-        if (sentMessage && sentMessage._id) {
-          const formattedSentMessage = formatReceivedMessage(sentMessage, currentUserId);
-
-          setMessages((prevMessages) =>
-            prevMessages.map((msg) =>
-              msg.id === tempId ? { ...formattedSentMessage, sender: 'self' } : msg
-            )
-          );
-
-          setConversations((prevConversations) =>
-            updateConversationsListLatestMessage(prevConversations, activeChat.id, sentMessage)
-          );
-
-          if (localPreviewUrl) {
-            URL.revokeObjectURL(localPreviewUrl);
-          }
-        } else {
-          throw new Error(sentMessage?.message || 'Failed to send file message.');
-        }
-      } catch (err) {
-        console.error('Failed to upload or send file:', err);
-        setMessages((prevMessages) =>
-          prevMessages.map((msg) =>
-            msg.id === tempId ? { ...newFileMessageOptimistic, status: 'failed' } : msg
-          )
+        const optimisticMsg = createOptimisticFileMessage(
+            tempId,
+            file, // Pass original file data
+            currentUserId,
+            user,
+            localPreviewUrl
         );
-        setActionError(err.message || 'Failed to send file.');
-        if (localPreviewUrl) {
-          URL.revokeObjectURL(localPreviewUrl);
+
+        // Store original file data and tempId, keyed by a unique identifier for lookup later
+        // Using file.name might be sufficient, or use tempId if filenames can be duplicated in a batch
+        // Let's use file.name for simplicity, assuming unique names per batch for now,
+        // or ensure your backend returns a key/name you can match.
+        // If using file.name, make sure to handle potential duplicates.
+        // A safer key might be a combination or a unique ID generated here.
+         optimisticMessagesRef.current[file.name] = { tempId, localPreviewUrl, originalFile: file };
+
+
+        return optimisticMsg;
+    });
+
+    // Add optimistic messages to state
+    setMessages(prevMessages => [...prevMessages, ...newOptimisticMessages]);
+
+    console.log("Upload begins for:", files.map(f => f.name).join(', '));
+
+    // Return the files to continue with the upload
+    return files;
+
+}, [activeChat?.id, currentUserIdRef, sendingMessage, editingMessageId, setSendingMessage, setActionError, setMessages, user]);
+
+
+const handleUploadComplete = useCallback(async (res) => {
+    console.log("Files uploaded:", res);
+    setActionError(null);
+
+    const filesBeingProcessed = { ...optimisticMessagesRef.current }; // Clone before clearing
+    optimisticMessagesRef.current = {}; // Clear ref immediately for next batch
+
+    // Process each uploaded file result
+    for (const uploadedFileDetails of res) {
+         // Find corresponding optimistic data using the name/key returned by Uploadthing
+        const originalFileName = uploadedFileDetails.name; // Assuming 'name' is returned
+        const optimisticData = filesBeingProcessed[originalFileName];
+
+        if (!optimisticData) {
+             console.error("Could not find optimistic message data for uploaded file:", originalFileName, uploadedFileDetails);
+             // This indicates a mismatch between files sent and results received
+             continue;
         }
-      } finally {
-        setSendingMessage(false);
-      }
-    },
-    [
-      activeChat,
-      sendingMessage,
-      editingMessageId,
-      currentUserIdRef,
-      user,
-      socket,
-      setMessages,
-      setActionError,
-      setConversations,
-      setSendingMessage,
-    ]
-  );
+
+        const { tempId, localPreviewUrl, originalFile } = optimisticData;
+        const fileType = originalFile.type.startsWith('image/') ? 'image' : 'file';
+
+        try {
+            // Build the final message payload
+            const messagePayload = buildFileMessagePayload(activeChat.id, fileType, uploadedFileDetails, tempId);
+
+            // Emit via Socket.IO
+            if (socket) {
+                socket.emit('message', messagePayload); // Adjust event name if necessary
+            }
+
+            // Send the message payload via HTTP API
+            const sentMessage = await sendMessageApi(messagePayload);
+            console.log('File message sent successfully via API:', sentMessage);
+
+            if (sentMessage && sentMessage._id) {
+                // Format and update message in state
+                const formattedSentMessage = formatReceivedMessage(sentMessage, currentUserIdRef.current);
+
+                setMessages((prevMessages) =>
+                    prevMessages.map((msg) =>
+                        msg.id === tempId ? { ...formattedSentMessage, sender: 'self' } : msg
+                    )
+                );
+
+                // Update conversations list
+                setConversations((prevConversations) =>
+                    updateConversationsListLatestMessage(prevConversations, activeChat.id, sentMessage)
+                );
+
+            } else {
+                 // Handle API call failure after successful upload
+                console.error('Failed to send message after successful upload:', sentMessage?.message);
+                throw new Error(sentMessage?.message || 'Failed to send file message.'); // Throw to trigger catch
+            }
+
+        } catch (err) {
+            console.error('Error sending file message after upload:', err);
+             // Mark the specific optimistic message as failed
+            setMessages((prevMessages) =>
+                prevMessages.map((msg) =>
+                    msg.id === tempId ? { ...msg, status: 'failed' } : msg
+                )
+            );
+            setActionError(err.message || `Failed to send file: ${originalFileName}`);
+        } finally {
+            // Clean up local URL for this specific file
+             if (localPreviewUrl) {
+                URL.revokeObjectURL(localPreviewUrl);
+             }
+        }
+    } // End loop
+
+    // Reset overall sending state (consider if you have a batch counter for multiple files)
+     setSendingMessage(false);
+
+}, [activeChat?.id, currentUserIdRef, socket, sendMessageApi, setMessages, setConversations, setActionError, setSendingMessage, user, optimisticMessagesRef]);
+
+
+const handleUploadError = useCallback((error) => {
+    console.error("Uploadthing Error:", error);
+
+    // Mark all pending optimistic messages in the ref as failed
+    Object.values(optimisticMessagesRef.current).forEach(data => {
+        setMessages(prevMessages =>
+            prevMessages.map(msg =>
+                 msg.id === data.tempId ? { ...msg, status: 'failed' } : msg
+             )
+         );
+        // Revoke local URL for failed ones
+        if (data.localPreviewUrl) {
+            URL.revokeObjectURL(data.localPreviewUrl);
+        }
+     });
+
+    // Clear the ref
+    optimisticMessagesRef.current = {};
+
+    // Reset sending state
+    setSendingMessage(false);
+
+    setActionError(error.message || 'File upload failed.');
+
+}, [setMessages, setActionError, setSendingMessage, optimisticMessagesRef]);
+
+// --- End NEW Uploadthing Handlers ---
+
+  // --- Handler for sending file ---
+  // const handleSendFile = useCallback(
+  //   async (file) => {
+  //     const currentUserId = currentUserIdRef.current;
+
+  //     if (
+  //       !activeChat?.id ||
+  //       !currentUserId ||
+  //       sendingMessage ||
+  //       editingMessageId !== null ||
+  //       !file
+  //     ) {
+  //       console.warn('Cannot send file: Invalid state');
+  //       return;
+  //     }
+
+  //     setSendingMessage(true);
+  //     setActionError(null);
+  //     const tempId = `temp-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+  //     const fileType = file.type.startsWith('image/') ? 'image' : 'file';
+
+  //     let localPreviewUrl = null;
+  //     if (fileType === 'image') {
+  //       try {
+  //         localPreviewUrl = URL.createObjectURL(file);
+  //       } catch (e) {
+  //         console.error('Error creating object URL for image preview:', e);
+  //       }
+  //     }
+
+  //     const newFileMessageOptimistic = createOptimisticFileMessage(
+  //       tempId,
+  //       file,
+  //       currentUserId,
+  //       user,
+  //       localPreviewUrl
+  //     );
+  //     setMessages((prevMessages) => [...prevMessages, newFileMessageOptimistic]);
+
+  //     let uploadedFileDetails = null;
+  //     try {
+  //       const formData = new FormData();
+  //       formData.append('file', file);
+  //       const uploadResponse = await mockUploadFileApi(formData);
+
+  //       if (!uploadResponse || !uploadResponse.success || !uploadResponse.data) {
+  //         throw new Error(uploadResponse?.message || 'File upload failed.');
+  //       }
+  //       uploadedFileDetails = uploadResponse.data;
+
+  //       const messagePayload = buildFileMessagePayload(activeChat.id, fileType, uploadedFileDetails, tempId);
+
+  //       // Emit file message via Socket.IO
+  //       if (socket) {
+  //         socket.emit('message', messagePayload);
+  //       }
+
+  //       // Keep HTTP API call
+  //       const sentMessage = await sendMessageApi(messagePayload);
+  //       console.log('File message sent successfully:', sentMessage);
+
+  //       if (sentMessage && sentMessage._id) {
+  //         const formattedSentMessage = formatReceivedMessage(sentMessage, currentUserId);
+
+  //         setMessages((prevMessages) =>
+  //           prevMessages.map((msg) =>
+  //             msg.id === tempId ? { ...formattedSentMessage, sender: 'self' } : msg
+  //           )
+  //         );
+
+  //         setConversations((prevConversations) =>
+  //           updateConversationsListLatestMessage(prevConversations, activeChat.id, sentMessage)
+  //         );
+
+  //         if (localPreviewUrl) {
+  //           URL.revokeObjectURL(localPreviewUrl);
+  //         }
+  //       } else {
+  //         throw new Error(sentMessage?.message || 'Failed to send file message.');
+  //       }
+  //     } catch (err) {
+  //       console.error('Failed to upload or send file:', err);
+  //       setMessages((prevMessages) =>
+  //         prevMessages.map((msg) =>
+  //           msg.id === tempId ? { ...newFileMessageOptimistic, status: 'failed' } : msg
+  //         )
+  //       );
+  //       setActionError(err.message || 'Failed to send file.');
+  //       if (localPreviewUrl) {
+  //         URL.revokeObjectURL(localPreviewUrl);
+  //       }
+  //     } finally {
+  //       setSendingMessage(false);
+  //     }
+  //   },
+  //   [
+  //     activeChat,
+  //     sendingMessage,
+  //     editingMessageId,
+  //     currentUserIdRef,
+  //     user,
+  //     socket,
+  //     setMessages,
+  //     setActionError,
+  //     setConversations,
+  //     setSendingMessage,
+  //   ]
+  // );
 
   // --- Handler for deleting a message ---
   const handleDeleteMessage = useCallback(
@@ -1186,7 +1349,10 @@ export const getHandlers = ({
     handleCancelEditGroupName,
     handleSaveEditGroupName,
     handleSendTextMessage,
-    handleSendFile,
+    // handleSendFile,
+    handleUploadBeforeBegin,
+    handleUploadComplete,
+    handleUploadError,
     handleDeleteMessage,
     handleInitiateEditMessage,
     handleSaveEditedMessage,

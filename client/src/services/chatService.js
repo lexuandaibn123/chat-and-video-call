@@ -225,32 +225,49 @@ export const createOptimisticFileMessage = (tempId, file, currentUserId, user, l
 
 // Hàm tạo payload gửi tin nhắn file/image cho API sau khi upload
 export const buildFileMessagePayload = (conversationId, fileType, uploadedFileDetails, replyToMessageId = null) => {
-     let apiPayloadData;
-     // Cấu trúc data cho API phụ thuộc vào type (image hay file)
-     if (fileType === 'image') {
-          apiPayloadData = {
-              image: [{
-                  data: uploadedFileDetails.data, // URL từ upload response
-                  metadata: uploadedFileDetails.metadata,
-                  type: 'image'
-              }]
-          };
-     } else { // fileType === 'file'
-          apiPayloadData = {
-              file: {
-                  data: uploadedFileDetails.data, // URL từ upload response
-                  metadata: uploadedFileDetails.metadata,
-                  type: 'file'
-              }
-          };
-     }
 
-     return {
-         conversationId: conversationId,
-         type: fileType, // 'image' or 'file' (type ngoài cùng)
-         data: apiPayloadData, // Dữ liệu content đã cấu trúc
-         replyToMessageId: replyToMessageId, // TODO
-     };
+    const serverFileDetails = uploadedFileDetails.serverData;
+
+    let dataForBackend; // <-- Đây sẽ là giá trị của trường 'data' ở level ngoài
+
+    if (fileType === 'image') {
+         // Backend mong đợi [...data] khi type là image.
+         // Nếu data là mảng [{ url, ... }], backend [...mảng] sẽ là mảng.
+         // => dataForBackend cần là mảng [{ url, ... }]
+         dataForBackend = [{
+             url: serverFileDetails.url,
+             // ... map các trường khác từ serverFileDetails sang ImagePartSchema ...
+             name: serverFileDetails.name,
+             size: serverFileDetails.size,
+             contentType: serverFileDetails.type,
+             fileHash: serverFileDetails.fileHash,
+         }];
+    } else if (fileType === 'file') {
+         // Backend mong đợi { ...data } khi type là file.
+         // Nếu data là object { url, name, ... }, backend { ...object } sẽ là object.
+         // => dataForBackend cần là object { url, name, ... }
+         dataForBackend = {
+             url: serverFileDetails.url,
+             name: serverFileDetails.name,
+             size: serverFileDetails.size,
+             contentType: serverFileDetails.type,
+             fileHash: serverFileDetails.fileHash,
+             // ... map các trường khác ...
+         };
+    } else {
+         console.error("Unsupported file type for message payload:", fileType);
+         // Fallback
+         dataForBackend = { url: serverFileDetails.url, name: serverFileDetails.name, size: serverFileDetails.size, contentType: serverFileDetails.type };
+    }
+    console.log(dataForBackend);
+
+    // Xây dựng cấu trúc payload - KHÔNG CÓ OBJECT data { data, type } trung gian nữa
+    return {
+        conversationId: conversationId,
+        type: fileType, // 'image' or 'file' (outer type)
+        data: dataForBackend, // <--- dataForBackend là mảng hoặc object trực tiếp
+        replyToMessageId: replyToMessageId,
+    };
 };
 
 
