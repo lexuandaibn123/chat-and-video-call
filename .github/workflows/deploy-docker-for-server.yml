@@ -1,4 +1,4 @@
-name: Build and Push Docker Image For Server
+name: Deploy Docker Image For Server
 
 on:
   push:
