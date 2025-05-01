@@ -3,7 +3,7 @@ import io from 'socket.io-client';
 import { getMessagesByRoomIdApi } from '../api/conversations';
 import { processRawMessages, formatReceivedMessage } from '../services/chatService';
 
-const SOCKET_ADMIN_URL = `${import.meta.env.VITE_SERVER_URL}/admin`;
+const SOCKET_ADMIN_URL = `${import.meta.env.VITE_SERVER_URL}/api`;
 
 // Ensure the hook is only called in a React context
 if (typeof useState !== 'function' || typeof useEffect !== 'function' || typeof useRef !== 'function') {

@@ -32,10 +32,14 @@ const ChatPageLayout = ({
   onUploadBeforeBegin,
   onClientUploadComplete,
   onUploadError,
+  onUploadProgress,
 }) => {
   // Filter conversations for groups and friends
   const filteredConversations = conversations.filter((conv) => {
-    const nameMatch = conv?.name && typeof conv.name === 'string' && conv.name.toLowerCase().includes(searchTerm);
+    const nameMatch =
+      conv?.name &&
+      typeof conv.name === "string" &&
+      conv.name.toLowerCase().includes(searchTerm);
     return nameMatch;
   });
 
@@ -45,7 +49,11 @@ const ChatPageLayout = ({
   // Determine rendering conditions
   const showInitialLoading =
     isAuthLoading ||
-    (isAuthenticated && currentUserId && isLoadingConversations && !activeChat && !error);
+    (isAuthenticated &&
+      currentUserId &&
+      isLoadingConversations &&
+      !activeChat &&
+      !error);
   const showAuthError = !isAuthLoading && !isAuthenticated;
   const showGeneralError =
     error &&
@@ -69,14 +77,16 @@ const ChatPageLayout = ({
   if (showAuthError) {
     return (
       <div className="chat-page-container">
-        <div className="error-message">Error: {error || 'User not authenticated. Please login.'}</div>
+        <div className="error-message">
+          Error: {error || "User not authenticated. Please login."}
+        </div>
       </div>
     );
   }
 
   // Render general error
   if (showGeneralError) {
-    console.error('Rendering with general error:', error);
+    console.error("Rendering with general error:", error);
     return (
       <div className="chat-page-container">
         <div className="error-message">Error: {error}</div>
@@ -86,7 +96,11 @@ const ChatPageLayout = ({
 
   // Render main chat UI
   return (
-    <div className={`chat-page-container ${isMobileChatActive ? 'chat-active-mobile' : ''}`}>
+    <div
+      className={`chat-page-container ${
+        isMobileChatActive ? "chat-active-mobile" : ""
+      }`}
+    >
       <ConversationListPanel
         groups={filteredGroups}
         friends={filteredFriends}
@@ -112,7 +126,9 @@ const ChatPageLayout = ({
         onSaveEditedMessage={handlers.handleSaveEditedMessage}
         onCancelEdit={handlers.handleCancelEdit}
         isLoadingMessages={isLoadingMessages}
-        onOpenSettings={activeChat?.isGroup ? handlers.handleOpenSettings : null}
+        onOpenSettings={
+          activeChat?.isGroup ? handlers.handleOpenSettings : null
+        }
         onDeleteMessage={handlers.handleDeleteMessage}
         onEditMessage={handlers.handleInitiateEditMessage}
         currentUserId={currentUserId}
@@ -121,6 +137,7 @@ const ChatPageLayout = ({
         onUploadBeforeBegin={onUploadBeforeBegin}
         onClientUploadComplete={onClientUploadComplete}
         onUploadError={onUploadError}
+        onUploadProgress={onUploadProgress}
       />
 
       {isSettingsOpen && activeChat?.isGroup && activeChat.detailedMembers && (

@@ -1,17 +1,15 @@
 const nodemailer = require("nodemailer");
 
-const SMTP_SERVER_HOST = process.env.SMTP_SERVER_HOST;
-const SMTP_SERVER_USERNAME = process.env.SMTP_SERVER_USERNAME;
-const SMTP_SERVER_PASSWORD = process.env.SMTP_SERVER_PASSWORD;
+const { emailService } = require("../../constants");
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
-  host: SMTP_SERVER_HOST,
+  host: emailService.host,
   port: 587,
   secure: true,
   auth: {
-    user: SMTP_SERVER_USERNAME,
-    pass: SMTP_SERVER_PASSWORD,
+    user: emailService.username,
+    pass: emailService.password,
   },
 });
 
@@ -23,7 +21,7 @@ const sendMail = async (data) => {
       throw new Error("SMTP Server is not working");
     }
 
-    const adminAddress = `LiamLee <${SMTP_SERVER_USERNAME}>`;
+    const adminAddress = `LiamLee <${emailService.username}>`;
 
     const message = {
       from: adminAddress,

@@ -1,6 +1,9 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import io from 'socket.io-client';
 import { formatReceivedMessage, updateConversationsListLatestMessage } from './chatService';
+
+// Lấy URL từ biến môi trường
+const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:8080';
 
 export const useSocket = ({
   isAuthenticated,
@@ -11,91 +14,128 @@ export const useSocket = ({
   setActionError,
 }) => {
   const socketRef = useRef(null);
+  const isConnectedRef = useRef(false); // Theo dõi trạng thái kết nối
+
+  // Hàm gửi tin nhắn
+  const sendMessage = useCallback(
+    ({ conversationId, data, type, replyToMessageId = null }) => {
+      if (!socketRef.current || !isConnectedRef.current) {
+        setActionError('Socket is not connected. Please try again.');
+        return false;
+      }
+
+      socketRef.current.emit('newMessage', {
+        conversationId,
+        type,
+        data: {
+          data,
+          type,
+        },
+        replyToMessageId,
+      });
+      return true;
+    },
+    [setActionError]
+  );
 
   useEffect(() => {
-    if (!isAuthenticated || !userId) return;
+    if (!isAuthenticated || !userId) {
+      console.warn('useSocket: Not authenticated or missing userId. Skipping socket initialization.');
+      return;
+    }
 
-    // Initialize Socket.IO connection to admin namespace
-    socketRef.current = io('http://localhost:8080/admin', {
+    // Khởi tạo socket
+    socketRef.current = io(SERVER_URL, {
       withCredentials: true,
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
     });
 
-    // Handle connection
     socketRef.current.on('connect', () => {
-      console.log('Socket.IO connected to admin namespace');
-      socketRef.current.emit('setup');
+      console.log('Socket.IO connected');
+      isConnectedRef.current = true;
+      socketRef.current.emit('setup', { page: 1, limit: 30 });
     });
 
-    // Handle setup confirmation
     socketRef.current.on('connected', () => {
       console.log('Socket.IO setup confirmed by server');
     });
 
-    // Handle incoming messages
-    socketRef.current.on('message', (receivedMessage) => {
+    socketRef.current.on('unauthorized', () => {
+      console.error('Unauthorized: Session invalid or missing');
+      setActionError('Unauthorized: Please log in again');
+      socketRef.current.disconnect();
+      isConnectedRef.current = false;
+    });
+
+    socketRef.current.on('receiveMessage', (receivedMessage) => {
       console.log('Received real-time message:', receivedMessage);
 
-      if (receivedMessage.conversationId === activeChatId) {
+      // Kiểm tra activeChatId trước khi cập nhật messages
+      if (receivedMessage.conversationId && receivedMessage.conversationId === activeChatId) {
         setMessages((prevMessages) => {
           const isDuplicate = prevMessages.some(
             (msg) => msg.id === receivedMessage._id || msg.id === receivedMessage.tempId
           );
           if (isDuplicate) {
-            // Update existing optimistic message
             return prevMessages.map((msg) =>
               msg.id === receivedMessage.tempId
                 ? { ...formatReceivedMessage(receivedMessage, userId), sender: msg.sender }
                 : msg
             );
           }
-          // Add new message
           const formattedMessage = formatReceivedMessage(receivedMessage, userId);
           return [...prevMessages, formattedMessage];
         });
-
-        // Update conversations list
-        setConversations((prevConvs) =>
-          updateConversationsListLatestMessage(prevConvs, receivedMessage.conversationId, receivedMessage)
-        );
       }
+
+      // Cập nhật danh sách conversations bất kể activeChatId
+      setConversations((prevConvs) =>
+        updateConversationsListLatestMessage(prevConvs, receivedMessage.conversationId, receivedMessage)
+      );
     });
 
-    // Handle socket errors
+    socketRef.current.on('typing', (memberId) => {
+      console.log(`${memberId} is typing`);
+    });
+
+    socketRef.current.on('stopTyping', (memberId) => {
+      console.log(`${memberId} stopped typing`);
+    });
+
     socketRef.current.on('error', (error) => {
       console.error('Socket.IO error:', error);
       setActionError(error.message || 'Real-time connection error');
     });
 
-    // Handle connection errors
     socketRef.current.on('connect_error', (err) => {
       console.error('Socket.IO connection error:', err);
       setActionError('Failed to connect to real-time server');
+      isConnectedRef.current = false;
     });
 
-    // Handle disconnection
     socketRef.current.on('disconnect', () => {
       console.log('Socket.IO disconnected');
+      isConnectedRef.current = false;
     });
 
-    // Cleanup on unmount
     return () => {
       if (socketRef.current) {
         socketRef.current.disconnect();
+        isConnectedRef.current = false;
         console.log('Socket.IO connection closed');
       }
     };
   }, [isAuthenticated, userId, activeChatId, setMessages, setConversations, setActionError]);
 
-  // Join conversation room when activeChatId changes
+  // Tham gia phòng chat khi activeChatId thay đổi
   useEffect(() => {
-    if (socketRef.current && activeChatId) {
+    if (socketRef.current && activeChatId && isConnectedRef.current) {
       socketRef.current.emit('join', activeChatId);
       console.log(`Socket joined room ${activeChatId}`);
     }
   }, [activeChatId]);
 
-  return socketRef.current;
+  return { socket: socketRef.current, sendMessage, isConnected: isConnectedRef.current };
 };

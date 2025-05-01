@@ -1,5 +1,3 @@
-require("dotenv").config();
-
 const express = require("express");
 const app = express();
 const bodyParser = require("body-parser");
@@ -16,26 +14,21 @@ const ConversationService = require("./services/conversation");
 const { instrument } = require("@socket.io/admin-ui");
 const { uploadRouter } = require("./utils/uploadthing");
 const { createRouteHandler } = require("uploadthing/express");
-
-const PORT = process.env.PORT || 8080;
-
-const serverUrl = process.env.SERVER_URL;
-
-const clientUrl = process.env.CLIENT_URL;
-
-const authSecret = process.env.AUTH_SECRET;
-
-const nodeEnv = process.env.NODE_ENV;
-
-const SESSION_RELOAD_INTERVAL = 30 * 1000;
-
-const UPLOADTHING_TOKEN = process.env.UPLOADTHING_TOKEN;
+const {
+  PORT,
+  SERVER_URL,
+  CLIENT_URL,
+  AUTH_SECRET,
+  NODE_ENV,
+  SESSION_RELOAD_INTERVAL,
+  UPLOADTHING_TOKEN,
+} = require("./constants");
 
 db.connect();
 
 /* Session */
 const sessionMiddleware = session({
-  secret: authSecret,
+  secret: AUTH_SECRET,
   saveUninitialized: true,
   resave: true,
   cookie: {
@@ -65,16 +58,17 @@ const options = {
     },
     servers: [
       {
-        url: serverUrl,
+        url: SERVER_URL,
       },
     ],
   },
   apis: ["./routes/*.js", "./models/*.js"],
 };
+
 const specs = swaggerJsdoc(options);
 
 app.use(
-  "/api-docs",
+  "/api/api-docs",
   swaggerUi.serve,
   swaggerUi.setup(specs, {
     customSiteTitle: "Chat and Video all API Documentation",
@@ -82,21 +76,21 @@ app.use(
   })
 );
 
-app.use(
-  cors({
-    origin: [clientUrl, "http://localhost:3000"],
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: [
-      "Content-Type",
-      "Authorization",
-      "x-uploadthing-version",
-      "x-uploadthing-package",
-    ],
-    credentials: true,
-  })
-);
-
-
+if (NODE_ENV === "development") {
+  app.use(
+    cors({
+      origin: [CLIENT_URL],
+      methods: ["GET", "POST", "PUT", "DELETE"],
+      allowedHeaders: [
+        "Content-Type",
+        "Authorization",
+        "x-uploadthing-version",
+        "x-uploadthing-package",
+      ],
+      credentials: true,
+    })
+  );
+}
 app.use(
   "/api/uploadthing",
   createRouteHandler({
@@ -107,30 +101,36 @@ app.use(
   })
 );
 
-app.get("/admin-socket", (req, res) => {
+app.get("/api/admin-socket", (req, res) => {
   res.render("admin.socket.ejs");
 });
 
 route(app);
 
-// ----------------------------------deploy----------------------------------
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
 
 const server = createServer(app);
 
-const io = new Server(server, {
-  cors: {
-    origin: [clientUrl, "http://localhost:3000"],
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: true,
-  },
-});
+const ioOptions =
+  NODE_ENV === "development"
+    ? {
+        cors: {
+          origin: [CLIENT_URL, "https://admin.socket.io"],
+          methods: ["GET", "POST", "PUT", "DELETE"],
+          allowedHeaders: ["Content-Type", "Authorization"],
+          credentials: true,
+        },
+      }
+    : {};
 
+const io = new Server(server, ioOptions);
 io.engine.use(sessionMiddleware);
 
 instrument(io, {
   auth: false,
-  mode: nodeEnv,
+  mode: NODE_ENV,
 });
 
 io.on("connection", (client) => {
@@ -193,6 +193,31 @@ io.on("connection", (client) => {
     "newMessage",
     async ({ conversationId, data, type, replyToMessageId = null }) => {
       try {
+        if (typeof conversationId !== "string" || conversationId.length < 1) {
+          console.error("Invalid conversationId type");
+          client.in(userInfo.id).emit("error", "Invalid conversationId type");
+        }
+        if (type !== "text" && type !== "file" && type !== "image") {
+          console.error("Invalid type");
+          client.in(userInfo.id).emit("error", "Invalid type");
+        }
+
+        if (Array.isArray(data) && data.length > 0) {
+          const isValid = data.reduce((a, b) => a && b.type == "image", true);
+          if (!isValid) {
+            console.error("Invalid data type");
+            client.in(userInfo.id).emit("error", "Invalid data type");
+          }
+        } else if (typeof data === "object") {
+          if (data.type !== "text" && data.type !== "file") {
+            console.error("Invalid data type");
+            client.in(userInfo.id).emit("error", "Invalid data type");
+          }
+        } else {
+          console.error("Invalid data type");
+          client.in(userInfo.id).emit("error", "Invalid data type");
+        }
+
         const message = await ConversationService.createNewMessageByWs({
           userId: userInfo.id,
           conversationId,
@@ -208,6 +233,51 @@ io.on("connection", (client) => {
     }
   );
 
+  client.on("editMessage", async ({ messageId, newData }) => {
+    try {
+      if (typeof messageId !== "string" || messageId.length < 1) {
+        console.error("Invalid messageId type");
+        client.in(userInfo.id).emit("error", "Invalid messageId type");
+      }
+      if (typeof newData !== "string" || newData.length < 1) {
+        console.error("Invalid newData type");
+        client.in(userInfo.id).emit("error", "Invalid newData type");
+      }
+
+      const updatedMessage = await ConversationService.editMessageByWs({
+        userId: userInfo.id,
+        messageId,
+        data,
+      });
+      client
+        .in(updatedMessage.conversationId)
+        .emit("editedMessage", updatedMessage);
+    } catch (error) {
+      console.error(error);
+      client.emit("error", error);
+    }
+  });
+
+  client.on("deleteMessage", async ({ messageId }) => {
+    try {
+      if (typeof messageId !== "string" || messageId.length < 1) {
+        console.error("Invalid messageId type");
+        client.in(userInfo.id).emit("error", "Invalid messageId type");
+      }
+
+      const deletedMessage = await ConversationService.deleteMessageByWs({
+        userId: userInfo.id,
+        messageId,
+      });
+      client
+        .in(deletedMessage.conversationId)
+        .emit("deletedMessage", deletedMessage);
+    } catch (error) {
+      console.error(error);
+      client.emit("error", error);
+    }
+  });
+
   client.on("disconnect", () => {
     console.log(`Client disconnected: ${client.id}`);
     clearInterval(sessionTracker);
@@ -217,7 +287,6 @@ io.on("connection", (client) => {
 const adminNamespace = io.of("/admin");
 
 adminNamespace.use((socket, next) => {
-  // ensure the user has sufficient rights
   next();
 });
 
@@ -234,5 +303,5 @@ adminNamespace.on("connection", (socket) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`Server is running at ${serverUrl}`);
+  console.log(`Server is running at ${SERVER_URL}`);
 });
