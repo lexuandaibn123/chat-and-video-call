@@ -202,9 +202,9 @@ io.on("connection", (client) => {
           client.in(userInfo.id).emit("error", "Invalid type");
         }
 
-        if (Array.isArray(data) && data.length > 0) {
+        if (Array.isArray(data)) {
           const isValid = data.reduce((a, b) => a && b.type == "image", true);
-          if (!isValid) {
+          if (!isValid || data.length < 1) {
             console.error("Invalid data type");
             client.in(userInfo.id).emit("error", "Invalid data type");
           }

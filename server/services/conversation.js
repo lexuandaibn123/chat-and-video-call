@@ -712,17 +712,20 @@ class ConversationService {
       const isValidType = ["text", "image", "file"].includes(type);
       if (!isValidType) throw new Error("Invalid message type");
 
-      if (
-        Array.isArray(data) &&
-        !data.reduce((a, b) => a && b.type == "image", true)
-      ) {
-        throw new Error("Invalid message data");
-      }
-      if (
-        typeof data === "object" &&
-        !(data.type == "text" || data.type == "file")
-      ) {
-        throw new Error("Invalid message data");
+      if (Array.isArray(data)) {
+        const isValid = data.reduce((a, b) => a && b.type == "image", true);
+        if (!isValid || data.length < 1) {
+          console.error("Invalid data type");
+          throw new Error("Invalid data type");
+        }
+      } else if (typeof data === "object") {
+        if (data.type !== "text" && data.type !== "file") {
+          console.error("Invalid data type");
+          throw new Error("Invalid data type");
+        }
+      } else {
+        console.error("Invalid data type");
+        throw new Error("Invalid data type");
       }
 
       const conversation = await this._mustBeValidConversation(
