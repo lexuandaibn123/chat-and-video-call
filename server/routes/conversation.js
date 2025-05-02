@@ -806,8 +806,11 @@ router.post(
       .withMessage("type is invalid"),
     check("data")
       .custom((value) => {
-        if (Array.isArray(value) && value.length > 0)
-          return value.reduce((a, b) => a && b.type == "image", true);
+        if (Array.isArray(value))
+          return (
+            value.length > 0 &&
+            value.reduce((a, b) => a && b.type == "image", true)
+          );
         else if (typeof value === "object") {
           return value.type == "text" || value.type == "file";
         }
