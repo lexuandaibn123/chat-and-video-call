@@ -1113,113 +1113,65 @@ export const useHandlers = ({
     async (res) => {
       console.log("Files uploaded:", res);
       setActionError(null);
-
-      const filesBeingProcessed = { ...optimisticMessagesRef.current }; // Clone before clearing
-      optimisticMessagesRef.current = {}; // Clear ref immediately for next batch
-
-      // Process each uploaded file result
+  
+      const filesBeingProcessed = { ...optimisticMessagesRef.current };
+      optimisticMessagesRef.current = {};
+  
       for (const uploadedFileDetails of res) {
-        // Find corresponding optimistic data using the name/key returned by Uploadthing
-        const originalFileName = uploadedFileDetails.name; // Assuming 'name' is returned
+        const originalFileName = uploadedFileDetails.name;
         const optimisticData = filesBeingProcessed[originalFileName];
-
+  
         if (!optimisticData) {
           console.error(
             "Could not find optimistic message data for uploaded file:",
             originalFileName,
             uploadedFileDetails
           );
-          // This indicates a mismatch between files sent and results received
           continue;
         }
-
+  
         const { tempId, localPreviewUrl, originalFile } = optimisticData;
-        const fileType = originalFile.type.startsWith("image/")
-          ? "image"
-          : "file";
-
+        const fileType = originalFile.type.startsWith("image/") ? "image" : "file";
+  
         try {
-          // Build the final message payload
           const messagePayload = buildFileMessagePayload(
             activeChat.id,
             fileType,
-            uploadedFileDetails
+            uploadedFileDetails,
+            null,
+            tempId // Truyền tempId để server trả về
           );
-
-          // Emit via Socket.IO
-          if (socket) {
-            socket.emit("message", messagePayload); // Adjust event name if necessary
+  
+          // Gửi tin nhắn qua Socket.IO
+          const sent = sendMessage(messagePayload);
+          if (!sent) {
+            throw new Error("Socket is not connected.");
           }
-
-          // Send the message payload via HTTP API
-          const sentMessage = await sendMessageApi(messagePayload);
-          console.log("File message sent successfully via API:", sentMessage);
-
-          if (sentMessage && sentMessage._id) {
-            // Format and update message in state
-            const formattedSentMessage = formatReceivedMessage(
-              sentMessage,
-              currentUserIdRef.current
-            );
-
-            setMessages((prevMessages) =>
-              prevMessages.map((msg) =>
-                msg.id === tempId
-                  ? { ...formattedSentMessage, sender: "self" }
-                  : msg
-              )
-            );
-
-            // Update conversations list
-            setConversations((prevConversations) =>
-              updateConversationsListLatestMessage(
-                prevConversations,
-                activeChat.id,
-                sentMessage
-              )
-            );
-          } else {
-            // Handle API call failure after successful upload
-            console.error(
-              "Failed to send message after successful upload:",
-              sentMessage?.message
-            );
-            throw new Error(
-              sentMessage?.message || "Failed to send file message."
-            ); // Throw to trigger catch
-          }
+  
+          console.log("File message sent via Socket.IO:", messagePayload);
         } catch (err) {
           console.error("Error sending file message after upload:", err);
-          // Mark the specific optimistic message as failed
           setMessages((prevMessages) =>
             prevMessages.map((msg) =>
               msg.id === tempId ? { ...msg, status: "failed" } : msg
             )
           );
-          setActionError(
-            err.message || `Failed to send file: ${originalFileName}`
-          );
+          setActionError(err.message || `Failed to send file: ${originalFileName}`);
         } finally {
-          // Clean up local URL for this specific file
           if (localPreviewUrl) {
             URL.revokeObjectURL(localPreviewUrl);
           }
         }
-      } // End loop
-
-      // Reset overall sending state (consider if you have a batch counter for multiple files)
+      }
+  
       setSendingMessage(false);
     },
     [
       activeChat?.id,
-      currentUserIdRef,
-      socket,
-      sendMessageApi,
+      sendMessage,
       setMessages,
-      setConversations,
       setActionError,
       setSendingMessage,
-      user,
       optimisticMessagesRef,
     ]
   );

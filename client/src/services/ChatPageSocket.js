@@ -18,25 +18,43 @@ export const useSocket = ({
 
   // Hàm gửi tin nhắn
   const sendMessage = useCallback(
-    ({ conversationId, data, type, replyToMessageId = null }) => {
-      if (!socketRef.current || !isConnectedRef.current) {
-        setActionError('Socket is not connected. Please try again.');
-        return false;
-      }
+  ({ conversationId, data, type, replyToMessageId = null }) => {
+    console.log("Original data:", data);
 
-      socketRef.current.emit('newMessage', {
-        conversationId,
-        type,
-        data: {
-          data,
-          type,
-        },
-        replyToMessageId,
-      });
-      return true;
-    },
-    [setActionError]
-  );
+    if (!socketRef.current || !isConnectedRef.current) {
+      setActionError('Socket is not connected. Please try again.');
+      return false;
+    }
+
+    let finalData;
+    if (type === "text") {
+      // Với tin nhắn text, bọc data thành object { data, type }
+      finalData = {
+        data: data, // data là chuỗi (ví dụ: "Hello")
+        type: "text",
+      };
+    } else if (type === "image" || type === "file") {
+      // Với tin nhắn image hoặc file, data đã là mảng hoặc object đúng định dạng, không cần bọc lại
+      finalData = data;
+    } else {
+      console.error("Unsupported message type:", type);
+      setActionError('Unsupported message type');
+      return false;
+    }
+
+    const payload = {
+      conversationId,
+      type,
+      data: finalData,
+      replyToMessageId,
+    };
+
+    console.log("Payload to send:", payload);
+    socketRef.current.emit('newMessage', payload);
+    return true;
+  },
+  [setActionError]
+);
 
   useEffect(() => {
     if (!isAuthenticated || !userId) {
