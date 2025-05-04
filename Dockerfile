@@ -1,7 +1,7 @@
 # ┌──────────────────────────────┐
 # │ 1) Build frontend (Vite)     │
 # └──────────────────────────────┘
-FROM node:20-alpine AS client-builder
+FROM node:20 AS client-builder
 WORKDIR /app/client
 
 COPY client/package*.json ./
@@ -17,7 +17,7 @@ RUN npm run build
 # ┌──────────────────────────────┐
 # │ 2) Build backend (Express)   │
 # └──────────────────────────────┘
-FROM node:20-alpine AS server-builder
+FROM node:20 AS server-builder
 WORKDIR /app
 
 COPY server/package*.json ./
@@ -25,7 +25,6 @@ RUN npm install --production
 
 COPY server/ .
 
-# copy build frontend từ stage trước vào public của Express
 COPY --from=client-builder /app/client/dist ./public
 
 EXPOSE 8080
