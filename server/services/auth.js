@@ -32,7 +32,7 @@ class AuthService {
 
       return res
         .status(200)
-        .json({ success: true, message: "Login successful" });
+        .json({ success: true, message: "Login successful", userInfo: req.session.userInfo });
     } catch (error) {
       console.log(error);
       return res.status(500).json({ error: String(error) });
