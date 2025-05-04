@@ -24,7 +24,8 @@
     "socket.io": "^4.8.1",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
-    "uploadthing": "^7.6.0"
+    "uploadthing": "^7.6.0",
+    "wrtc": "^0.4.7"
   },
   "devDependencies": {
     "ngrok": "^5.0.0-beta.2",

@@ -10,7 +10,6 @@ const session = require("express-session");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
 const path = require("path");
-const ConversationService = require("./services/conversation");
 const { instrument } = require("@socket.io/admin-ui");
 const { uploadRouter } = require("./utils/uploadthing");
 const { createRouteHandler } = require("uploadthing/express");
@@ -20,9 +19,13 @@ const {
   CLIENT_URL,
   AUTH_SECRET,
   NODE_ENV,
-  SESSION_RELOAD_INTERVAL,
   UPLOADTHING_TOKEN,
 } = require("./constants");
+const initDefaultNameSpace = require("./socket/default");
+const initVideoCallNamespace = require("./socket/video");
+const initAdminNamespace = require("./socket/admin");
+
+const { createPeer } = require("./utils/wrtc");
 
 db.connect();
 
@@ -75,11 +78,24 @@ app.use(
     explorer: true,
   })
 );
-
+const allowedOrigins = [
+  CLIENT_URL,
+  "http://localhost:8080",
+  "http://localhost:3000",
+  "https://admin.socket.io",
+  "https://9c09-2405-4802-17cb-99b0-653c-5503-c01f-cf8.ngrok-free.app",
+];
 if (NODE_ENV === "development") {
   app.use(
     cors({
-      origin: [CLIENT_URL],
+      origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+          callback(null, origin);
+        } else {
+          console.error("Not allowed by CORS: " + origin);
+          callback(new Error("Not allowed by CORS"));
+        }
+      },
       methods: ["GET", "POST", "PUT", "DELETE"],
       allowedHeaders: [
         "Content-Type",
@@ -107,9 +123,11 @@ app.get("/api/admin-socket", (req, res) => {
 
 route(app);
 
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
-});
+if (NODE_ENV === "production") {
+  app.get("*", (req, res) => {
+    res.sendFile(path.join(__dirname, "public", "index.html"));
+  });
+}
 
 const server = createServer(app);
 
@@ -117,7 +135,13 @@ const ioOptions =
   NODE_ENV === "development"
     ? {
         cors: {
-          origin: [CLIENT_URL, "https://admin.socket.io"],
+          origin: (origin, callback) => {
+            if (!origin || allowedOrigins.includes(origin)) {
+              callback(null, origin);
+            } else {
+              callback(new Error("Not allowed by CORS"));
+            }
+          },
           methods: ["GET", "POST", "PUT", "DELETE"],
           allowedHeaders: ["Content-Type", "Authorization"],
           credentials: true,
@@ -133,174 +157,23 @@ instrument(io, {
   mode: NODE_ENV,
 });
 
-io.on("connection", (client) => {
-  const sessionTracker = setInterval(() => {
-    client.request.session.reload((err) => {
-      if (err) {
-        client.conn.close();
-      }
-    });
-  }, SESSION_RELOAD_INTERVAL);
-  const session = client.request.session;
+// Default namespace
 
-  if (!session || !session.userInfo) {
-    client.emit("unauthorized");
-    console.error("Unauthorized client attempted to connect");
-    client.disconnect();
-    return;
-  }
+const defaultNamespace = io.of("/");
 
-  console.log("Client connected: " + client.id);
+initDefaultNameSpace(defaultNamespace);
 
-  const userInfo = session.userInfo;
+// Video call namespace
 
-  client.on("setup", async ({ page = 1, limit = 30 }) => {
-    try {
-      client.join(userInfo.id);
+const videoCallNamespace = io.of("/video-call");
 
-      const conversations = await ConversationService.fetchConversationsByWs({
-        userId: userInfo.id,
-        page,
-        limit,
-      });
-      conversations.forEach((conversation) => {
-        const userObj = conversation.members.find((member) => {
-          return (
-            (typeof member.id == "object"
-              ? member.id._id.toString() == userInfo.id
-              : member.id.toString() == userInfo.id) && member.leftAt == null
-          );
-        });
-        if (userObj && userObj.leftAt == null)
-          client.join(conversation._id.toString());
-      });
-      client.emit("connected");
-    } catch (error) {
-      console.error(error);
-      client.emit("error", error);
-    }
-  });
+initVideoCallNamespace(videoCallNamespace, defaultNamespace);
 
-  client.on("typing", ({ roomId, memberId }) =>
-    client.in(roomId).emit("typing", memberId)
-  );
-
-  client.on("stopTyping", ({ roomId, memberId }) =>
-    client.in(roomId).emit("stopTyping", memberId)
-  );
-
-  client.on(
-    "newMessage",
-    async ({ conversationId, data, type, replyToMessageId = null }) => {
-      try {
-        if (typeof conversationId !== "string" || conversationId.length < 1) {
-          console.error("Invalid conversationId type");
-          client.in(userInfo.id).emit("error", "Invalid conversationId type");
-        }
-        if (type !== "text" && type !== "file" && type !== "image") {
-          console.error("Invalid type");
-          client.in(userInfo.id).emit("error", "Invalid type");
-        }
-
-        if (Array.isArray(data)) {
-          const isValid = data.reduce((a, b) => a && b.type == "image", true);
-          if (!isValid || data.length < 1) {
-            console.error("Invalid data type");
-            client.in(userInfo.id).emit("error", "Invalid data type");
-          }
-        } else if (typeof data === "object") {
-          if (data.type !== "text" && data.type !== "file") {
-            console.error("Invalid data type");
-            client.in(userInfo.id).emit("error", "Invalid data type");
-          }
-        } else {
-          console.error("Invalid data type");
-          client.in(userInfo.id).emit("error", "Invalid data type");
-        }
-
-        const message = await ConversationService.createNewMessageByWs({
-          userId: userInfo.id,
-          conversationId,
-          data,
-          type,
-          replyToMessageId,
-        });
-        client.in(conversationId).emit("receiveMessage", message);
-      } catch (error) {
-        console.error(error);
-        client.emit("error", error);
-      }
-    }
-  );
-
-  client.on("editMessage", async ({ messageId, newData }) => {
-    try {
-      if (typeof messageId !== "string" || messageId.length < 1) {
-        console.error("Invalid messageId type");
-        client.in(userInfo.id).emit("error", "Invalid messageId type");
-      }
-      if (typeof newData !== "string" || newData.length < 1) {
-        console.error("Invalid newData type");
-        client.in(userInfo.id).emit("error", "Invalid newData type");
-      }
-
-      const updatedMessage = await ConversationService.editMessageByWs({
-        userId: userInfo.id,
-        messageId,
-        data,
-      });
-      client
-        .in(updatedMessage.conversationId)
-        .emit("editedMessage", updatedMessage);
-    } catch (error) {
-      console.error(error);
-      client.emit("error", error);
-    }
-  });
-
-  client.on("deleteMessage", async ({ messageId }) => {
-    try {
-      if (typeof messageId !== "string" || messageId.length < 1) {
-        console.error("Invalid messageId type");
-        client.in(userInfo.id).emit("error", "Invalid messageId type");
-      }
-
-      const deletedMessage = await ConversationService.deleteMessageByWs({
-        userId: userInfo.id,
-        messageId,
-      });
-      client
-        .in(deletedMessage.conversationId)
-        .emit("deletedMessage", deletedMessage);
-    } catch (error) {
-      console.error(error);
-      client.emit("error", error);
-    }
-  });
-
-  client.on("disconnect", () => {
-    console.log(`Client disconnected: ${client.id}`);
-    clearInterval(sessionTracker);
-  });
-});
+// Admin namespace
 
 const adminNamespace = io.of("/admin");
 
-adminNamespace.use((socket, next) => {
-  next();
-});
-
-adminNamespace.on("connection", (socket) => {
-  console.log("Admin connected");
-
-  socket.on("setup", () => {
-    socket.emit("connected");
-  });
-
-  socket.on("disconnect", () => {
-    console.log("Admin disconnected");
-  });
-});
+initAdminNamespace(adminNamespace);
 
 server.listen(PORT, () => {
   console.log(`Server is running at ${SERVER_URL}`);

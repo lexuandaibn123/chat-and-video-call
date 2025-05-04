@@ -92,6 +92,21 @@ class ConversationService {
     );
   }
 
+  async verifyConversationAndUserByWs({ conversationId, userId }) {
+    try {
+      const conversation = await this._mustBeValidConversation(conversationId);
+      this._mustBeMemberOfConversation(
+        conversation,
+        userId,
+        "You are not a member of the conversation"
+      );
+      return conversation;
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  }
+
   async createConversation(req, res) {
     try {
       const { members = [], name = "" } = req.body;
