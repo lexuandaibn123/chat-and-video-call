@@ -137,37 +137,42 @@ export const processRawMessages = (rawMessages, currentUserId) => {
     }
 
     const formattedMessages = rawMessages.map(msg => {
-        // Sử dụng helper để xử lý senderId nhất quán
-        const messageSenderId = getProcessedUserId(msg.senderId);
+        // Kiểm tra senderId
+        const isSenderObject = msg.senderId && typeof msg.senderId === 'object';
+        const messageSenderId = isSenderObject ? msg.senderId._id || null : msg.senderId || null;
+        console.log("isSenderObject:", isSenderObject);
 
-        // Lấy tên và avatar người gửi (có thể lấy từ object senderId nếu API populate)
-        const messageSenderName = msg.senderId?.fullName || (messageSenderId === currentUserId ? 'You' : 'Unknown User'); // Giả định nếu API không populate thì là mình
-        const messageSenderAvatar = msg.senderId?.avatar || null; // Giả định nếu API không populate thì không có avatar
+        // Lấy tên và avatar người gửi
+        const messageSenderName = isSenderObject && msg.senderId.fullName
+            ? msg.senderId.fullName
+            : (messageSenderId === currentUserId ? 'You' : 'Unknown User');
+        const messageSenderAvatar = isSenderObject ? msg.senderId.avatar || null : null;
 
         // Format thời gian
-        const messageTime = msg.datetime_created
+        const messageTime = msg.datetime_created && !isNaN(new Date(msg.datetime_created))
             ? new Date(msg.datetime_created).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase()
-            : '';
+            : 'Unknown time';
 
         return {
-            id: msg._id,
-            type: msg.type,
-            content: msg.content, // Giữ nguyên cấu trúc content thô từ API
+            id: msg._id || null,
+            type: msg.type || 'text',
+            content: msg.content && typeof msg.content === 'object' ? msg.content : {},
             time: messageTime,
-            createdAt: msg.datetime_created,
+            createdAt: msg.datetime_created || null,
+            lastUpdated: msg.last_updated || msg.datetime_created || null,
             isEdited: msg.isEdited || false,
             isDeleted: msg.isDeleted || false,
-            senderId: messageSenderId, // ID người gửi đã xử lý
+            senderId: messageSenderId,
             senderName: messageSenderName,
             senderAvatar: messageSenderAvatar,
-            status: 'sent', // Tin nhắn từ API mặc định là 'sent'
+            replyToMessageId: msg.replyToMessageId || null,
+            conversationId: msg.conversationId || null,
+            status: msg.status || 'sent',
         };
     });
 
     // Đảo ngược thứ tự để tin nhắn mới nhất ở cuối
-    formattedMessages.reverse();
-
-    return formattedMessages;
+    return formattedMessages.reverse();
 };
 
 

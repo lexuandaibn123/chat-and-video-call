@@ -13,6 +13,7 @@
     "@fortawesome/fontawesome-free": "^6.7.2",
     "@uploadthing/react": "^7.3.0",
     "@uploadthing/shared": "^7.1.7",
+    "emoji-picker-react": "^4.12.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.4.0",

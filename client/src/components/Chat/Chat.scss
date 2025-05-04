@@ -825,6 +825,13 @@
             font-size: 1em;
         }
     }
+
+    .emoji-picker-container { 
+      position: absolute;
+      right: 0;
+      bottom: 57px;
+      z-index: 1000;
+    }
   }
 
   // Overlay for message editing dialog (if used)
