@@ -58,6 +58,7 @@ class UserService {
           ...new Set(
             conversations
               .flatMap((conversation) => conversation.members)
+              .filter((member) => member.id !== null)
               .map((member) =>
                 typeof member === "object"
                   ? member.id._id.toString()
