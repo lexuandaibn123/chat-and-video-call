@@ -3,6 +3,10 @@ import Picker from 'emoji-picker-react'; // Thêm import cho emoji picker
 import MessageBubble from './MessageBubble';
 import defaultAvatarPlaceholder from '../../assets/images/avatar_placeholder.jpg';
 import { UploadButton } from '../../utils/uploadthing';
+import VideoCall from './VideoCall';
+import io from 'socket.io-client';
+
+const SERVER_URL = import.meta.env.VITE_SERVER_URL;
 
 const ChatWindow = ({
   activeContact,
@@ -25,10 +29,40 @@ const ChatWindow = ({
   onClientUploadComplete,
   onUploadError,
   onUploadProgress,
+  userInfo,
 }) => {
   const messageListEndRef = useRef(null);
   const messageInputRef = useRef(null);
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false); // Trạng thái cho emoji picker
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false); 
+  const [isVideoCallOpen, setIsVideoCallOpen] = useState(false);
+  const [callInvite, setCallInvite] = useState(null);
+  const socket = useRef(null);
+
+  useEffect(() => {
+    // Khởi tạo kết nối tới namespace mặc định
+    socket.current = io(SERVER_URL, {
+      auth: { userInfo },
+      secure: true,
+      rejectUnauthorized: false,
+    });
+
+    socket.current.on('connect', () => {
+      console.log('Connected to default namespace:', socket.current.id);
+    });
+
+    socket.current.on('callStarted', (data) => {
+      console.log('Received callStarted:', data);
+      setCallInvite(data); // Hiển thị popup khi nhận sự kiện
+    });
+
+    socket.current.on('connect_error', (error) => {
+      console.error('Socket.IO connect error:', error);
+    });
+
+    return () => {
+      if (socket.current) socket.current.disconnect();
+    };
+  }, [userInfo]);
 
   // Cuộn xuống cuối danh sách tin nhắn
   useEffect(() => {
@@ -124,6 +158,23 @@ const ChatWindow = ({
   const isGroupChat = activeContact.isGroup;
   const isEditingMode = editingMessageId !== null;
 
+  const handleVideoCall = () => {
+    setIsVideoCallOpen(true);
+  };
+
+  const handleCloseVideoCall = () => {
+    setIsVideoCallOpen(false);
+  };
+
+  const handleJoinCall = () => {
+    setIsVideoCallOpen(true);
+    setCallInvite(null); // Đóng popup sau khi join
+  };
+
+  const handleDeclineCall = () => {
+    setCallInvite(null); // Đóng popup khi từ chối
+  };
+
   return (
     <section className="active-chat-panel">
       <header className="chat-header">
@@ -163,6 +214,7 @@ const ChatWindow = ({
             className="icon-button"
             title="Video Call"
             disabled={isEditingMode || sendingMessage}
+            onClick={handleVideoCall}
           >
             <i className="fas fa-video"></i>
           </button>
@@ -348,6 +400,27 @@ const ChatWindow = ({
           )}
         </button>
       </form>
+
+      {isVideoCallOpen && (
+        <VideoCall
+          activeChat={activeContact}
+          userInfo={userInfo}
+          onClose={handleCloseVideoCall}
+        />
+      )}
+
+      {callInvite && (
+        <div className="call-invite-popup">
+          <div className="call-invite-content">
+            <p>
+              {callInvite.username} has started a video call in room{' '}
+              {callInvite.roomId}. Join or decline?
+            </p>
+            <button onClick={handleJoinCall}>Join</button>
+            <button onClick={handleDeclineCall}>Decline</button>
+          </div>
+        </div>
+      )}
     </section>
   );
 };

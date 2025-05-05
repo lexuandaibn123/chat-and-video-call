@@ -317,6 +317,7 @@ const ChatPage = () => {
       onClientUploadComplete={handlers.handleUploadComplete}
       onUploadError={handlers.handleUploadError}
       onUploadProgress={handlers.handleUploadProgress}
+      userInfo = {user}
     />
   );
 };

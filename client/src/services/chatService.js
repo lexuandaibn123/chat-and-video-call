@@ -6,7 +6,6 @@
 
 // Hàm trợ giúp xử lý ID người dùng nhất quán (vì nó có thể là object._id hoặc string)
 const getProcessedUserId = (userData) => {
-    console.log("userData: ", userData);
     if (!userData) return null;
     if (typeof userData === 'object' && userData._id) {
         return String(userData._id).trim();

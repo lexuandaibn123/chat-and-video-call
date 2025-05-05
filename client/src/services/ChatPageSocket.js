@@ -3,7 +3,7 @@ import io from 'socket.io-client';
 import { formatReceivedMessage, updateConversationsListLatestMessage } from './chatService';
 
 // Lấy URL từ biến môi trường
-const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:8080';
+const SERVER_URL = import.meta.env.VITE_SERVER_URL;
 
 export const useSocket = ({
   isAuthenticated,
