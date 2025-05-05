@@ -34,6 +34,7 @@ const initDefaultNameSpace = (defaultNamespace) => {
         });
         conversations.forEach((conversation) => {
           const userObj = conversation.members.find((member) => {
+            if(member.id == null) return false;
             return (
               (typeof member.id == "object"
                 ? member.id._id.toString() == userInfo.id

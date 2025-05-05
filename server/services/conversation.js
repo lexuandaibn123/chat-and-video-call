@@ -39,6 +39,7 @@ class ConversationService {
 
   _isMemberOfConversation(conversation, userId, allowLeft = false) {
     return conversation.members.find((member) => {
+      if (member.id == null) return false;
       return (
         (typeof member.id == "object"
           ? member.id._id.toString() == userId
@@ -67,14 +68,16 @@ class ConversationService {
   }
 
   _isLeaderOfConversation(conversation, userId) {
-    return conversation.members.find(
-      (member) =>
+    return conversation.members.find((member) => {
+      if (member.id == null) return false;
+      return (
         (typeof member.id == "object"
           ? member.id._id.toString() == userId
           : member.id.toString() == userId) &&
         member.role === "leader" &&
         member.leftAt == null
-    );
+      );
+    });
   }
 
   _mustBeLeaderOfConversation(conversation, userId, errorMsg = "") {
