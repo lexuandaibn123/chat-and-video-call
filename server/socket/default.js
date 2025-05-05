@@ -34,7 +34,7 @@ const initDefaultNameSpace = (defaultNamespace) => {
         });
         conversations.forEach((conversation) => {
           const userObj = conversation.members.find((member) => {
-            if(member.id == null) return false;
+            if (member.id == null) return false;
             return (
               (typeof member.id == "object"
                 ? member.id._id.toString() == userInfo.id
@@ -73,7 +73,9 @@ const initDefaultNameSpace = (defaultNamespace) => {
           }
 
           if (Array.isArray(data)) {
-            const isValid = data.reduce((a, b) => a && b.type == "image", true);
+            const isValid = data.every((part) => {
+              return typeof part === "object" && part.type == "image" && part.data.length > 0;
+            });
             if (!isValid || data.length < 1) {
               console.error("Invalid data type");
               client.in(userInfo.id).emit("error", "Invalid data type");
