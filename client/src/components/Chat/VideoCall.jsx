@@ -189,35 +189,6 @@ const VideoCall = ({ activeChat, userInfo, socket, onClose }) => {
     }
   };
 
-  const joinRoom = async () => {
-    if (hasJoined || !activeChat || !activeChat.id) {
-      return;
-    }
-
-    setHasJoined(true);
-
-    const peerId = `${userInfo.id}-${uuidv4()}`;
-    const peerConnection = createPeerConnection(peerId, userInfo.fullName);
-
-    if (!peerConnection) {
-      setHasJoined(false);
-      return;
-    }
-
-    try {
-      const offer = await peerConnection.createOffer();
-      await peerConnection.setLocalDescription(offer);
-
-      videoCallSocketRef.current.emit('joinRoom', {
-        conversationId: activeChat.id,
-        sdp: offer,
-      });
-    } catch (error) {
-      console.error('Error joining room:', error);
-      setHasJoined(false);
-    }
-  };
-
   const createConsumer = async (id, username) => {
     const consumerId = `${userInfo.id}-${id}-${uuidv4()}`;
     const peerConnection = createPeerConnection(consumerId, username, true);
@@ -274,9 +245,6 @@ const VideoCall = ({ activeChat, userInfo, socket, onClose }) => {
       {Object.entries(remoteStreams).map(([id, stream]) => (
         <video key={id} autoPlay srcObject={stream} style={{ width: '300px' }} />
       ))}
-      <button onClick={joinRoom} disabled={!activeChat || hasJoined}>
-        Tham gia cuộc gọi
-      </button>
       <button onClick={onClose}>Đóng</button>
     </div>
   );
