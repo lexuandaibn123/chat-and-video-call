@@ -45,6 +45,8 @@ const ChatPageLayout = ({
     return nameMatch;
   });
 
+  console.log("activechat: ", activeChat);
+
   const filteredGroups = filteredConversations.filter((c) => c.isGroup);
   const filteredFriends = filteredConversations.filter((c) => !c.isGroup);
 

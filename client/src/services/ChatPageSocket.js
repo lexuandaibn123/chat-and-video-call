@@ -2,25 +2,25 @@ import { useEffect, useRef, useCallback } from 'react';
 import io from 'socket.io-client';
 import { formatReceivedMessage, updateConversationsListLatestMessage } from './chatService';
 
-// Lấy URL từ biến môi trường
 const SERVER_URL = import.meta.env.VITE_SERVER_URL;
 
 export const useSocket = ({
   isAuthenticated,
   userId,
-  userInfo, // Thêm userInfo để truyền vào auth
+  userInfo,
   activeChatId,
   setMessages,
   setConversations,
   setActionError,
+  conversations,
 }) => {
   const socketRef = useRef(null);
   const isConnectedRef = useRef(false);
+  const joinedRoomsRef = useRef(new Set()); // Theo dõi các room đã tham gia để tránh trùng lặp
 
-  // Hàm gửi tin nhắn
   const sendMessage = useCallback(
     ({ conversationId, data, type, replyToMessageId = null }) => {
-      console.log("Original data:", data);
+      console.log('Original data:', data);
 
       if (!socketRef.current || !isConnectedRef.current) {
         setActionError('Socket is not connected. Please try again.');
@@ -28,15 +28,15 @@ export const useSocket = ({
       }
 
       let finalData;
-      if (type === "text") {
+      if (type === 'text') {
         finalData = {
           data: data,
-          type: "text",
+          type: 'text',
         };
-      } else if (type === "image" || type === "file") {
+      } else if (type === 'image' || type === 'file') {
         finalData = data;
       } else {
-        console.error("Unsupported message type:", type);
+        console.error('Unsupported message type:', type);
         setActionError('Unsupported message type');
         return false;
       }
@@ -48,7 +48,7 @@ export const useSocket = ({
         replyToMessageId,
       };
 
-      console.log("Payload to send:", payload);
+      console.log('Payload to send:', payload);
       socketRef.current.emit('newMessage', payload);
       return true;
     },
@@ -67,16 +67,31 @@ export const useSocket = ({
 
     // Khởi tạo socket
     socketRef.current = io(SERVER_URL, {
-      withCredentials: true, // Đảm bảo gửi cookie session
+      withCredentials: true,
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
-      auth: { userInfo }, // Truyền userInfo vào auth
+      auth: { userInfo },
     });
 
+    // Xử lý kết nối
     socketRef.current.on('connect', () => {
-      console.log('Socket.IO connected');
+      console.log('Socket.IO connected:', socketRef.current.id);
       isConnectedRef.current = true;
+
+      // Tham gia các room dựa trên conversations
+      if (conversations?.length) {
+        conversations.forEach((conv) => {
+          const roomId = conv.id;
+          if (!joinedRoomsRef.current.has(roomId)) {
+            socketRef.current.emit('joinRoom', roomId);
+            joinedRoomsRef.current.add(roomId);
+            console.log(`Joined room: ${roomId}`);
+          }
+        });
+      }
+
+      // Emit setup (nếu cần thiết, tùy thuộc vào yêu cầu của bạn)
       socketRef.current.emit('setup', { page: 1, limit: 30 });
     });
 
@@ -138,24 +153,33 @@ export const useSocket = ({
     socketRef.current.on('disconnect', () => {
       console.log('Socket.IO disconnected');
       isConnectedRef.current = false;
+      joinedRoomsRef.current.clear(); // Xóa danh sách room đã tham gia khi ngắt kết nối
     });
 
+    // Cleanup khi component unmount hoặc dependencies thay đổi
     return () => {
       if (socketRef.current) {
         socketRef.current.disconnect();
         isConnectedRef.current = false;
+        joinedRoomsRef.current.clear();
         console.log('Socket.IO connection closed');
       }
     };
-  }, [isAuthenticated, userId, userInfo, activeChatId, setMessages, setConversations, setActionError]);
+  }, [isAuthenticated, userId, userInfo, setMessages, setConversations, setActionError]);
 
-  // Tham gia phòng chat khi activeChatId thay đổi
+  // Xử lý khi conversations thay đổi: tham gia các room mới
   useEffect(() => {
-    if (socketRef.current && activeChatId && isConnectedRef.current) {
-      socketRef.current.emit('join', activeChatId);
-      console.log(`Socket joined room ${activeChatId}`);
+    if (socketRef.current && isConnectedRef.current && conversations?.length) {
+      conversations.forEach((conv) => {
+        const roomId = conv.id;
+        if (!joinedRoomsRef.current.has(roomId)) {
+          socketRef.current.emit('joinRoom', roomId);
+          joinedRoomsRef.current.add(roomId);
+          console.log(`Joined room (on conversations change): ${roomId}`);
+        }
+      });
     }
-  }, [activeChatId]);
+  }, [conversations]);
 
   return { socket: socketRef.current, sendMessage, isConnected: isConnectedRef.current };
 };

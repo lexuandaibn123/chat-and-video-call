@@ -27,7 +27,7 @@ const ChatWindow = ({
   onUploadError,
   onUploadProgress,
   userInfo,
-  socket, // Nhận socket từ props
+  socket,
 }) => {
   const messageListEndRef = useRef(null);
   const messageInputRef = useRef(null);
@@ -36,33 +36,44 @@ const ChatWindow = ({
   const [callInvite, setCallInvite] = useState(null);
 
   useEffect(() => {
-    if (!socket || !activeContact?.id) return;
+    if (!socket || !activeContact?.id) {
+      console.warn('Socket or activeContact.id is missing:', { socket, activeContactId: activeContact?.id });
+      return;
+    }
 
-    // Join room khi activeContact thay đổi
-    socket.emit('join', activeContact.id);
-
-    // Lắng nghe sự kiện callStarted
     socket.on('callStarted', (data) => {
-      console.log('Received callStarted:', data);
+      console.log('Received callStarted event:', data);
       if (data.roomId === activeContact.id) {
         setCallInvite(data);
+      } else {
+        console.warn('callStarted roomId does not match activeContact.id:', {
+          receivedRoomId: data.roomId,
+          activeContactId: activeContact.id,
+        });
       }
     });
 
-    // Lắng nghe sự kiện callEnded
     socket.on('callEnded', (data) => {
-      console.log('Call ended:', data);
+      console.log('Received callEnded event:', data);
       setCallInvite(null);
       alert('Cuộc gọi đã kết thúc');
     });
 
-    // Lắng nghe sự kiện userLeft
     socket.on('userLeft', (data) => {
-      console.log('User left:', data.id);
+      console.log('Received userLeft event:', data);
+    });
+
+    socket.on('error', (message) => {
+      console.error('Server error:', message);
+      alert(`Lỗi từ server: ${message}`);
     });
 
     return () => {
-      // Cleanup không cần disconnect vì socket được quản lý từ useSocket
+      console.log('Cleaning up socket listeners for activeContact:', activeContact.id);
+      socket.off('callStarted');
+      socket.off('callEnded');
+      socket.off('userLeft');
+      socket.off('error');
     };
   }, [socket, activeContact?.id]);
 
@@ -124,11 +135,15 @@ const ChatWindow = ({
   }, [showEmojiPicker]);
 
   const handleJoinCall = () => {
+    console.log('User joined call for room:', activeContact.id);
     setIsVideoCallOpen(true);
     setCallInvite(null);
   };
 
-  const handleDeclineCall = () => setCallInvite(null);
+  const handleDeclineCall = () => {
+    console.log('User declined call for room:', activeContact.id);
+    setCallInvite(null);
+  };
 
   if (!activeContact) {
     return (
@@ -165,7 +180,10 @@ const ChatWindow = ({
             className="icon-button"
             title="Video Call"
             disabled={isEditingMode || sendingMessage}
-            onClick={() => setIsVideoCallOpen(true)}
+            onClick={() => {
+              console.log('Starting video call for room:', activeContact.id);
+              setIsVideoCallOpen(true);
+            }}
           >
             <i className="fas fa-video"></i>
           </button>
@@ -307,7 +325,7 @@ const ChatWindow = ({
         <VideoCall
           activeChat={activeContact}
           userInfo={userInfo}
-          socket={socket} // Truyền socket từ ChatPage
+          socket={socket}
           onClose={() => setIsVideoCallOpen(false)}
         />
       )}
