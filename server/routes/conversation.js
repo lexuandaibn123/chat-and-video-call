@@ -809,7 +809,9 @@ router.post(
         if (Array.isArray(value))
           return (
             value.length > 0 &&
-            value.reduce((a, b) => a && b.type == "image", true)
+            value.every((item) => {
+              return typeof item === "object" && item.type == "image" && item.data.length > 0;
+            })
           );
         else if (typeof value === "object") {
           return value.type == "text" || value.type == "file";

@@ -39,6 +39,16 @@ const mongoose = require("mongoose");
  *           type: string
  *           description: The image data, either a URL or base64 encoded string
  *           example: https://example.com/image.jpg
+ *         caption:
+ *           type: string
+ *           description: Caption for the file, can be null
+ *           example: This is a sample file
+ *           default: null
+ *         altText:
+ *           type: string
+ *           description: Alternative text for the file, can be null
+ *           example: Sample file
+ *           default: null
  *         type:
  *           type: string
  *           enum: ["image"]
@@ -59,6 +69,16 @@ const mongoose = require("mongoose");
  *           type: string
  *           description: The file data, either a URL or base64 encoded string
  *           example: https://example.com/file.pdf
+ *         caption:
+ *           type: string
+ *           description: Caption for the file, can be null
+ *           example: This is a sample file
+ *           default: null
+ *         altText:
+ *           type: string
+ *           description: Alternative text for the file, can be null
+ *           example: Sample file
+ *           default: null
  *         type:
  *           type: string
  *           enum: ["file"]
@@ -98,6 +118,8 @@ const ImagePartSchema = new mongoose.Schema(
   {
     metadata: { type: FileMetaDataSchema, default: null },
     data: { type: String }, // url or base64
+    caption: { type: String, default: null }, // for post feature
+    altText: { type: String, default: null },
     type: { type: String, enum: ["image"], default: "image" },
   },
   { _id: false }
@@ -108,6 +130,8 @@ const FilePartSchema = new mongoose.Schema(
   {
     metadata: { type: FileMetaDataSchema, default: null },
     data: { type: String }, // url or base64
+    caption: { type: String, default: null }, // for post feature
+    altText: { type: String, default: null },
     type: { type: String, enum: ["file"], default: "file" },
   },
   { _id: false }
