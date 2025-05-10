@@ -44,7 +44,7 @@ const ChatPage = () => {
     });
   }, [user, isAuthenticated, isAuthLoading]);
 
-  const { socket, sendMessage, isConnected } = useSocket({
+  const { socket, videoCallSocket, sendMessage, isConnected } = useSocket({
     isAuthenticated,
     userId: user?._id,
     userInfo: user,
@@ -307,6 +307,7 @@ const ChatPage = () => {
       onUploadProgress={handlers.handleUploadProgress}
       userInfo={user}
       socket={socket}
+      videoCallSocket={videoCallSocket}
     />
   );
 };

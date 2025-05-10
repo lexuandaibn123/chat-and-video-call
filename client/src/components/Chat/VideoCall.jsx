@@ -1,17 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import io from 'socket.io-client';
+import './VideoCall.css'; // Import CSS
+import './Chat.scss';
 
-// Định nghĩa URL server từ biến môi trường hoặc mặc định là localhost:8800
-const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:8800';
-
-const VideoCall = ({ activeChat, userInfo, socket, onClose }) => {
+const VideoCall = ({ activeChat, userInfo, videoCallSocket, onClose }) => {
   const [localStream, setLocalStream] = useState(null);
-  const [remoteStreams, setRemoteStreams] = useState({});
+  const [remoteStreams, setRemoteStreams] = useState({}); // { id: { stream, username, micEnabled, cameraEnabled } }
   const [hasJoined, setHasJoined] = useState(false);
+  const [micEnabled, setMicEnabled] = useState(true);
+  const [cameraEnabled, setCameraEnabled] = useState(true);
   const localVideoRef = useRef(null);
   const peerConnections = useRef({});
-  const videoCallSocketRef = useRef(null);
+  const consumersCreated = useRef(new Map());
 
   useEffect(() => {
     if (!userInfo || !userInfo.id) {
@@ -21,27 +21,18 @@ const VideoCall = ({ activeChat, userInfo, socket, onClose }) => {
       return;
     }
 
-    if (!socket) {
-      console.error('VideoCall: Socket is not provided');
+    if (!videoCallSocket) {
+      console.error('VideoCall: Video call socket is not provided');
       alert('Không thể kết nối đến server. Vui lòng thử lại.');
       onClose();
       return;
     }
 
-    // Tạo kết nối tới namespace /video-call
-    videoCallSocketRef.current = io(`${SERVER_URL}/video-call`, {
-      auth: { userInfo },
-      transports: ['websocket'],
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-    });
-
-    const videoCallSocket = videoCallSocketRef.current;
-
     const checkMediaPermissions = async () => {
       try {
+        console.log('Accessing media devices...');
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        console.log('Local stream obtained:', stream);
         stream.getTracks().forEach((track) => track.stop());
         return true;
       } catch (error) {
@@ -78,6 +69,7 @@ const VideoCall = ({ activeChat, userInfo, socket, onClose }) => {
 
     videoCallSocket.on('connect', () => {
       console.log('Connected to video call namespace:', videoCallSocket.id);
+      joinRoom();
     });
 
     videoCallSocket.on('connect_error', (error) => {
@@ -88,9 +80,13 @@ const VideoCall = ({ activeChat, userInfo, socket, onClose }) => {
 
     videoCallSocket.on('answer', async ({ sdp }) => {
       try {
-        const peerId = Object.keys(peerConnections.current)[0]; // Giả sử chỉ có một peer khi nhận answer
+        const peerId = Object.keys(peerConnections.current)[0];
         const peerConnection = peerConnections.current[peerId];
         if (peerConnection) {
+          if (peerConnection.signalingState !== 'have-local-offer') {
+            console.warn(`Cannot set remote description for ${peerId}: Invalid signaling state (${peerConnection.signalingState})`);
+            return;
+          }
           const desc = new RTCSessionDescription(sdp);
           await peerConnection.setRemoteDescription(desc);
           console.log('Set remote description for peer:', peerId);
@@ -102,25 +98,48 @@ const VideoCall = ({ activeChat, userInfo, socket, onClose }) => {
 
     videoCallSocket.on('newProducer', (data) => {
       console.log('New user joined:', data);
-      createConsumer(data.id, data.username);
+      if (data.id !== userInfo.id) {
+        createConsumer(data.id, data.username);
+      }
     });
 
     videoCallSocket.on('userLeft', (data) => {
       console.log('User left:', data.id);
-      removePeer(data.id);
+      const consumerId = consumersCreated.current.get(data.id);
+      if (consumerId) {
+        removePeer(consumerId);
+        consumersCreated.current.delete(data.id);
+      }
     });
 
     videoCallSocket.on('consumerReady', async ({ sdp, id, consumerId }) => {
       const peerConnection = peerConnections.current[consumerId];
       if (peerConnection) {
         try {
+          if (peerConnection.signalingState !== 'have-local-offer') {
+            console.warn(`Cannot set remote description for ${consumerId}: Invalid signaling state (${peerConnection.signalingState})`);
+            return;
+          }
           const desc = new RTCSessionDescription(sdp);
           await peerConnection.setRemoteDescription(desc);
           console.log(`Set remote description for consumer ${consumerId}`);
         } catch (error) {
           console.error('Error setting remote description:', error);
         }
+      } else {
+        console.warn(`No peer connection found for consumer ${consumerId}`);
       }
+    });
+
+    videoCallSocket.on('deviceStatus', ({ id, micEnabled, cameraEnabled }) => {
+      setRemoteStreams((prev) => ({
+        ...prev,
+        [id]: {
+          ...prev[id],
+          micEnabled,
+          cameraEnabled,
+        },
+      }));
     });
 
     videoCallSocket.on('error', (message) => {
@@ -130,12 +149,9 @@ const VideoCall = ({ activeChat, userInfo, socket, onClose }) => {
 
     return () => {
       cleanup();
-      if (videoCallSocketRef.current) {
-        videoCallSocketRef.current.disconnect();
-        videoCallSocketRef.current = null;
-      }
+      consumersCreated.current.clear();
     };
-  }, [activeChat, userInfo, socket, onClose]);
+  }, [activeChat, userInfo, videoCallSocket, onClose]);
 
   const createPeerConnection = (id, username, isConsumer = false) => {
     try {
@@ -155,15 +171,22 @@ const VideoCall = ({ activeChat, userInfo, socket, onClose }) => {
       }
 
       peerConnection.ontrack = (event) => {
-        setRemoteStreams((prev) => ({
-          ...prev,
-          [id]: event.streams[0],
-        }));
+        if (event.streams && event.streams[0]) {
+          setRemoteStreams((prev) => ({
+            ...prev,
+            [id]: {
+              stream: event.streams[0],
+              username: username || 'Unknown',
+              micEnabled: true,
+              cameraEnabled: true,
+            },
+          }));
+        }
       };
 
       peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
-          videoCallSocketRef.current.emit(isConsumer ? 'consumerIceCandidate' : 'iceCandidate', {
+          videoCallSocket.emit(isConsumer ? 'consumerIceCandidate' : 'iceCandidate', {
             candidate: event.candidate,
             peerId: id,
             consumerId: isConsumer ? id : undefined,
@@ -190,7 +213,14 @@ const VideoCall = ({ activeChat, userInfo, socket, onClose }) => {
   };
 
   const joinRoom = async () => {
-    if (hasJoined || !activeChat || !activeChat.id) {
+    if (hasJoined || !activeChat || !activeChat.id || !localStream) {
+      console.warn('Cannot join room: Already joined, no active chat, or no local stream');
+      return;
+    }
+
+    if (!videoCallSocket || !videoCallSocket.connected) {
+      console.error('Cannot join room: Video call socket is not connected');
+      alert('Không thể kết nối đến server video call. Vui lòng thử lại.');
       return;
     }
 
@@ -200,6 +230,7 @@ const VideoCall = ({ activeChat, userInfo, socket, onClose }) => {
     const peerConnection = createPeerConnection(peerId, userInfo.fullName);
 
     if (!peerConnection) {
+      console.error('Failed to create peer connection');
       setHasJoined(false);
       return;
     }
@@ -208,35 +239,60 @@ const VideoCall = ({ activeChat, userInfo, socket, onClose }) => {
       const offer = await peerConnection.createOffer();
       await peerConnection.setLocalDescription(offer);
 
-      videoCallSocketRef.current.emit('joinRoom', {
+      if (!offer || !offer.sdp || !offer.type) {
+        throw new Error('Invalid SDP generated');
+      }
+
+      console.log('Emitting joinRoom with payload:', {
+        conversationId: activeChat.id,
+        sdp: offer,
+      });
+
+      videoCallSocket.emit('joinRoom', {
         conversationId: activeChat.id,
         sdp: offer,
       });
     } catch (error) {
       console.error('Error joining room:', error);
       setHasJoined(false);
+      alert(`Lỗi khi tham gia cuộc gọi: ${error.message}`);
     }
   };
 
   const createConsumer = async (id, username) => {
-    const consumerId = `${userInfo.id}-${id}-${uuidv4()}`;
-    const peerConnection = createPeerConnection(consumerId, username, true);
+    if (consumersCreated.current.has(id)) {
+      console.log(`Consumer already created for user ${id}, skipping`);
+      return;
+    }
 
+    const consumerId = `${userInfo.id}-${id}-${uuidv4()}`;
+    consumersCreated.current.set(id, consumerId);
+
+    const peerConnection = createPeerConnection(consumerId, username, true);
     if (!peerConnection) {
+      consumersCreated.current.delete(id);
       return;
     }
 
     try {
+      if (peerConnection.signalingState !== 'stable') {
+        console.warn(`Cannot create offer for ${consumerId}: Invalid signaling state (${peerConnection.signalingState})`);
+        consumersCreated.current.delete(id);
+        removePeer(consumerId);
+        return;
+      }
       const offer = await peerConnection.createOffer();
       await peerConnection.setLocalDescription(offer);
 
-      videoCallSocketRef.current.emit('consume', {
+      videoCallSocket.emit('consume', {
         id,
         sdp: offer,
         consumerId,
       });
     } catch (error) {
       console.error('Error creating consumer:', error);
+      consumersCreated.current.delete(id);
+      removePeer(consumerId);
     }
   };
 
@@ -245,6 +301,12 @@ const VideoCall = ({ activeChat, userInfo, socket, onClose }) => {
     if (peerConnection) {
       peerConnection.close();
       delete peerConnections.current[id];
+      for (const [userId, consumerId] of consumersCreated.current) {
+        if (consumerId === id) {
+          consumersCreated.current.delete(userId);
+          break;
+        }
+      }
     }
     setRemoteStreams((prev) => {
       const newStreams = { ...prev };
@@ -255,6 +317,7 @@ const VideoCall = ({ activeChat, userInfo, socket, onClose }) => {
 
   const cleanup = () => {
     if (localStream) {
+      console.log('Cleaning up local stream:', localStream);
       localStream.getTracks().forEach((track) => track.stop());
     }
     Object.values(peerConnections.current).forEach((pc) => pc.close());
@@ -262,22 +325,97 @@ const VideoCall = ({ activeChat, userInfo, socket, onClose }) => {
     setLocalStream(null);
     setRemoteStreams({});
     setHasJoined(false);
-    if (videoCallSocketRef.current && activeChat?.id) {
-      videoCallSocketRef.current.emit('leaveRoom', { conversationId: activeChat.id });
+    if (videoCallSocket && activeChat?.id) {
+      videoCallSocket.emit('leaveRoom', { conversationId: activeChat.id });
     }
   };
 
+  const toggleMic = () => {
+    if (localStream) {
+      const audioTrack = localStream.getAudioTracks()[0];
+      if (audioTrack) {
+        audioTrack.enabled = !audioTrack.enabled;
+        setMicEnabled(audioTrack.enabled);
+        videoCallSocket.emit('deviceStatus', {
+          id: userInfo.id,
+          micEnabled: audioTrack.enabled,
+          cameraEnabled,
+        });
+      }
+    }
+  };
+
+  const toggleCamera = () => {
+    if (localStream) {
+      const videoTrack = localStream.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.enabled = !videoTrack.enabled;
+        setCameraEnabled(videoTrack.enabled);
+        videoCallSocket.emit('deviceStatus', {
+          id: userInfo.id,
+          micEnabled,
+          cameraEnabled: videoTrack.enabled,
+        });
+      }
+    }
+  };
+
+  // Tính số lượng người tham gia (bao gồm cả local)
+  const participantCount = Object.keys(remoteStreams).length + (localStream ? 1 : 0);
+
   return (
-    <div className="video-call-modal">
-      <h2>Cuộc gọi video</h2>
-      <video ref={localVideoRef} autoPlay muted style={{ width: '300px' }} />
-      {Object.entries(remoteStreams).map(([id, stream]) => (
-        <video key={id} autoPlay srcObject={stream} style={{ width: '300px' }} />
-      ))}
-      <button onClick={joinRoom} disabled={!activeChat || hasJoined}>
-        Tham gia cuộc gọi
-      </button>
-      <button onClick={onClose}>Đóng</button>
+    <div className="video-call-container">
+      <h2>Cuộc gọi video ({participantCount} người tham gia)</h2>
+      <div className={`video-grid participant-count-${participantCount}`}>
+        {/* Local video */}
+        {localStream && (
+          <div className="video-wrapper">
+            <video ref={localVideoRef} autoPlay muted className="video-element" />
+            <div className="video-info">
+              <span className="username">{userInfo.fullName || 'Bạn'}</span>
+              <div className="status-icons">
+                <span className={`icon ${micEnabled ? 'mic-on' : 'mic-off'}`}>
+                  {micEnabled ? '🎤' : '🔇'}
+                </span>
+                <span className={`icon ${cameraEnabled ? 'camera-on' : 'camera-off'}`}>
+                  {cameraEnabled ? '📷' : '📷'}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Remote videos */}
+        {Object.entries(remoteStreams).map(([id, { stream, username, micEnabled, cameraEnabled }]) => (
+          <div key={id} className="video-wrapper">
+            <video autoPlay srcObject={stream} className="video-element" />
+            <div className="video-info">
+              <span className="username">{username || 'Unknown'}</span>
+              <div className="status-icons">
+                <span className={`icon ${micEnabled ? 'mic-on' : 'mic-off'}`}>
+                  {micEnabled ? '🎤' : '🔇'}
+                </span>
+                <span className={`icon ${cameraEnabled ? 'camera-on' : 'camera-off'}`}>
+                  {cameraEnabled ? '📷' : '📷'}
+                </span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="controls">
+        <button onClick={toggleMic} className={micEnabled ? 'control-btn' : 'control-btn off'}>
+          {micEnabled ? 'Tắt Mic' : 'Bật Mic'}
+        </button>
+        <button onClick={toggleCamera} className={cameraEnabled ? 'control-btn' : 'control-btn off'}>
+          {cameraEnabled ? 'Tắt Camera' : 'Bật Camera'}
+        </button>
+        <button onClick={joinRoom} disabled={!activeChat || hasJoined} className="control-btn">
+          Tham gia cuộc gọi
+        </button>
+        <button onClick={onClose} className="control-btn leave">
+          Rời cuộc gọi
+        </button>
+      </div>
     </div>
   );
 };

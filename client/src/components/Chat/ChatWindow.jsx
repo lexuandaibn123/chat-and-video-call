@@ -28,6 +28,7 @@ const ChatWindow = ({
   onUploadProgress,
   userInfo,
   socket,
+  videoCallSocket
 }) => {
   const messageListEndRef = useRef(null);
   const messageInputRef = useRef(null);
@@ -325,7 +326,7 @@ const ChatWindow = ({
         <VideoCall
           activeChat={activeContact}
           userInfo={userInfo}
-          socket={socket}
+          videoCallSocket={videoCallSocket}
           onClose={() => setIsVideoCallOpen(false)}
         />
       )}
