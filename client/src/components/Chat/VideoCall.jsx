@@ -154,63 +154,54 @@ const VideoCall = ({ activeChat, userInfo, videoCallSocket, onClose }) => {
   }, [activeChat, userInfo, videoCallSocket, onClose]);
 
   const createPeerConnection = (id, username, isConsumer = false) => {
-    try {
-      const peerConnection = new RTCPeerConnection({
-        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
-      });
-      peerConnections.current[id] = peerConnection;
+  try {
+    const peerConnection = new RTCPeerConnection({
+      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+    });
+    peerConnections.current[id] = peerConnection;
 
-      if (localStream) {
-        localStream.getTracks().forEach((track) => {
-          try {
-            peerConnection.addTrack(track, localStream);
-          } catch (error) {
-            console.error(`Error adding track for peer ${id}:`, error);
-          }
+    if (localStream && !isConsumer) {
+      localStream.getTracks().forEach((track) => {
+        console.log(`Adding track to peerConnection ${id}:`, track.kind);
+        peerConnection.addTrack(track, localStream);
+      });
+    }
+
+    peerConnection.ontrack = (event) => {
+      if (event.streams && event.streams[0]) {
+        console.log('ontrack triggered for peer:', id, event.streams[0]);
+        setRemoteStreams((prev) => ({
+          ...prev,
+          [id]: {
+            stream: event.streams[0],
+            username: username || 'Unknown',
+            micEnabled: true,
+            cameraEnabled: true,
+          },
+        }));
+      }
+    };
+
+    peerConnection.onicecandidate = (event) => {
+      if (event.candidate) {
+        videoCallSocket.emit(isConsumer ? 'consumerIceCandidate' : 'iceCandidate', {
+          candidate: event.candidate,
+          peerId: id,
+          consumerId: isConsumer ? id : undefined,
         });
       }
+    };
 
-      peerConnection.ontrack = (event) => {
-        if (event.streams && event.streams[0]) {
-          setRemoteStreams((prev) => ({
-            ...prev,
-            [id]: {
-              stream: event.streams[0],
-              username: username || 'Unknown',
-              micEnabled: true,
-              cameraEnabled: true,
-            },
-          }));
-        }
-      };
+    peerConnection.onconnectionstatechange = () => {
+      console.log(`Peer ${id} connection state: ${peerConnection.connectionState}`);
+    };
 
-      peerConnection.onicecandidate = (event) => {
-        if (event.candidate) {
-          videoCallSocket.emit(isConsumer ? 'consumerIceCandidate' : 'iceCandidate', {
-            candidate: event.candidate,
-            peerId: id,
-            consumerId: isConsumer ? id : undefined,
-          });
-        }
-      };
-
-      peerConnection.onerror = (error) => {
-        console.error(`Peer connection error for ${id}:`, error);
-      };
-
-      peerConnection.onconnectionstatechange = () => {
-        console.log(`Peer ${id} connection state: ${peerConnection.connectionState}`);
-        if (peerConnection.connectionState === 'failed') {
-          removePeer(id);
-        }
-      };
-
-      return peerConnection;
-    } catch (error) {
-      console.error(`Error creating peer connection for ${id}:`, error);
-      return null;
-    }
-  };
+    return peerConnection;
+  } catch (error) {
+    console.error(`Error creating peer connection for ${id}:`, error);
+    return null;
+  }
+};
 
   const joinRoom = async () => {
     if (hasJoined || !activeChat || !activeChat.id || !localStream) {
