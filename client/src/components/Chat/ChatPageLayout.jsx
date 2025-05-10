@@ -33,7 +33,8 @@ const ChatPageLayout = ({
   onClientUploadComplete,
   onUploadError,
   onUploadProgress,
-  userInfo
+  userInfo,
+  socket
 }) => {
   // Filter conversations for groups and friends
   const filteredConversations = conversations.filter((conv) => {
@@ -140,6 +141,7 @@ const ChatPageLayout = ({
         onUploadError={onUploadError}
         onUploadProgress={onUploadProgress}
         userInfo = {userInfo}
+        socket={socket}
       />
 
       {isSettingsOpen && activeChat?.isGroup && activeChat.detailedMembers && (

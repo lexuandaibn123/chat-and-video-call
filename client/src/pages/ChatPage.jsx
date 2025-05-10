@@ -51,10 +51,12 @@ const ChatPage = () => {
   const { socket, sendMessage, isConnected } = useSocket({
     isAuthenticated,
     userId: user?._id,
+    userInfo: user, // Truyền toàn bộ user object làm userInfo
     activeChatId: activeChat?.id,
     setMessages,
     setConversations,
     setActionError,
+    setSendingMessage,
   });
 
   // --- Handlers ---
@@ -73,8 +75,8 @@ const ChatPage = () => {
     isEditingName,
     editingGroupName,
     socket,
-    sendMessage, // Truyền sendMessage vào handlers
-    isConnected, // Truyền isConnected vào handlers
+    sendMessage,
+    isConnected,
     setConversations,
     setActiveChat,
     setMessages,
@@ -109,7 +111,10 @@ const ChatPage = () => {
             throw new Error("User ID is missing or invalid from API.");
           }
           const authenticatedUser = {
+            id: userId, // Đảm bảo có trường id
             _id: userId,
+            fullName: userInfoResponse.userInfo.fullName,
+            email: userInfoResponse.userInfo.email,
             ...userInfoResponse.userInfo,
           };
           setMockAuth({
@@ -200,7 +205,7 @@ const ChatPage = () => {
       setEditingMessageId(null);
       setSendingMessage(false);
     }
-  }, [isAuthLoading, isAuthenticated, user?._id, fetchInitialData]);
+  }, [isAuthLoading, isAuthenticated, user, fetchInitialData]);
 
   // --- Effect 3: Handle mobile nav toggle ---
   useEffect(() => {
@@ -280,7 +285,7 @@ const ChatPage = () => {
     }
   }, [
     activeChat,
-    user?._id,
+    user,
     setIsMobileChatActive,
     isAuthLoading,
     isAuthenticated,
@@ -317,7 +322,8 @@ const ChatPage = () => {
       onClientUploadComplete={handlers.handleUploadComplete}
       onUploadError={handlers.handleUploadError}
       onUploadProgress={handlers.handleUploadProgress}
-      userInfo = {user}
+      userInfo={user}
+      socket={socket}
     />
   );
 };

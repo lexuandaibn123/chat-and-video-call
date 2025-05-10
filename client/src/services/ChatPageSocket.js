@@ -8,66 +8,70 @@ const SERVER_URL = import.meta.env.VITE_SERVER_URL;
 export const useSocket = ({
   isAuthenticated,
   userId,
+  userInfo, // Thêm userInfo để truyền vào auth
   activeChatId,
   setMessages,
   setConversations,
   setActionError,
 }) => {
   const socketRef = useRef(null);
-  const isConnectedRef = useRef(false); // Theo dõi trạng thái kết nối
+  const isConnectedRef = useRef(false);
 
   // Hàm gửi tin nhắn
   const sendMessage = useCallback(
-  ({ conversationId, data, type, replyToMessageId = null }) => {
-    console.log("Original data:", data);
+    ({ conversationId, data, type, replyToMessageId = null }) => {
+      console.log("Original data:", data);
 
-    if (!socketRef.current || !isConnectedRef.current) {
-      setActionError('Socket is not connected. Please try again.');
-      return false;
-    }
+      if (!socketRef.current || !isConnectedRef.current) {
+        setActionError('Socket is not connected. Please try again.');
+        return false;
+      }
 
-    let finalData;
-    if (type === "text") {
-      // Với tin nhắn text, bọc data thành object { data, type }
-      finalData = {
-        data: data, // data là chuỗi (ví dụ: "Hello")
-        type: "text",
+      let finalData;
+      if (type === "text") {
+        finalData = {
+          data: data,
+          type: "text",
+        };
+      } else if (type === "image" || type === "file") {
+        finalData = data;
+      } else {
+        console.error("Unsupported message type:", type);
+        setActionError('Unsupported message type');
+        return false;
+      }
+
+      const payload = {
+        conversationId,
+        type,
+        data: finalData,
+        replyToMessageId,
       };
-    } else if (type === "image" || type === "file") {
-      // Với tin nhắn image hoặc file, data đã là mảng hoặc object đúng định dạng, không cần bọc lại
-      finalData = data;
-    } else {
-      console.error("Unsupported message type:", type);
-      setActionError('Unsupported message type');
-      return false;
-    }
 
-    const payload = {
-      conversationId,
-      type,
-      data: finalData,
-      replyToMessageId,
-    };
-
-    console.log("Payload to send:", payload);
-    socketRef.current.emit('newMessage', payload);
-    return true;
-  },
-  [setActionError]
-);
+      console.log("Payload to send:", payload);
+      socketRef.current.emit('newMessage', payload);
+      return true;
+    },
+    [setActionError]
+  );
 
   useEffect(() => {
-    if (!isAuthenticated || !userId) {
-      console.warn('useSocket: Not authenticated or missing userId. Skipping socket initialization.');
+    if (!isAuthenticated || !userId || !userInfo) {
+      console.warn('useSocket: Not authenticated, missing userId, or missing userInfo. Skipping socket initialization.', {
+        isAuthenticated,
+        userId,
+        userInfo,
+      });
       return;
     }
 
     // Khởi tạo socket
     socketRef.current = io(SERVER_URL, {
-      withCredentials: true,
+      withCredentials: true, // Đảm bảo gửi cookie session
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
+      auth: { userInfo }, // Truyền userInfo vào auth
     });
 
     socketRef.current.on('connect', () => {
@@ -90,7 +94,6 @@ export const useSocket = ({
     socketRef.current.on('receiveMessage', (receivedMessage) => {
       console.log('Received real-time message:', receivedMessage);
 
-      // Kiểm tra activeChatId trước khi cập nhật messages
       if (receivedMessage.conversationId && receivedMessage.conversationId === activeChatId) {
         setMessages((prevMessages) => {
           const isDuplicate = prevMessages.some(
@@ -108,7 +111,6 @@ export const useSocket = ({
         });
       }
 
-      // Cập nhật danh sách conversations bất kể activeChatId
       setConversations((prevConvs) =>
         updateConversationsListLatestMessage(prevConvs, receivedMessage.conversationId, receivedMessage)
       );
@@ -145,7 +147,7 @@ export const useSocket = ({
         console.log('Socket.IO connection closed');
       }
     };
-  }, [isAuthenticated, userId, activeChatId, setMessages, setConversations, setActionError]);
+  }, [isAuthenticated, userId, userInfo, activeChatId, setMessages, setConversations, setActionError]);
 
   // Tham gia phòng chat khi activeChatId thay đổi
   useEffect(() => {

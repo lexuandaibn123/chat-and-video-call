@@ -1,12 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import Picker from 'emoji-picker-react'; // Thêm import cho emoji picker
+import Picker from 'emoji-picker-react';
 import MessageBubble from './MessageBubble';
 import defaultAvatarPlaceholder from '../../assets/images/avatar_placeholder.jpg';
 import { UploadButton } from '../../utils/uploadthing';
 import VideoCall from './VideoCall';
-import io from 'socket.io-client';
-
-const SERVER_URL = import.meta.env.VITE_SERVER_URL;
 
 const ChatWindow = ({
   activeContact,
@@ -30,94 +27,82 @@ const ChatWindow = ({
   onUploadError,
   onUploadProgress,
   userInfo,
+  socket, // Nhận socket từ props
 }) => {
   const messageListEndRef = useRef(null);
   const messageInputRef = useRef(null);
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false); 
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isVideoCallOpen, setIsVideoCallOpen] = useState(false);
   const [callInvite, setCallInvite] = useState(null);
-  const socket = useRef(null);
 
   useEffect(() => {
-    // Khởi tạo kết nối tới namespace mặc định
-    socket.current = io(SERVER_URL, {
-      auth: { userInfo },
-      secure: true,
-      rejectUnauthorized: false,
-    });
+    if (!socket || !activeContact?.id) return;
 
-    socket.current.on('connect', () => {
-      console.log('Connected to default namespace:', socket.current.id);
-    });
+    // Join room khi activeContact thay đổi
+    socket.emit('join', activeContact.id);
 
-    socket.current.on('callStarted', (data) => {
+    // Lắng nghe sự kiện callStarted
+    socket.on('callStarted', (data) => {
       console.log('Received callStarted:', data);
-      setCallInvite(data); // Hiển thị popup khi nhận sự kiện
+      if (data.roomId === activeContact.id) {
+        setCallInvite(data);
+      }
     });
 
-    socket.current.on('connect_error', (error) => {
-      console.error('Socket.IO connect error:', error);
+    // Lắng nghe sự kiện callEnded
+    socket.on('callEnded', (data) => {
+      console.log('Call ended:', data);
+      setCallInvite(null);
+      alert('Cuộc gọi đã kết thúc');
+    });
+
+    // Lắng nghe sự kiện userLeft
+    socket.on('userLeft', (data) => {
+      console.log('User left:', data.id);
     });
 
     return () => {
-      if (socket.current) socket.current.disconnect();
+      // Cleanup không cần disconnect vì socket được quản lý từ useSocket
     };
-  }, [userInfo]);
+  }, [socket, activeContact?.id]);
 
-  // Cuộn xuống cuối danh sách tin nhắn
   useEffect(() => {
     if (!isLoadingMessages && editingMessageId === null) {
-      messageListEndRef.current?.scrollIntoView({ behavior: "auto" });
+      messageListEndRef.current?.scrollIntoView({ behavior: 'auto' });
     }
   }, [messages, isLoadingMessages, editingMessageId]);
 
-  // Tập trung vào textarea khi chỉnh sửa
   useEffect(() => {
     if (editingMessageId !== null) {
       messageInputRef.current?.focus();
       const input = messageInputRef.current;
       if (input) {
         const end = input.value.length;
-        setTimeout(() => {
-          input.setSelectionRange(end, end);
-        }, 0);
+        setTimeout(() => input.setSelectionRange(end, end), 0);
       }
     }
   }, [editingMessageId]);
 
-  // Xử lý gửi form
   const handleFormSubmit = (event) => {
     event.preventDefault();
     const messageText = messageInput.trim();
     if (editingMessageId !== null) {
-      if (messageText) {
-        onSaveEditedMessage();
-      } else {
-        console.warn("Cannot save empty message.");
-      }
-    } else {
-      if (messageText) {
-        onSendTextMessage(messageText);
-      }
+      if (messageText) onSaveEditedMessage();
+      else console.warn('Cannot save empty message.');
+    } else if (messageText) {
+      onSendTextMessage(messageText);
     }
   };
 
-  // Xử lý thay đổi input
-  const handleInputChange = (e) => {
-    setMessageInput(e.target.value);
-  };
+  const handleInputChange = (e) => setMessageInput(e.target.value);
 
-  // Xử lý khi chọn emoji
   const handleEmojiClick = (emojiObject) => {
     const emoji = emojiObject.emoji;
     const textarea = messageInputRef.current;
     if (textarea) {
       const start = textarea.selectionStart;
       const end = textarea.selectionEnd;
-      const newValue =
-        messageInput.substring(0, start) +
-        emoji +
-        messageInput.substring(end);
+      const newValue = messageInput.substring(0, start) + emoji + messageInput.substring(end);
       setMessageInput(newValue);
       setTimeout(() => {
         textarea.selectionStart = start + emoji.length;
@@ -128,24 +113,23 @@ const ChatWindow = ({
     setShowEmojiPicker(false);
   };
 
-  // Đóng emoji picker khi click bên ngoài
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (
-        showEmojiPicker &&
-        !event.target.closest('.emoji-picker-container') &&
-        !event.target.closest('.icon-button[title="Emoji"]')
-      ) {
+      if (showEmojiPicker && !event.target.closest('.emoji-picker-container') && !event.target.closest('.icon-button[title="Emoji"]')) {
         setShowEmojiPicker(false);
       }
     };
     document.addEventListener('click', handleClickOutside);
-    return () => {
-      document.removeEventListener('click', handleClickOutside);
-    };
+    return () => document.removeEventListener('click', handleClickOutside);
   }, [showEmojiPicker]);
 
-  // Nếu không có liên hệ nào được chọn
+  const handleJoinCall = () => {
+    setIsVideoCallOpen(true);
+    setCallInvite(null);
+  };
+
+  const handleDeclineCall = () => setCallInvite(null);
+
   if (!activeContact) {
     return (
       <section className="active-chat-panel placeholder">
@@ -158,79 +142,40 @@ const ChatWindow = ({
   const isGroupChat = activeContact.isGroup;
   const isEditingMode = editingMessageId !== null;
 
-  const handleVideoCall = () => {
-    setIsVideoCallOpen(true);
-  };
-
-  const handleCloseVideoCall = () => {
-    setIsVideoCallOpen(false);
-  };
-
-  const handleJoinCall = () => {
-    setIsVideoCallOpen(true);
-    setCallInvite(null); // Đóng popup sau khi join
-  };
-
-  const handleDeclineCall = () => {
-    setCallInvite(null); // Đóng popup khi từ chối
-  };
-
   return (
     <section className="active-chat-panel">
       <header className="chat-header">
         {isMobile && (
-          <button
-            className="icon-button back-button"
-            title="Back"
-            onClick={onMobileBack}
-          >
+          <button className="icon-button back-button" title="Back" onClick={onMobileBack}>
             <i className="fas fa-arrow-left"></i>
           </button>
         )}
         <div className="contact-info">
-          <img
-            src={activeContact.avatar || defaultAvatarPlaceholder}
-            alt={activeContact.name || "User Avatar"}
-            className="avatar"
-          />
+          <img src={activeContact.avatar || defaultAvatarPlaceholder} alt={activeContact.name || "User Avatar"} className="avatar" />
           <div className="name-status">
-            <span className="contact-name">
-              {activeContact.name || "Unknown"}
-            </span>
-            <span className="contact-status">
-              {activeContact.statusText || (isGroupChat ? "Group" : "Offline")}
-            </span>
+            <span className="contact-name">{activeContact.name || "Unknown"}</span>
+            <span className="contact-status">{activeContact.statusText || (isGroupChat ? "Group" : "Offline")}</span>
           </div>
         </div>
         <div className="chat-actions">
-          <button
-            className="icon-button"
-            title="Call"
-            disabled={isEditingMode || sendingMessage}
-          >
+          <button className="icon-button" title="Call" disabled={isEditingMode || sendingMessage}>
             <i className="fas fa-phone-alt"></i>
           </button>
           <button
             className="icon-button"
             title="Video Call"
             disabled={isEditingMode || sendingMessage}
-            onClick={handleVideoCall}
+            onClick={() => setIsVideoCallOpen(true)}
           >
             <i className="fas fa-video"></i>
           </button>
           {isGroupChat && onOpenSettings && (
-            <button
-              className="icon-button"
-              title="More Options"
-              onClick={onOpenSettings}
-              disabled={isEditingMode || sendingMessage}
-            >
+            <button className="icon-button" title="More Options" onClick={onOpenSettings} disabled={isEditingMode || sendingMessage}>
               <i className="fas fa-ellipsis-v"></i>
             </button>
           )}
         </div>
       </header>
-
       <div className="message-list-container">
         {isLoadingMessages ? (
           <div className="loading-messages">Loading messages...</div>
@@ -260,30 +205,16 @@ const ChatWindow = ({
         )}
         <div ref={messageListEndRef} />
       </div>
-
       <form className="chat-input-area" onSubmit={handleFormSubmit}>
         <div className="icon-button attach-button uploadthing-wrapper">
           <UploadButton
-            endpoint={"conversationUploader"}
+            endpoint="conversationUploader"
             key="file-uploader"
             disabled={sendingMessage || !activeContact || isEditingMode}
-            content={{
-              button: <i className="fas fa-paperclip"></i>,
-            }}
+            content={{ button: <i className="fas fa-paperclip"></i> }}
             appearance={{
-              button: {
-                padding: 0,
-                height: "auto",
-                lineHeight: "normal",
-                pointerEvents: "all",
-              },
-              container: {
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: "100%",
-                height: "100%",
-              },
+              button: { padding: 0, height: 'auto', lineHeight: 'normal', pointerEvents: 'all' },
+              container: { display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' },
             }}
             onBeforeUploadBegin={onUploadBeforeBegin}
             onClientUploadComplete={onClientUploadComplete}
@@ -291,31 +222,17 @@ const ChatWindow = ({
             onUploadProgress={onUploadProgress}
           />
         </div>
-
         <div className="icon-button uploadthing-wrapper">
           <UploadButton
-            endpoint={"conversationUploader"}
+            endpoint="conversationUploader"
             key="image-uploader"
             multiple={true}
             accept="image/*"
             disabled={sendingMessage || !activeContact || isEditingMode}
-            content={{
-              button: <i className="fas fa-camera"></i>,
-            }}
+            content={{ button: <i className="fas fa-camera"></i> }}
             appearance={{
-              button: {
-                padding: 0,
-                height: "auto",
-                lineHeight: "normal",
-                pointerEvents: "all",
-              },
-              container: {
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: "100%",
-                height: "100%",
-              },
+              button: { padding: 0, height: 'auto', lineHeight: 'normal', pointerEvents: 'all' },
+              container: { display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' },
             }}
             onBeforeUploadBegin={onUploadBeforeBegin}
             onClientUploadComplete={onClientUploadComplete}
@@ -323,51 +240,40 @@ const ChatWindow = ({
             onUploadProgress={onUploadProgress}
           />
         </div>
-
         <textarea
           ref={messageInputRef}
           value={messageInput}
           onChange={handleInputChange}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
+            if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
-              if (
-                !isLoadingMessages &&
-                activeContact &&
-                !sendingMessage &&
-                (isEditingMode || messageInput.trim())
-              ) {
-                document.querySelector(".send-button").click();
+              if (!isLoadingMessages && activeContact && !sendingMessage && (isEditingMode || messageInput.trim())) {
+                document.querySelector('.send-button').click();
               }
             }
           }}
-          placeholder={
-            isEditingMode ? "Editing message..." : "Type your message here..."
-          }
-          className={`message-input ${isEditingMode ? "editing-mode" : ""}`}
+          placeholder={isEditingMode ? 'Editing message...' : 'Type your message here...'}
+          className={`message-input ${isEditingMode ? 'editing-mode' : ''}`}
           name="messageInput"
           autoComplete="off"
           disabled={isLoadingMessages || !activeContact || sendingMessage}
           rows={isEditingMode ? 2 : 1}
-          style={{ resize: isEditingMode ? "vertical" : "none" }}
+          style={{ resize: isEditingMode ? 'vertical' : 'none' }}
         />
-
         <button
           type="button"
           className="icon-button"
           title="Emoji"
-          onClick={() => setShowEmojiPicker(!showEmojiPicker)} // Thêm sự kiện toggle
+          onClick={() => setShowEmojiPicker(!showEmojiPicker)}
           disabled={sendingMessage || !activeContact || isEditingMode}
         >
           <i className="far fa-smile"></i>
         </button>
-
         {showEmojiPicker && (
           <div className="emoji-picker-container">
             <Picker onEmojiClick={handleEmojiClick} />
           </div>
         )}
-
         {isEditingMode && (
           <button
             type="button"
@@ -379,47 +285,31 @@ const ChatWindow = ({
             <i className="fas fa-times"></i>
           </button>
         )}
-
         <button
           type="submit"
           className="icon-button send-button"
-          title={isEditingMode ? "Save Edit" : "Send Message"}
-          disabled={
-            isLoadingMessages ||
-            !activeContact ||
-            sendingMessage ||
-            (!isEditingMode && !messageInput.trim())
-          }
+          title={isEditingMode ? 'Save Edit' : 'Send Message'}
+          disabled={isLoadingMessages || !activeContact || sendingMessage || (!isEditingMode && !messageInput.trim())}
         >
-          {sendingMessage ? (
-            <i className="fas fa-spinner fa-spin"></i>
-          ) : isEditingMode ? (
-            <i className="fas fa-check"></i>
-          ) : (
-            <i className="fas fa-paper-plane"></i>
-          )}
+          {sendingMessage ? <i className="fas fa-spinner fa-spin"></i> : isEditingMode ? <i className="fas fa-check"></i> : <i className="fas fa-paper-plane"></i>}
         </button>
       </form>
-
-      {isVideoCallOpen && (
-        <VideoCall
-          activeChat={activeContact}
-          userInfo={userInfo}
-          onClose={handleCloseVideoCall}
-        />
-      )}
-
       {callInvite && (
         <div className="call-invite-popup">
           <div className="call-invite-content">
-            <p>
-              {callInvite.username} has started a video call in room{' '}
-              {callInvite.roomId}. Join or decline?
-            </p>
+            <p>{callInvite.username} has started a video call in room {callInvite.roomId}. Join or decline?</p>
             <button onClick={handleJoinCall}>Join</button>
             <button onClick={handleDeclineCall}>Decline</button>
           </div>
         </div>
+      )}
+      {isVideoCallOpen && (
+        <VideoCall
+          activeChat={activeContact}
+          userInfo={userInfo}
+          socket={socket} // Truyền socket từ ChatPage
+          onClose={() => setIsVideoCallOpen(false)}
+        />
       )}
     </section>
   );
