@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import io from 'socket.io-client';
 
 // Định nghĩa URL server từ biến môi trường hoặc mặc định là localhost:8800
-const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:8800';
+const SERVER_URL = import.meta.env.VITE_SERVER_URL;
 
 const VideoCall = ({ activeChat, userInfo, socket, onClose }) => {
   const [localStream, setLocalStream] = useState(null);
