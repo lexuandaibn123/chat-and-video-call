@@ -23,6 +23,7 @@ class ConversationService {
   }
 
   _isOwnerOfMessage(message, userId) {
+    if (!message.senderId) return false;
     if (typeof message.senderId === "string")
       return message.senderId.toString() == userId;
     else if (typeof message.senderId === "object")
@@ -162,16 +163,21 @@ class ConversationService {
         };
       });
 
-      const conversation = await ConversationRepository.create({
-        isGroup,
-        members: membersInfo,
-        name: name ?? "",
-      });
+      try {
+        const conversation = await ConversationRepository.create({
+          isGroup,
+          members: membersInfo,
+          name: name ?? "",
+        });
 
-      return res.status(200).json({
-        success: true,
-        data: conversation,
-      });
+        return res.status(200).json({
+          success: true,
+          data: conversation,
+        });
+      } catch (error) {
+        console.error(error);
+        return res.status(400).json({ error: error.message });
+      }
     } catch (error) {
       console.error(error);
       return res.status(500).json({ error: "Internal server error" });
@@ -184,57 +190,62 @@ class ConversationService {
       const userInfo = req.session.userInfo;
 
       const userId = userInfo.id.toString();
-      const conversations = await ConversationRepository.findByUserId(
-        userId,
-        page,
-        limit
-      );
+      try {
+        const conversations = await ConversationRepository.findByUserId(
+          userId,
+          page,
+          limit
+        );
 
-      return res.status(200).json({
-        success: true,
-        data: conversations
-          .map((conversation) => {
-            const conversationHandle = conversation.toObject();
-            const leftAt = this._isMemberOfConversation(
-              conversationHandle,
-              userId,
-              true
-            ).leftAt;
+        return res.status(200).json({
+          success: true,
+          data: conversations
+            .map((conversation) => {
+              const conversationHandle = conversation.toObject();
+              const leftAt = this._isMemberOfConversation(
+                conversationHandle,
+                userId,
+                true
+              ).leftAt;
 
-            if (leftAt) {
-              conversationHandle.members = conversationHandle.members.filter(
-                (member) => {
-                  return member.joinedAt <= leftAt && member.leftAt == null;
+              if (leftAt) {
+                conversationHandle.members = conversationHandle.members.filter(
+                  (member) => {
+                    return member.joinedAt <= leftAt && member.leftAt == null;
+                  }
+                );
+
+                if (
+                  typeof conversationHandle.latestMessage === "object" &&
+                  conversationHandle.latestMessage.datetime_created > leftAt
+                ) {
+                  conversationHandle.latestMessage = {
+                    _id: conversationHandle.latestMessage._id,
+                    conversationId:
+                      conversationHandle.latestMessage.conversationId,
+                    content: null,
+                    datetime_created: null,
+                    last_updated: null,
+                    type: null,
+                    replyToMessageId: null,
+                    isEdited: null,
+                    isDeleted: null,
+                    senderId: null,
+                  };
                 }
-              );
-
-              if (
-                typeof conversationHandle.latestMessage === "object" &&
-                conversationHandle.latestMessage.datetime_created > leftAt
-              ) {
-                conversationHandle.latestMessage = {
-                  _id: conversationHandle.latestMessage._id,
-                  conversationId:
-                    conversationHandle.latestMessage.conversationId,
-                  content: null,
-                  datetime_created: null,
-                  last_updated: null,
-                  type: null,
-                  replyToMessageId: null,
-                  isEdited: null,
-                  isDeleted: null,
-                  senderId: null,
-                };
               }
-            }
 
-            return conversationHandle;
-          })
-          .map((conversation) => {
-            this._filterMembersLeft(conversation);
-            return conversation;
-          }),
-      });
+              return conversationHandle;
+            })
+            .map((conversation) => {
+              this._filterMembersLeft(conversation);
+              return conversation;
+            }),
+        });
+      } catch (error) {
+        console.error(error);
+        return res.status(400).json({ error: error.message });
+      }
     } catch (error) {
       console.error(error);
       return res.status(500).json({ error: "Internal server error" });
@@ -263,19 +274,24 @@ class ConversationService {
 
       const userInfo = req.session.userInfo;
 
-      const conversations = await ConversationRepository.findByName(
-        userInfo.id.toString(),
-        name,
-        page,
-        limit
-      );
-      return res.status(200).json({
-        success: true,
-        data: conversations.map((conversation) => {
-          this._filterMembersLeft(conversation);
-          return conversation;
-        }),
-      });
+      try {
+        const conversations = await ConversationRepository.findByName(
+          userInfo.id.toString(),
+          name,
+          page,
+          limit
+        );
+        return res.status(200).json({
+          success: true,
+          data: conversations.map((conversation) => {
+            this._filterMembersLeft(conversation);
+            return conversation;
+          }),
+        });
+      } catch (error) {
+        console.error(error);
+        return res.status(400).json({ error: error.message });
+      }
     } catch (error) {
       console.error(error);
       return res.status(500).json({ error: "Internal server error" });
@@ -731,7 +747,9 @@ class ConversationService {
       if (!isValidType) throw new Error("Invalid message type");
 
       if (Array.isArray(data)) {
-        const isValid = data.reduce((a, b) => a && b.type == "image", true);
+        const isValid = data.every((item) => {
+          return typeof item === "object" && item.type == "image" && item.data.length > 0;
+        });
         if (!isValid || data.length < 1) {
           console.error("Invalid data type");
           throw new Error("Invalid data type");

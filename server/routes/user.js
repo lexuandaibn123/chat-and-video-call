@@ -3,6 +3,8 @@ const router = express.Router();
 const { check, param } = require("express-validator"); // For validation
 const { validateMiddleware } = require("../middleware/validate");
 const UserService = require("../services/user");
+const { authMiddleware } = require("../middleware/auth");
+router.use(authMiddleware);
 
 /**
  * @openapi

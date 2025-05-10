@@ -41,6 +41,18 @@ const { validateMiddleware } = require("../middleware/validate");
  *                 message:
  *                   type: string
  *                   example: Login successful
+ *                 userInfo:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       example: 1234567890
+ *                     fullName:
+ *                       type: string
+ *                       example: John Doe
+ *                     email:
+ *                       type: string
+ *                       example: user@example.com
  *       400:
  *         description: Validation error
  *         content:
