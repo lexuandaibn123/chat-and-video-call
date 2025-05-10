@@ -171,7 +171,7 @@ const MessageSchema = new mongoose.Schema(
     },
     isDeleted: { type: Boolean, default: false },
     isEdited: { type: Boolean, default: false },
-    replyToMessageId: { type: String, default: null },
+    replyToMessageId: { type: mongoose.Types.ObjectId, ref: "Message", default: null },
   },
   {
     timestamps: { createdAt: "datetime_created", updatedAt: "last_updated" },
