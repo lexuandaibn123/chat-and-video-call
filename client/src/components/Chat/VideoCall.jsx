@@ -92,42 +92,20 @@ const VideoCall = ({ activeChat, userInfo, videoCallSocket, onClose }) => {
 
     videoCallSocket.on('answer', async ({ sdp, from }) => {
       try {
-        if (!peerConnections.current[from]) {
-          peerConnections.current[from] = new RTCPeerConnection({
-            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
-          });
-          peerConnections.current[from].ontrack = (event) => {
-            if (event.streams && event.streams[0]) {
-              console.log('ontrack triggered for peer:', from, event.streams[0]);
-              setRemoteStreams((prev) => ({
-                ...prev,
-                [from]: {
-                  stream: event.streams[0],
-                  username: 'Unknown', // Cập nhật username từ server nếu có
-                  micEnabled: true,
-                  cameraEnabled: true,
-                },
-              }));
-            }
-          };
-          peerConnections.current[from].onicecandidate = (event) => {
-            if (event.candidate) {
-              videoCallSocket.emit('iceCandidate', { candidate: event.candidate, to: from });
-            }
-          };
-          peerConnections.current[from].onconnectionstatechange = () => {
-            console.log(`Peer ${from} connection state: ${peerConnections.current[from].connectionState}`);
-          };
+        const peerId = Object.keys(peerConnections.current).find((key) => key.startsWith(userInfo.id));
+        if (!peerConnections.current[peerId]) {
+          console.error(`Peer connection not found for ${userInfo.id} when handling answer`);
+          return;
         }
 
-        const pc = peerConnections.current[from];
+        const pc = peerConnections.current[peerId];
         await waitForIceGathering(pc);
-        if (pc.signalingState === 'have-local-offer' || pc.signalingState === 'stable') {
+        if (pc.signalingState === 'have-local-offer') {
           const desc = new RTCSessionDescription(sdp);
           await pc.setRemoteDescription(desc);
-          console.log('Set remote description for peer:', from);
+          console.log('Set remote description for peer:', peerId);
         } else {
-          console.error(`Invalid signaling state ${pc.signalingState} for ${from}`);
+          console.warn(`Skipping setRemoteDescription for ${peerId} in state: ${pc.signalingState}`);
         }
       } catch (error) {
         console.error('Error setting remote description:', error);
@@ -136,8 +114,8 @@ const VideoCall = ({ activeChat, userInfo, videoCallSocket, onClose }) => {
 
     videoCallSocket.on('newProducer', (data) => {
       console.log('New user joined:', data);
-      if (data.id !== userInfo.id && !peerConnections.current[data.id]) {
-        createConsumer(data.id, data.username);
+      if (data.id !== userInfo.id && !peerConnections.current[data.id] && !consumersCreated.current.has(data.id)) {
+        createConsumer(data.id, data.username || 'Unknown');
       }
     });
 
@@ -159,21 +137,36 @@ const VideoCall = ({ activeChat, userInfo, videoCallSocket, onClose }) => {
       });
     });
 
-    videoCallSocket.on('consumerReady', async ({ sdp, id, consumerId }) => {
+    videoCallSocket.on('consumerReady', async ({ sdp, id, consumerId, username }) => {
+      console.log(`Received consumerReady for ${consumerId}:`, { sdp, id, username });
       const peerConnection = peerConnections.current[consumerId];
       if (peerConnection) {
         try {
           await waitForIceGathering(peerConnection);
-          if (peerConnection.signalingState === 'have-local-offer' || peerConnection.signalingState === 'stable') {
+          if (peerConnection.signalingState === 'have-local-offer') {
             const desc = new RTCSessionDescription(sdp);
             await peerConnection.setRemoteDescription(desc);
             console.log(`Set remote description for consumer ${consumerId}`);
+            // Restart ICE negotiation
+            const offer = await peerConnection.createOffer({ iceRestart: true });
+            await peerConnection.setLocalDescription(offer);
+            console.log(`Restarted ICE for consumer ${consumerId}`);
           } else {
-            console.error(`Invalid signaling state ${peerConnection.signalingState} for ${consumerId}`);
+            console.warn(`Skipping setRemoteDescription for ${consumerId} in state: ${peerConnection.signalingState}`);
           }
+          // Cập nhật username từ payload nếu có
+          setRemoteStreams((prev) => ({
+            ...prev,
+            [id]: {
+              ...prev[id],
+              username: username || 'Unknown',
+            },
+          }));
         } catch (error) {
           console.error('Error setting remote description:', error);
         }
+      } else {
+        console.error(`Consumer peer not found for ${consumerId}`);
       }
     });
 
@@ -182,6 +175,39 @@ const VideoCall = ({ activeChat, userInfo, videoCallSocket, onClose }) => {
         ...prev,
         [id]: { ...prev[id], micEnabled, cameraEnabled },
       }));
+    });
+
+    videoCallSocket.on('iceCandidate', async ({ candidate, to }) => {
+      if (to === userInfo.id) {
+        const peerId = Object.keys(peerConnections.current).find((key) => key.startsWith(userInfo.id));
+        const peerConnection = peerConnections.current[peerId];
+        if (peerConnection) {
+          try {
+            console.log(`Received iceCandidate for ${userInfo.id}:`, candidate);
+            await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+          } catch (error) {
+            console.error('Error adding iceCandidate:', error);
+          }
+        } else {
+          console.error(`Peer connection not found for ${userInfo.id}`);
+        }
+      }
+    });
+
+    videoCallSocket.on('consumerIceCandidate', async ({ candidate, consumerId, to }) => {
+      if (to === userInfo.id) {
+        const peerConnection = peerConnections.current[consumerId];
+        if (peerConnection) {
+          try {
+            console.log(`Received consumerIceCandidate for ${consumerId}:`, candidate);
+            await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+          } catch (error) {
+            console.error('Error adding consumerIceCandidate:', error);
+          }
+        } else {
+          console.error(`Consumer peer not found for ${consumerId} when handling iceCandidate`);
+        }
+      }
     });
 
     videoCallSocket.on('error', (message) => {
@@ -198,7 +224,10 @@ const VideoCall = ({ activeChat, userInfo, videoCallSocket, onClose }) => {
   const createPeerConnection = (id, username, isConsumer = false) => {
     try {
       const peerConnection = new RTCPeerConnection({
-        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' },
+        ],
       });
       if (localStream && !isConsumer) {
         localStream.getTracks().forEach((track) => {
@@ -210,9 +239,10 @@ const VideoCall = ({ activeChat, userInfo, videoCallSocket, onClose }) => {
       peerConnection.ontrack = (event) => {
         if (event.streams && event.streams[0]) {
           console.log('ontrack triggered for peer:', id, event.streams[0]);
+          const remoteId = isConsumer ? id.split('-')[1] : id;
           setRemoteStreams((prev) => ({
             ...prev,
-            [id]: {
+            [remoteId]: {
               stream: event.streams[0],
               username: username || 'Unknown',
               micEnabled: true,
@@ -227,13 +257,20 @@ const VideoCall = ({ activeChat, userInfo, videoCallSocket, onClose }) => {
           videoCallSocket.emit(isConsumer ? 'consumerIceCandidate' : 'iceCandidate', {
             candidate: event.candidate,
             consumerId: isConsumer ? id : undefined,
-            to: isConsumer ? id.split('-')[1] : undefined, // Gửi đến ID người dùng từ xa
+            to: isConsumer ? id.split('-')[1] : userInfo.id,
           });
+          console.log(`Sending ${isConsumer ? 'consumerIceCandidate' : 'iceCandidate'} for ${id}:`, event.candidate);
         }
       };
 
-      peerConnection.onconnectionstatechange = () => {
-        console.log(`Peer ${id} connection state: ${peerConnection.connectionState}`);
+      peerConnection.oniceconnectionstatechange = () => {
+        console.log(`ICE connection state for ${id}:`, peerConnection.iceConnectionState);
+        if (peerConnection.iceConnectionState === 'disconnected') {
+          console.warn('ICE connection disconnected for', id);
+          removePeer(id);
+        } else if (peerConnection.iceConnectionState === 'connected') {
+          console.log('ICE connection established for', id);
+        }
       };
 
       return peerConnection;
@@ -266,18 +303,21 @@ const VideoCall = ({ activeChat, userInfo, videoCallSocket, onClose }) => {
       return;
     }
 
+    peerConnections.current[peerId] = peerConnection;
+
     try {
       const offer = await peerConnection.createOffer();
       await peerConnection.setLocalDescription(offer);
       videoCallSocket.emit('joinRoom', {
         conversationId: activeChat.id,
         sdp: offer,
-        from: userInfo.id, // Thêm thông tin người gửi
+        from: userInfo.id,
       });
     } catch (error) {
       console.error('Error joining room:', error);
       setHasJoined(false);
       alert(`Lỗi khi tham gia cuộc gọi: ${error.message}`);
+      removePeer(peerId);
     }
   };
 
@@ -296,10 +336,13 @@ const VideoCall = ({ activeChat, userInfo, videoCallSocket, onClose }) => {
       return;
     }
 
+    peerConnections.current[consumerId] = peerConnection;
+
     try {
       const offer = await peerConnection.createOffer();
       await peerConnection.setLocalDescription(offer);
       videoCallSocket.emit('consume', { id, sdp: offer, consumerId });
+      console.log(`Created consumer for ${id} with consumerId ${consumerId}`);
     } catch (error) {
       console.error('Error creating consumer:', error);
       consumersCreated.current.delete(id);
