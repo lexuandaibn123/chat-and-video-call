@@ -223,14 +223,14 @@ const VideoCall = ({ activeChat, userInfo, videoCallSocket, onClose }) => {
       };
 
       peerConnection.onicecandidate = (event) => {
-  if (event.candidate) {
-    videoCallSocket.emit(isConsumer ? 'consumerIceCandidate' : 'iceCandidate', {
-      candidate: event.candidate,
-      consumerId: isConsumer ? id : undefined,
-      to: isConsumer ? id.split('-')[1] : id, // Gửi đến ID người dùng từ xa
-    });
-  }
-};
+        if (event.candidate) {
+          videoCallSocket.emit(isConsumer ? 'consumerIceCandidate' : 'iceCandidate', {
+            candidate: event.candidate,
+            consumerId: isConsumer ? id : undefined,
+            to: isConsumer ? id.split('-')[1] : undefined, // Gửi đến ID người dùng từ xa
+          });
+        }
+      };
 
       peerConnection.onconnectionstatechange = () => {
         console.log(`Peer ${id} connection state: ${peerConnection.connectionState}`);
