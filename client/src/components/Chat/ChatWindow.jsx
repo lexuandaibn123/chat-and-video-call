@@ -167,7 +167,6 @@ const ChatWindow = ({
       return;
     }
     console.log('User joined call for room:', activeContact.id);
-    alert('Đang tham gia cuộc gọi video...');
     setIsVideoCallOpen(true);
     setCallInvite(null);
   };
@@ -224,7 +223,6 @@ const ChatWindow = ({
             disabled={isEditingMode || sendingMessage || isVideoCallOpen}
             onClick={() => {
               console.log('Starting video call for room:', activeContact.id);
-              alert('Đang bắt đầu cuộc gọi video...');
               setIsVideoCallOpen(true);
             }}
           >
