@@ -15,16 +15,14 @@ export const useSocket = ({
   conversations,
   setCallInvite,
 }) => {
-  const socketRef = useRef(null); // Socket chính (defaultNamespace)
-  const videoCallSocketRef = useRef(null); // Socket cho namespace /video-call
-  const isConnectedRef = useRef(false); // Trạng thái kết nối của socket chính
-  const isVideoCallConnectedRef = useRef(false); // Trạng thái kết nối của socket /video-call
-  const joinedRoomsRef = useRef(new Set()); // Theo dõi các room đã tham gia trên socket chính
+  const socketRef = useRef(null);
+  const videoCallSocketRef = useRef(null);
+  const isConnectedRef = useRef(false);
+  const isVideoCallConnectedRef = useRef(false);
+  const joinedRoomsRef = useRef(new Set());
 
   const sendMessage = useCallback(
     ({ conversationId, data, type, replyToMessageId = null }) => {
-      console.log('Original data:', data);
-
       if (!socketRef.current || !isConnectedRef.current) {
         setActionError('Socket is not connected. Please try again.');
         return false;
@@ -32,10 +30,7 @@ export const useSocket = ({
 
       let finalData;
       if (type === 'text') {
-        finalData = {
-          data: data,
-          type: 'text',
-        };
+        finalData = { data, type: 'text' };
       } else if (type === 'image' || type === 'file') {
         finalData = data;
       } else {
@@ -44,14 +39,7 @@ export const useSocket = ({
         return false;
       }
 
-      const payload = {
-        conversationId,
-        type,
-        data: finalData,
-        replyToMessageId,
-      };
-
-      console.log('Payload to send:', payload);
+      const payload = { conversationId, type, data: finalData, replyToMessageId };
       socketRef.current.emit('newMessage', payload);
       return true;
     },
@@ -68,7 +56,6 @@ export const useSocket = ({
       return;
     }
 
-    // Khởi tạo socket chính (defaultNamespace)
     socketRef.current = io(SERVER_URL, {
       withCredentials: true,
       reconnection: true,
@@ -77,7 +64,6 @@ export const useSocket = ({
       auth: { userInfo },
     });
 
-    // Khởi tạo socket cho namespace /video-call
     videoCallSocketRef.current = io(`${SERVER_URL}/video-call`, {
       withCredentials: true,
       reconnection: true,
@@ -86,7 +72,6 @@ export const useSocket = ({
       auth: { userInfo },
     });
 
-    // Xử lý kết nối socket chính
     socketRef.current.on('connect', () => {
       console.log('Socket.IO connected:', socketRef.current.id);
       isConnectedRef.current = true;
@@ -103,20 +88,7 @@ export const useSocket = ({
       }
     });
 
-    socketRef.current.on('connected', () => {
-      console.log('Socket.IO setup confirmed by server');
-    });
-
-    socketRef.current.on('unauthorized', () => {
-      console.error('Unauthorized: Session invalid or missing');
-      setActionError('Unauthorized: Please log in again');
-      socketRef.current.disconnect();
-      isConnectedRef.current = false;
-    });
-
     socketRef.current.on('receiveMessage', (receivedMessage) => {
-      console.log('Received real-time message:', receivedMessage);
-
       if (receivedMessage.conversationId && receivedMessage.conversationId === activeChatId) {
         setMessages((prevMessages) => {
           const isDuplicate = prevMessages.some(
@@ -133,18 +105,25 @@ export const useSocket = ({
           return [...prevMessages, formattedMessage];
         });
       }
-
       setConversations((prevConvs) =>
         updateConversationsListLatestMessage(prevConvs, receivedMessage.conversationId, receivedMessage)
       );
     });
 
-    socketRef.current.on('typing', (memberId) => {
-      console.log(`${memberId} is typing`);
+    socketRef.current.on('callStarted', (data) => {
+      console.log('Received callStarted event:', data);
+      if (data.roomId === activeChatId) {
+        setCallInvite(data);
+        alert(`${data.username} đã bắt đầu cuộc gọi video trong phòng ${data.roomId}. Tham gia hay từ chối?`);
+      }
     });
 
-    socketRef.current.on('stopTyping', (memberId) => {
-      console.log(`${memberId} stopped typing`);
+    socketRef.current.on('callEnded', (data) => {
+      console.log('Received callEnded event:', data);
+      if (data.roomId === activeChatId) {
+        setCallInvite(null);
+        alert('Cuộc gọi đã kết thúc');
+      }
     });
 
     socketRef.current.on('error', (error) => {
@@ -164,42 +143,13 @@ export const useSocket = ({
       joinedRoomsRef.current.clear();
     });
 
-    // Xử lý kết nối socket /video-call
     videoCallSocketRef.current.on('connect', () => {
       console.log('Video Call Socket.IO connected:', videoCallSocketRef.current.id);
       isVideoCallConnectedRef.current = true;
-      // Không gọi joinRoom ở đây, để VideoCall.jsx xử lý
-    });
-
-    videoCallSocketRef.current.on('callStarted', (data) => {
-      console.log('Video Call Socket: Received callStarted event:', data);
-      if (data.roomId === activeChatId) {
-        setCallInvite(data);
-      } else {
-        console.warn('callStarted roomId does not match activeChatId:', {
-          receivedRoomId: data.roomId,
-          activeChatId,
-        });
-      }
-    });
-
-    videoCallSocketRef.current.on('callEnded', (data) => {
-      console.log('Video Call Socket: Received callEnded event:', data);
-      if (data.roomId === activeChatId) {
-        setCallInvite(null);
-        alert('Cuộc gọi đã kết thúc');
-      }
-    });
-
-    videoCallSocketRef.current.on('userLeft', (data) => {
-      console.log('Video Call Socket: Received userLeft event:', data);
-      if (data.id && activeChatId) {
-        console.log(`User ${data.id} left room ${activeChatId}`);
-      }
     });
 
     videoCallSocketRef.current.on('unauthorized', () => {
-      console.error('Video Call Socket: Unauthorized: Session invalid or missing');
+      console.error('Video Call Socket: Unauthorized');
       setActionError('Unauthorized: Please log in again');
       videoCallSocketRef.current.disconnect();
       isVideoCallConnectedRef.current = false;
@@ -226,17 +176,14 @@ export const useSocket = ({
         socketRef.current.disconnect();
         isConnectedRef.current = false;
         joinedRoomsRef.current.clear();
-        console.log('Socket.IO connection closed');
       }
       if (videoCallSocketRef.current) {
         videoCallSocketRef.current.disconnect();
         isVideoCallConnectedRef.current = false;
-        console.log('Video Call Socket.IO connection closed');
       }
     };
   }, [isAuthenticated, userId, userInfo, activeChatId, setMessages, setConversations, setActionError, setCallInvite]);
 
-  // Tham gia room mới trên socket chính khi conversations thay đổi
   useEffect(() => {
     if (socketRef.current && isConnectedRef.current && conversations?.length) {
       conversations.forEach((conv) => {

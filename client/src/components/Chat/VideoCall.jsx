@@ -1,17 +1,34 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import './VideoCall.css'; // Import CSS
+import './VideoCall.css';
 import './Chat.scss';
 
 const VideoCall = ({ activeChat, userInfo, videoCallSocket, onClose }) => {
   const [localStream, setLocalStream] = useState(null);
-  const [remoteStreams, setRemoteStreams] = useState({}); // { id: { stream, username, micEnabled, cameraEnabled } }
+  const [remoteStreams, setRemoteStreams] = useState({});
   const [hasJoined, setHasJoined] = useState(false);
   const [micEnabled, setMicEnabled] = useState(true);
   const [cameraEnabled, setCameraEnabled] = useState(true);
   const localVideoRef = useRef(null);
-  const peerConnections = useRef({});
+  const peerConnections = useRef({}); // Lưu trữ tất cả RTCPeerConnection cho từng người dùng
   const consumersCreated = useRef(new Map());
+
+  // Hàm chờ ICE gathering hoàn tất
+  const waitForIceGathering = (peerConnection) => {
+    return new Promise((resolve) => {
+      if (peerConnection.iceGatheringState === 'complete') {
+        resolve();
+      } else {
+        const checkState = () => {
+          if (peerConnection.iceGatheringState === 'complete') {
+            peerConnection.removeEventListener('icegatheringstatechange', checkState);
+            resolve();
+          }
+        };
+        peerConnection.addEventListener('icegatheringstatechange', checkState);
+      }
+    });
+  };
 
   useEffect(() => {
     if (!userInfo || !userInfo.id) {
@@ -30,9 +47,7 @@ const VideoCall = ({ activeChat, userInfo, videoCallSocket, onClose }) => {
 
     const checkMediaPermissions = async () => {
       try {
-        console.log('Accessing media devices...');
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        console.log('Local stream obtained:', stream);
         stream.getTracks().forEach((track) => track.stop());
         return true;
       } catch (error) {
@@ -50,10 +65,7 @@ const VideoCall = ({ activeChat, userInfo, videoCallSocket, onClose }) => {
       }
 
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: true,
-        });
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         setLocalStream(stream);
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = stream;
@@ -78,18 +90,44 @@ const VideoCall = ({ activeChat, userInfo, videoCallSocket, onClose }) => {
       onClose();
     });
 
-    videoCallSocket.on('answer', async ({ sdp }) => {
+    videoCallSocket.on('answer', async ({ sdp, from }) => {
       try {
-        const peerId = Object.keys(peerConnections.current)[0];
-        const peerConnection = peerConnections.current[peerId];
-        if (peerConnection) {
-          if (peerConnection.signalingState !== 'have-local-offer') {
-            console.warn(`Cannot set remote description for ${peerId}: Invalid signaling state (${peerConnection.signalingState})`);
-            return;
-          }
+        if (!peerConnections.current[from]) {
+          peerConnections.current[from] = new RTCPeerConnection({
+            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+          });
+          peerConnections.current[from].ontrack = (event) => {
+            if (event.streams && event.streams[0]) {
+              console.log('ontrack triggered for peer:', from, event.streams[0]);
+              setRemoteStreams((prev) => ({
+                ...prev,
+                [from]: {
+                  stream: event.streams[0],
+                  username: 'Unknown', // Cập nhật username từ server nếu có
+                  micEnabled: true,
+                  cameraEnabled: true,
+                },
+              }));
+            }
+          };
+          peerConnections.current[from].onicecandidate = (event) => {
+            if (event.candidate) {
+              videoCallSocket.emit('iceCandidate', { candidate: event.candidate, to: from });
+            }
+          };
+          peerConnections.current[from].onconnectionstatechange = () => {
+            console.log(`Peer ${from} connection state: ${peerConnections.current[from].connectionState}`);
+          };
+        }
+
+        const pc = peerConnections.current[from];
+        await waitForIceGathering(pc);
+        if (pc.signalingState === 'have-local-offer' || pc.signalingState === 'stable') {
           const desc = new RTCSessionDescription(sdp);
-          await peerConnection.setRemoteDescription(desc);
-          console.log('Set remote description for peer:', peerId);
+          await pc.setRemoteDescription(desc);
+          console.log('Set remote description for peer:', from);
+        } else {
+          console.error(`Invalid signaling state ${pc.signalingState} for ${from}`);
         }
       } catch (error) {
         console.error('Error setting remote description:', error);
@@ -98,47 +136,51 @@ const VideoCall = ({ activeChat, userInfo, videoCallSocket, onClose }) => {
 
     videoCallSocket.on('newProducer', (data) => {
       console.log('New user joined:', data);
-      if (data.id !== userInfo.id) {
+      if (data.id !== userInfo.id && !peerConnections.current[data.id]) {
         createConsumer(data.id, data.username);
       }
     });
 
     videoCallSocket.on('userLeft', (data) => {
       console.log('User left:', data.id);
+      if (peerConnections.current[data.id]) {
+        peerConnections.current[data.id].close();
+        delete peerConnections.current[data.id];
+      }
       const consumerId = consumersCreated.current.get(data.id);
       if (consumerId) {
         removePeer(consumerId);
         consumersCreated.current.delete(data.id);
       }
+      setRemoteStreams((prev) => {
+        const newStreams = { ...prev };
+        delete newStreams[data.id];
+        return newStreams;
+      });
     });
 
     videoCallSocket.on('consumerReady', async ({ sdp, id, consumerId }) => {
       const peerConnection = peerConnections.current[consumerId];
       if (peerConnection) {
         try {
-          if (peerConnection.signalingState !== 'have-local-offer') {
-            console.warn(`Cannot set remote description for ${consumerId}: Invalid signaling state (${peerConnection.signalingState})`);
-            return;
+          await waitForIceGathering(peerConnection);
+          if (peerConnection.signalingState === 'have-local-offer' || peerConnection.signalingState === 'stable') {
+            const desc = new RTCSessionDescription(sdp);
+            await peerConnection.setRemoteDescription(desc);
+            console.log(`Set remote description for consumer ${consumerId}`);
+          } else {
+            console.error(`Invalid signaling state ${peerConnection.signalingState} for ${consumerId}`);
           }
-          const desc = new RTCSessionDescription(sdp);
-          await peerConnection.setRemoteDescription(desc);
-          console.log(`Set remote description for consumer ${consumerId}`);
         } catch (error) {
           console.error('Error setting remote description:', error);
         }
-      } else {
-        console.warn(`No peer connection found for consumer ${consumerId}`);
       }
     });
 
     videoCallSocket.on('deviceStatus', ({ id, micEnabled, cameraEnabled }) => {
       setRemoteStreams((prev) => ({
         ...prev,
-        [id]: {
-          ...prev[id],
-          micEnabled,
-          cameraEnabled,
-        },
+        [id]: { ...prev[id], micEnabled, cameraEnabled },
       }));
     });
 
@@ -154,54 +196,52 @@ const VideoCall = ({ activeChat, userInfo, videoCallSocket, onClose }) => {
   }, [activeChat, userInfo, videoCallSocket, onClose]);
 
   const createPeerConnection = (id, username, isConsumer = false) => {
-  try {
-    const peerConnection = new RTCPeerConnection({
-      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
-    });
-    peerConnections.current[id] = peerConnection;
-
-    if (localStream && !isConsumer) {
-      localStream.getTracks().forEach((track) => {
-        console.log(`Adding track to peerConnection ${id}:`, track.kind);
-        peerConnection.addTrack(track, localStream);
+    try {
+      const peerConnection = new RTCPeerConnection({
+        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
       });
-    }
-
-    peerConnection.ontrack = (event) => {
-      if (event.streams && event.streams[0]) {
-        console.log('ontrack triggered for peer:', id, event.streams[0]);
-        setRemoteStreams((prev) => ({
-          ...prev,
-          [id]: {
-            stream: event.streams[0],
-            username: username || 'Unknown',
-            micEnabled: true,
-            cameraEnabled: true,
-          },
-        }));
-      }
-    };
-
-    peerConnection.onicecandidate = (event) => {
-      if (event.candidate) {
-        videoCallSocket.emit(isConsumer ? 'consumerIceCandidate' : 'iceCandidate', {
-          candidate: event.candidate,
-          peerId: id,
-          consumerId: isConsumer ? id : undefined,
+      if (localStream && !isConsumer) {
+        localStream.getTracks().forEach((track) => {
+          console.log(`Adding track to peerConnection ${id}:`, track.kind);
+          peerConnection.addTrack(track, localStream);
         });
       }
-    };
 
-    peerConnection.onconnectionstatechange = () => {
-      console.log(`Peer ${id} connection state: ${peerConnection.connectionState}`);
-    };
+      peerConnection.ontrack = (event) => {
+        if (event.streams && event.streams[0]) {
+          console.log('ontrack triggered for peer:', id, event.streams[0]);
+          setRemoteStreams((prev) => ({
+            ...prev,
+            [id]: {
+              stream: event.streams[0],
+              username: username || 'Unknown',
+              micEnabled: true,
+              cameraEnabled: true,
+            },
+          }));
+        }
+      };
 
-    return peerConnection;
-  } catch (error) {
-    console.error(`Error creating peer connection for ${id}:`, error);
-    return null;
+      peerConnection.onicecandidate = (event) => {
+  if (event.candidate) {
+    videoCallSocket.emit(isConsumer ? 'consumerIceCandidate' : 'iceCandidate', {
+      candidate: event.candidate,
+      consumerId: isConsumer ? id : undefined,
+      to: isConsumer ? id.split('-')[1] : id, // Gửi đến ID người dùng từ xa
+    });
   }
 };
+
+      peerConnection.onconnectionstatechange = () => {
+        console.log(`Peer ${id} connection state: ${peerConnection.connectionState}`);
+      };
+
+      return peerConnection;
+    } catch (error) {
+      console.error(`Error creating peer connection for ${id}:`, error);
+      return null;
+    }
+  };
 
   const joinRoom = async () => {
     if (hasJoined || !activeChat || !activeChat.id || !localStream) {
@@ -229,19 +269,10 @@ const VideoCall = ({ activeChat, userInfo, videoCallSocket, onClose }) => {
     try {
       const offer = await peerConnection.createOffer();
       await peerConnection.setLocalDescription(offer);
-
-      if (!offer || !offer.sdp || !offer.type) {
-        throw new Error('Invalid SDP generated');
-      }
-
-      console.log('Emitting joinRoom with payload:', {
-        conversationId: activeChat.id,
-        sdp: offer,
-      });
-
       videoCallSocket.emit('joinRoom', {
         conversationId: activeChat.id,
         sdp: offer,
+        from: userInfo.id, // Thêm thông tin người gửi
       });
     } catch (error) {
       console.error('Error joining room:', error);
@@ -266,20 +297,9 @@ const VideoCall = ({ activeChat, userInfo, videoCallSocket, onClose }) => {
     }
 
     try {
-      if (peerConnection.signalingState !== 'stable') {
-        console.warn(`Cannot create offer for ${consumerId}: Invalid signaling state (${peerConnection.signalingState})`);
-        consumersCreated.current.delete(id);
-        removePeer(consumerId);
-        return;
-      }
       const offer = await peerConnection.createOffer();
       await peerConnection.setLocalDescription(offer);
-
-      videoCallSocket.emit('consume', {
-        id,
-        sdp: offer,
-        consumerId,
-      });
+      videoCallSocket.emit('consume', { id, sdp: offer, consumerId });
     } catch (error) {
       console.error('Error creating consumer:', error);
       consumersCreated.current.delete(id);
@@ -308,7 +328,6 @@ const VideoCall = ({ activeChat, userInfo, videoCallSocket, onClose }) => {
 
   const cleanup = () => {
     if (localStream) {
-      console.log('Cleaning up local stream:', localStream);
       localStream.getTracks().forEach((track) => track.stop());
     }
     Object.values(peerConnections.current).forEach((pc) => pc.close());
@@ -327,11 +346,7 @@ const VideoCall = ({ activeChat, userInfo, videoCallSocket, onClose }) => {
       if (audioTrack) {
         audioTrack.enabled = !audioTrack.enabled;
         setMicEnabled(audioTrack.enabled);
-        videoCallSocket.emit('deviceStatus', {
-          id: userInfo.id,
-          micEnabled: audioTrack.enabled,
-          cameraEnabled,
-        });
+        videoCallSocket.emit('deviceStatus', { id: userInfo.id, micEnabled: audioTrack.enabled, cameraEnabled });
       }
     }
   };
@@ -342,52 +357,37 @@ const VideoCall = ({ activeChat, userInfo, videoCallSocket, onClose }) => {
       if (videoTrack) {
         videoTrack.enabled = !videoTrack.enabled;
         setCameraEnabled(videoTrack.enabled);
-        videoCallSocket.emit('deviceStatus', {
-          id: userInfo.id,
-          micEnabled,
-          cameraEnabled: videoTrack.enabled,
-        });
+        videoCallSocket.emit('deviceStatus', { id: userInfo.id, micEnabled, cameraEnabled: videoTrack.enabled });
       }
     }
   };
 
-  // Tính số lượng người tham gia (bao gồm cả local)
   const participantCount = Object.keys(remoteStreams).length + (localStream ? 1 : 0);
 
   return (
     <div className="video-call-container">
       <h2>Cuộc gọi video ({participantCount} người tham gia)</h2>
       <div className={`video-grid participant-count-${participantCount}`}>
-        {/* Local video */}
         {localStream && (
           <div className="video-wrapper">
             <video ref={localVideoRef} autoPlay muted className="video-element" />
             <div className="video-info">
               <span className="username">{userInfo.fullName || 'Bạn'}</span>
               <div className="status-icons">
-                <span className={`icon ${micEnabled ? 'mic-on' : 'mic-off'}`}>
-                  {micEnabled ? '🎤' : '🔇'}
-                </span>
-                <span className={`icon ${cameraEnabled ? 'camera-on' : 'camera-off'}`}>
-                  {cameraEnabled ? '📷' : '📷'}
-                </span>
+                <span className={`icon ${micEnabled ? 'mic-on' : 'mic-off'}`}>{micEnabled ? '🎤' : '🔇'}</span>
+                <span className={`icon ${cameraEnabled ? 'camera-on' : 'camera-off'}`}>{cameraEnabled ? '📷' : '📷'}</span>
               </div>
             </div>
           </div>
         )}
-        {/* Remote videos */}
         {Object.entries(remoteStreams).map(([id, { stream, username, micEnabled, cameraEnabled }]) => (
           <div key={id} className="video-wrapper">
             <video autoPlay srcObject={stream} className="video-element" />
             <div className="video-info">
               <span className="username">{username || 'Unknown'}</span>
               <div className="status-icons">
-                <span className={`icon ${micEnabled ? 'mic-on' : 'mic-off'}`}>
-                  {micEnabled ? '🎤' : '🔇'}
-                </span>
-                <span className={`icon ${cameraEnabled ? 'camera-on' : 'camera-off'}`}>
-                  {cameraEnabled ? '📷' : '📷'}
-                </span>
+                <span className={`icon ${micEnabled ? 'mic-on' : 'mic-off'}`}>{micEnabled ? '🎤' : '🔇'}</span>
+                <span className={`icon ${cameraEnabled ? 'camera-on' : 'camera-off'}`}>{cameraEnabled ? '📷' : '📷'}</span>
               </div>
             </div>
           </div>
