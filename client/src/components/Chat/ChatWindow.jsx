@@ -399,9 +399,9 @@ const ChatWindow = ({
       )}
       {isVideoCallOpen && (
         <VideoCall
-          activeChat={activeContact}
-          userInfo={userInfo}
-          videoCallSocket={videoCallSocket}
+          roomId={activeContact.id}
+          userId={userInfo.id}
+          // videoCallSocket={videoCallSocket}
           onClose={() => setIsVideoCallOpen(false)}
         />
       )}
