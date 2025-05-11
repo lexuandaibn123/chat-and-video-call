@@ -9,6 +9,10 @@ class UserRepository {
     return await User.findById(id);
   }
 
+  async findByIds(ids, query = {}, select = "") {
+    return await User.find({ _id: { $in: ids }, ...query }, select);
+  }
+
   async findByEmail(email) {
     return await User.findOne({ email });
   }
@@ -39,7 +43,14 @@ class UserRepository {
   }
 
   async updateById(id, data) {
-    return await User.findByIdAndUpdate(id, { ...data });
+    return await User.findByIdAndUpdate(
+      id,
+      { ...data },
+      {
+        new: true, // Return the updated document
+        select: "-password -verificationToken -resetToken -resetTokenExpiry", // Exclude fields
+      }
+    );
   }
 }
 

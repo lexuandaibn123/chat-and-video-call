@@ -3,8 +3,10 @@ const route = express.Router();
 
 /**
  * @openapi
- * /healthz:
+ * /api/healthz:
  *   get:
+ *     tags:
+ *       - Default
  *     summary: Health check endpoint
  *     operationId: healthCheck
  *     responses:
@@ -37,6 +39,10 @@ const route = express.Router();
  */
 route.get("/healthz", (req, res) => {
   res.json({ status: "OK" });
+});
+
+route.get("/", (req, res) => {
+  res.json({ message: "Welcome to the Chat and Video all API" });
 });
 
 module.exports = route;

@@ -1,12 +1,14 @@
 const express = require("express");
-const route = express.Router();
+const router = express.Router();
 const AuthService = require("../services/auth");
 const { check } = require("express-validator"); // For validation
-
+const { validateMiddleware } = require("../middleware/validate");
 /**
  * @openapi
- * /auth/login:
+ * /api/auth/login:
  *   post:
+ *     tags:
+ *       - Authentication
  *     summary: Login endpoint
  *     operationId: login
  *     description: Logs in a user with the provided email and password.
@@ -39,6 +41,18 @@ const { check } = require("express-validator"); // For validation
  *                 message:
  *                   type: string
  *                   example: Login successful
+ *                 userInfo:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       example: 1234567890
+ *                     fullName:
+ *                       type: string
+ *                       example: John Doe
+ *                     email:
+ *                       type: string
+ *                       example: user@example.com
  *       400:
  *         description: Validation error
  *         content:
@@ -88,7 +102,7 @@ const { check } = require("express-validator"); // For validation
  *                   type: string
  *                   example: Internal server error
  */
-route.post(
+router.post(
   "/login",
   [
     check("email").isEmail().withMessage("Invalid email format"),
@@ -96,13 +110,16 @@ route.post(
       .isLength({ min: 6 })
       .withMessage("Password must be at least 6 characters"),
   ],
+  validateMiddleware,
   AuthService.login
 );
 
 /**
  * @openapi
- * /auth/register:
+ * /api/auth/register:
  *   post:
+ *     tags:
+ *       - Authentication
  *     summary: Register endpoint
  *     operationId: register
  *     description: Registers a new user with full name, email, and password, and sends a verification email.
@@ -168,7 +185,7 @@ route.post(
  *                   type: string
  *                   example: Internal server error
  */
-route.post(
+router.post(
   "/register",
   [
     check("fullName")
@@ -182,13 +199,16 @@ route.post(
       .custom((value, { req }) => value === req.body.password)
       .withMessage("Passwords do not match"),
   ],
+  validateMiddleware,
   AuthService.register
 );
 
 /**
  * @openapi
- * /auth/verify-email:
+ * /api/auth/verify-email:
  *   get:
+ *     tags:
+ *       - Authentication
  *     summary: Email verification endpoint
  *     operationId: verifyEmail
  *     description: Verifies the user's email using the provided token.
@@ -244,26 +264,26 @@ route.post(
  *                   type: string
  *                   example: Internal server error
  */
-route.get("/verify-email", AuthService.verifyEmail);
+router.get("/verify-email", AuthService.verifyEmail);
 
 /**
  * @openapi
- * /auth/resend-verification-email:
- *   post:
+ * /api/auth/resend-verification-email:
+ *   get:
+ *     tags:
+ *       - Authentication
  *     summary: Resend email verification endpoint
  *     operationId: resendVerificationEmail
  *     description: Resends a verification email to the provided email address if the email is not yet verified.
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               email:
- *                 type: string
- *                 format: email
- *                 example: user@example.com
+ *     parameters:
+ *       - in: query
+ *         name: email
+ *         schema:
+ *           type: string
+ *           format: email
+ *         required: true
+ *         description: The email address to resend the verification email to
+ *         example: user@example.com
  *     responses:
  *       200:
  *         description: Verification email sent successfully
@@ -317,30 +337,37 @@ route.get("/verify-email", AuthService.verifyEmail);
  *                   type: string
  *                   example: Internal server error
  */
-route.post(
+router.get(
   "/resend-verification-email",
-  [check("email").isEmail().withMessage("Invalid email format")],
+  [
+    check("email")
+      .exists()
+      .withMessage("Email is required")
+      .isEmail()
+      .withMessage("Invalid email format"),
+  ],
+  validateMiddleware,
   AuthService.resendVerificationEmail
 );
 
 /**
  * @openapi
- * /auth/forgot-password:
- *   post:
+ * /api/auth/forgot-password:
+ *   get:
+ *     tags:
+ *       - Authentication
  *     summary: Forgot password endpoint
  *     operationId: forgotPassword
  *     description: Initiates a password reset by sending a reset link to the provided email.
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               email:
- *                 type: string
- *                 format: email
- *                 example: user@example.com
+ *     parameters:
+ *       - in: query
+ *         name: email
+ *         schema:
+ *           type: string
+ *           format: email
+ *         required: true
+ *         description: The email address to send the password reset link to
+ *         example: user@example.com
  *     responses:
  *       200:
  *         description: Password reset email sent successfully
@@ -354,7 +381,7 @@ route.post(
  *                   example: true
  *                 message:
  *                   type: string
- *                   example: Password reset successful
+ *                   example: Password reset email sent
  *       400:
  *         description: Validation error
  *         content:
@@ -391,16 +418,25 @@ route.post(
  *                   type: string
  *                   example: Internal server error
  */
-route.post(
+router.get(
   "/forgot-password",
-  [check("email").isEmail().withMessage("Invalid email format")],
+  [
+    check("email")
+      .exists()
+      .withMessage("Email is required")
+      .isEmail()
+      .withMessage("Invalid email format"),
+  ],
+  validateMiddleware,
   AuthService.forgotPassword
 );
 
 /**
  * @openapi
- * /auth/reset-password:
+ * /api/auth/reset-password:
  *   post:
+ *     tags:
+ *       - Authentication
  *     summary: Reset password endpoint
  *     operationId: resetPassword
  *     description: Resets the user's password using the provided reset token and new password.
@@ -468,7 +504,7 @@ route.post(
  *                   type: string
  *                   example: Internal server error
  */
-route.post(
+router.post(
   "/reset-password",
   [
     check("token").not().isEmpty().withMessage("Token is required"),
@@ -476,13 +512,16 @@ route.post(
       .isLength({ min: 6 })
       .withMessage("Password must be at least 6 characters"),
   ],
+  validateMiddleware,
   AuthService.resetPassword
 );
 
 /**
  * @openapi
- * /auth/change-password:
- *   post:
+ * /api/auth/change-password:
+ *   put:
+ *     tags:
+ *       - Authentication
  *     summary: Change password endpoint
  *     operationId: changePassword
  *     description: Allows a user to change their password by providing the old and new passwords.
@@ -553,7 +592,7 @@ route.post(
  *                   type: string
  *                   example: Internal server error
  */
-route.post(
+router.put(
   "/change-password",
   [
     check("email").isEmail().withMessage("Invalid email format"),
@@ -564,13 +603,16 @@ route.post(
       .isLength({ min: 6 })
       .withMessage("Password must be at least 6 characters"),
   ],
+  validateMiddleware,
   AuthService.changePassword
 );
 
 /**
  * @openapi
- * /auth/logout:
+ * /api/auth/logout:
  *   post:
+ *     tags:
+ *       - Authentication
  *     summary: Logout endpoint
  *     operationId: logout
  *     description: Logs out the current user by destroying their session.
@@ -602,12 +644,14 @@ route.post(
  *                     - Logout failed
  *                     - Internal server error
  */
-route.post("/logout", AuthService.logout);
+router.post("/logout", AuthService.logout);
 
 /**
  * @openapi
- * /auth/info:
+ * /api/auth/info:
  *   get:
+ *     tags:
+ *       - Authentication
  *     summary: User info endpoint
  *     operationId: info
  *     description: Retrieves information about the current user.
@@ -645,6 +689,6 @@ route.post("/logout", AuthService.logout);
  *                   type: string
  *                   example: Internal server error
  */
-route.get("/info", AuthService.info);
+router.get("/info", AuthService.info);
 
-module.exports = route;
+module.exports = router;

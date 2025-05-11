@@ -30,7 +30,7 @@ const CheckEmailPage = () => {
     setPopupMessage(''); // Xóa popup cũ
 
     try {
-      const data = await resendVerificationEmailApi({ email });
+      const data = await resendVerificationEmailApi( email );
       setPopupMessage(data.message || 'Verification email has been resent.');
       setPopupType('success');
     } catch (error) {

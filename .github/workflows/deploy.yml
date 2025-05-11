@@ -1,0 +1,77 @@
+name: Deploy Chat and Video Call
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - "client/**"
+      - "server/**"
+      - "Dockerfile"
+      - ".github/workflows/deploy.yml"
+
+jobs:
+  build-and-push:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          file: ./Dockerfile
+          tags: lexuandaibn123/chat-and-video-call:latest
+          build-args: |
+            VITE_SERVER_URL=${{ secrets.SERVER_URL }}
+            VITE_CLIENT_URL=${{ secrets.SERVER_URL }}
+
+  pull-and-deploy:
+    name: Pull and Deploy Docker Image
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    steps:
+      - name: Deploy
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USERNAME }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            docker pull lexuandaibn123/chat-and-video-call:latest
+
+            docker stop chat-and-video-call || true
+            docker rm   chat-and-video-call || true
+
+            docker run -d \
+              --name chat-and-video-call \
+              -p 127.0.0.1:8080:8080 \
+              -e NODE_ENV=production \
+              -e PORT=8080 \
+              -e SERVER_URL="${{ secrets.SERVER_URL }}" \
+              -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+              -e DB_MIN_POOL_SIZE="${{ secrets.DB_MIN_POOL_SIZE }}" \
+              -e DB_MAX_POOL_SIZE="${{ secrets.DB_MAX_POOL_SIZE }}" \
+              -e SMTP_SERVER_USERNAME="${{ secrets.SMTP_SERVER_USERNAME }}" \
+              -e SMTP_SERVER_PASSWORD="${{ secrets.SMTP_SERVER_PASSWORD }}" \
+              -e SMTP_SERVER_HOST="${{ secrets.SMTP_SERVER_HOST }}" \
+              -e AUTH_SECRET="${{ secrets.AUTH_SECRET }}" \
+              -e UPLOADTHING_TOKEN="${{ secrets.UPLOADTHING_TOKEN }}" \
+              -e UPLOADTHING_CALLBACK_URL="${{ secrets.SERVER_URL }}/api/uploadthing" \
+              -e CLIENT_URL="${{ secrets.SERVER_URL }}" \
+              lexuandaibn123/chat-and-video-call:latest
+
+            sudo nginx -t
+            sudo systemctl reload nginx

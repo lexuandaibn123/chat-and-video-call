@@ -1,5 +1,3 @@
-require("dotenv").config();
-
 const express = require("express");
 const app = express();
 const bodyParser = require("body-parser");
@@ -9,26 +7,53 @@ const swaggerJsdoc = require("swagger-jsdoc");
 const cors = require("cors");
 const db = require("./config/db");
 const session = require("express-session");
-const http = require("http");
+const { createServer } = require("http");
+const { Server } = require("socket.io");
 const path = require("path");
+const { instrument } = require("@socket.io/admin-ui");
+const { uploadRouter } = require("./utils/uploadthing");
+const { createRouteHandler } = require("uploadthing/express");
+const {
+  PORT,
+  SERVER_URL,
+  CLIENT_URL,
+  AUTH_SECRET,
+  NODE_ENV,
+  UPLOADTHING_TOKEN,
+} = require("./constants");
+const initDefaultNameSpace = require("./socket/default");
+const initVideoCallNamespace = require("./socket/video");
+const initAdminNamespace = require("./socket/admin");
 
-const socketIO = require("socket.io");
-
-const PORT = process.env.PORT || 8080;
-
-const serverUrl = process.env.SERVER_URL;
-
-const clientUrl = process.env.CLIENT_URL;
+const { createPeer } = require("./utils/wrtc");
 
 db.connect();
+
+/* Session */
+const sessionMiddleware = session({
+  secret: AUTH_SECRET,
+  saveUninitialized: true,
+  resave: true,
+  cookie: {
+    secure: false,
+  },
+});
+app.use(sessionMiddleware);
+
+// Parses the text as json
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
+app.use(express.static(path.join(__dirname, "public")));
+app.set("view engine", "ejs");
 
 const options = {
   definition: {
     openapi: "3.1.0",
     info: {
-      title: "API Documentation",
+      title: "Chat and Video all API Documentation",
       version: "0.1.0",
-      description: "This is a sample API documentation",
+      description: "Documentation for Chat and Video all API",
       license: {
         name: "MIT",
         url: "https://spdx.org/licenses/MIT.html",
@@ -36,80 +61,120 @@ const options = {
     },
     servers: [
       {
-        url: serverUrl,
+        url: SERVER_URL,
       },
     ],
   },
-  apis: ["./routes/*.js"],
+  apis: ["./routes/*.js", "./models/*.js"],
 };
+
 const specs = swaggerJsdoc(options);
 
 app.use(
-  "/api-docs",
+  "/api/api-docs",
   swaggerUi.serve,
-  swaggerUi.setup(specs, { explorer: true })
+  swaggerUi.setup(specs, {
+    customSiteTitle: "Chat and Video all API Documentation",
+    explorer: true,
+  })
 );
-
+const allowedOrigins = [
+  CLIENT_URL,
+  "http://localhost:8080",
+  "http://localhost:3000",
+  "https://admin.socket.io",
+  "https://9c09-2405-4802-17cb-99b0-653c-5503-c01f-cf8.ngrok-free.app",
+];
+if (NODE_ENV === "development") {
+  app.use(
+    cors({
+      origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+          callback(null, origin);
+        } else {
+          console.error("Not allowed by CORS: " + origin);
+          callback(new Error("Not allowed by CORS"));
+        }
+      },
+      methods: ["GET", "POST", "PUT", "DELETE"],
+      allowedHeaders: [
+        "Content-Type",
+        "Authorization",
+        "x-uploadthing-version",
+        "x-uploadthing-package",
+      ],
+      credentials: true,
+    })
+  );
+}
 app.use(
-  cors({
-    origin: clientUrl,
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+  "/api/uploadthing",
+  createRouteHandler({
+    router: uploadRouter,
+    config: {
+      token: UPLOADTHING_TOKEN,
+    },
   })
 );
 
-/* Session */
-app.use(
-  session({
-    secret: "anysecret",
-    saveUninitialized: true,
-    resave: true,
-  })
-);
-
-app.use(bodyParser.urlencoded({ extended: true }));
-
-// Parses the text as json
-app.use(bodyParser.json());
-
-// Setup test
-app.use(express.static(path.join(__dirname, "public")));
-app.set("view engine", "ejs");
-
-app.get("/", (req, res) => {
-  res.render("index.ejs");
+app.get("/api/admin-socket", (req, res) => {
+  res.render("admin.socket.ejs");
 });
 
 route(app);
 
-const server = http.createServer(app);
+if (NODE_ENV === "production") {
+  app.get("*", (req, res) => {
+    res.sendFile(path.join(__dirname, "public", "index.html"));
+  });
+}
 
-const io = socketIO(server, {
-  cors: {
-    origin: clientUrl,
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  },
+const server = createServer(app);
+
+const ioOptions =
+  NODE_ENV === "development"
+    ? {
+        cors: {
+          origin: (origin, callback) => {
+            if (!origin || allowedOrigins.includes(origin)) {
+              callback(null, origin);
+            } else {
+              callback(new Error("Not allowed by CORS"));
+            }
+          },
+          methods: ["GET", "POST", "PUT", "DELETE"],
+          allowedHeaders: ["Content-Type", "Authorization"],
+          credentials: true,
+        },
+      }
+    : {};
+
+const io = new Server(server, ioOptions);
+io.engine.use(sessionMiddleware);
+
+instrument(io, {
+  auth: false,
+  mode: NODE_ENV,
 });
 
-io.sockets.on("connection", (client) => {
-  client.on("join", (roomId) => {
-    // roomId = userId or groupId
-    /* handle before join */
-    io.sockets.in(room).emit("join", room);
+// Default namespace
 
-    client.join(room);
+const defaultNamespace = io.of("/");
 
-    client.emit("joined", room, socket.id);
-  });
-  client.on("event", (data) => {
-    /* … */
-  });
-  client.on("disconnect", () => {
-    /* … */
-  });
-});
+initDefaultNameSpace(defaultNamespace);
+
+// Video call namespace
+
+const videoCallNamespace = io.of("/video-call");
+
+initVideoCallNamespace(videoCallNamespace, defaultNamespace);
+
+// Admin namespace
+
+const adminNamespace = io.of("/admin");
+
+initAdminNamespace(adminNamespace);
 
 server.listen(PORT, () => {
-  console.log(`Server is running at ${serverUrl}`);
+  console.log(`Server is running at ${SERVER_URL}`);
 });
