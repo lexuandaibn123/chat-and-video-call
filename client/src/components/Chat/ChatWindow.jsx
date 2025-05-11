@@ -28,6 +28,7 @@ const ChatWindow = ({
   onUploadProgress,
   userInfo,
   socket,
+  videoCallSocket,
 }) => {
   const messageListEndRef = useRef(null);
   const messageInputRef = useRef(null);
@@ -36,19 +37,27 @@ const ChatWindow = ({
   const [callInvite, setCallInvite] = useState(null);
 
   useEffect(() => {
-    if (!socket || !activeContact?.id) {
-      console.warn('Socket or activeContact.id is missing:', { socket, activeContactId: activeContact?.id });
+    if (!socket || !activeContact?.id || !userInfo?.id) {
+      console.warn('Socket, activeContact.id, or userInfo.id is missing:', {
+        socket,
+        activeContactId: activeContact?.id,
+        userId: userInfo?.id,
+      });
       return;
     }
 
+    // Tham gia phòng cuộc trò chuyện trong defaultNamespace
+    socket.emit('joinConversationRoom', { conversationId: activeContact.id });
+
     socket.on('callStarted', (data) => {
       console.log('Received callStarted event:', data);
-      if (data.roomId === activeContact.id) {
+      if (data.roomId === activeContact.id && !isVideoCallOpen) {
         setCallInvite(data);
       } else {
-        console.warn('callStarted roomId does not match activeContact.id:', {
+        console.warn('callStarted ignored:', {
           receivedRoomId: data.roomId,
           activeContactId: activeContact.id,
+          isVideoCallOpen,
         });
       }
     });
@@ -68,14 +77,28 @@ const ChatWindow = ({
       alert(`Lỗi từ server: ${message}`);
     });
 
+    socket.on('connect_error', (error) => {
+      console.error('Socket connection error:', error);
+      alert('Mất kết nối đến server. Vui lòng thử lại.');
+    });
+
+    socket.on('disconnect', () => {
+      console.warn('Socket disconnected');
+      alert('Mất kết nối đến server.');
+    });
+
     return () => {
-      console.log('Cleaning up socket listeners for activeContact:', activeContact.id);
+      console.log('Cleaning up socket listeners for activeContact:', activeContact?.id);
       socket.off('callStarted');
       socket.off('callEnded');
       socket.off('userLeft');
       socket.off('error');
+      socket.off('connect_error');
+      socket.off('disconnect');
+      // Rời phòng cuộc trò chuyện khi component unmount
+      socket.emit('leaveConversationRoom', { conversationId: activeContact.id });
     };
-  }, [socket, activeContact?.id]);
+  }, [socket, activeContact?.id, userInfo?.id, isVideoCallOpen]);
 
   useEffect(() => {
     if (!isLoadingMessages && editingMessageId === null) {
@@ -126,7 +149,11 @@ const ChatWindow = ({
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (showEmojiPicker && !event.target.closest('.emoji-picker-container') && !event.target.closest('.icon-button[title="Emoji"]')) {
+      if (
+        showEmojiPicker &&
+        !event.target.closest('.emoji-picker-container') &&
+        !event.target.closest('.icon-button[title="Emoji"]')
+      ) {
         setShowEmojiPicker(false);
       }
     };
@@ -135,12 +162,20 @@ const ChatWindow = ({
   }, [showEmojiPicker]);
 
   const handleJoinCall = () => {
+    if (!activeContact?.id) {
+      console.warn('No active contact selected');
+      return;
+    }
     console.log('User joined call for room:', activeContact.id);
     setIsVideoCallOpen(true);
     setCallInvite(null);
   };
 
   const handleDeclineCall = () => {
+    if (!activeContact?.id) {
+      console.warn('No active contact selected');
+      return;
+    }
     console.log('User declined call for room:', activeContact.id);
     setCallInvite(null);
   };
@@ -166,10 +201,16 @@ const ChatWindow = ({
           </button>
         )}
         <div className="contact-info">
-          <img src={activeContact.avatar || defaultAvatarPlaceholder} alt={activeContact.name || "User Avatar"} className="avatar" />
+          <img
+            src={activeContact.avatar || defaultAvatarPlaceholder}
+            alt={activeContact.name || 'User Avatar'}
+            className="avatar"
+          />
           <div className="name-status">
-            <span className="contact-name">{activeContact.name || "Unknown"}</span>
-            <span className="contact-status">{activeContact.statusText || (isGroupChat ? "Group" : "Offline")}</span>
+            <span className="contact-name">{activeContact.name || 'Unknown'}</span>
+            <span className="contact-status">
+              {activeContact.statusText || (isGroupChat ? 'Group' : 'Offline')}
+            </span>
           </div>
         </div>
         <div className="chat-actions">
@@ -179,7 +220,7 @@ const ChatWindow = ({
           <button
             className="icon-button"
             title="Video Call"
-            disabled={isEditingMode || sendingMessage}
+            disabled={isEditingMode || sendingMessage || isVideoCallOpen}
             onClick={() => {
               console.log('Starting video call for room:', activeContact.id);
               setIsVideoCallOpen(true);
@@ -188,7 +229,12 @@ const ChatWindow = ({
             <i className="fas fa-video"></i>
           </button>
           {isGroupChat && onOpenSettings && (
-            <button className="icon-button" title="More Options" onClick={onOpenSettings} disabled={isEditingMode || sendingMessage}>
+            <button
+              className="icon-button"
+              title="More Options"
+              onClick={onOpenSettings}
+              disabled={isEditingMode || sendingMessage}
+            >
               <i className="fas fa-ellipsis-v"></i>
             </button>
           )}
@@ -232,7 +278,13 @@ const ChatWindow = ({
             content={{ button: <i className="fas fa-paperclip"></i> }}
             appearance={{
               button: { padding: 0, height: 'auto', lineHeight: 'normal', pointerEvents: 'all' },
-              container: { display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' },
+              container: {
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '100%',
+                height: '100%',
+              },
             }}
             onBeforeUploadBegin={onUploadBeforeBegin}
             onClientUploadComplete={onClientUploadComplete}
@@ -250,7 +302,13 @@ const ChatWindow = ({
             content={{ button: <i className="fas fa-camera"></i> }}
             appearance={{
               button: { padding: 0, height: 'auto', lineHeight: 'normal', pointerEvents: 'all' },
-              container: { display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' },
+              container: {
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '100%',
+                height: '100%',
+              },
             }}
             onBeforeUploadBegin={onUploadBeforeBegin}
             onClientUploadComplete={onClientUploadComplete}
@@ -265,7 +323,12 @@ const ChatWindow = ({
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
-              if (!isLoadingMessages && activeContact && !sendingMessage && (isEditingMode || messageInput.trim())) {
+              if (
+                !isLoadingMessages &&
+                activeContact &&
+                !sendingMessage &&
+                (isEditingMode || messageInput.trim())
+              ) {
                 document.querySelector('.send-button').click();
               }
             }
@@ -307,15 +370,28 @@ const ChatWindow = ({
           type="submit"
           className="icon-button send-button"
           title={isEditingMode ? 'Save Edit' : 'Send Message'}
-          disabled={isLoadingMessages || !activeContact || sendingMessage || (!isEditingMode && !messageInput.trim())}
+          disabled={
+            isLoadingMessages ||
+            !activeContact ||
+            sendingMessage ||
+            (!isEditingMode && !messageInput.trim())
+          }
         >
-          {sendingMessage ? <i className="fas fa-spinner fa-spin"></i> : isEditingMode ? <i className="fas fa-check"></i> : <i className="fas fa-paper-plane"></i>}
+          {sendingMessage ? (
+            <i className="fas fa-spinner fa-spin"></i>
+          ) : isEditingMode ? (
+            <i className="fas fa-check"></i>
+          ) : (
+            <i className="fas fa-paper-plane"></i>
+          )}
         </button>
       </form>
       {callInvite && (
         <div className="call-invite-popup">
           <div className="call-invite-content">
-            <p>{callInvite.username} has started a video call in room {callInvite.roomId}. Join or decline?</p>
+            <p>
+              {callInvite.username} has started a video call in room {callInvite.roomId}. Join or decline?
+            </p>
             <button onClick={handleJoinCall}>Join</button>
             <button onClick={handleDeclineCall}>Decline</button>
           </div>
@@ -325,7 +401,7 @@ const ChatWindow = ({
         <VideoCall
           activeChat={activeContact}
           userInfo={userInfo}
-          socket={socket}
+          videoCallSocket={videoCallSocket}
           onClose={() => setIsVideoCallOpen(false)}
         />
       )}

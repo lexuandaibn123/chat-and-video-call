@@ -25,6 +25,7 @@ const ChatPage = () => {
   const [editingMessageId, setEditingMessageId] = useState(null);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editingGroupName, setEditingGroupName] = useState("");
+  const [callInvite, setCallInvite] = useState(null); // Thêm state cho call invite
   const currentUserIdRef = useRef(null);
   const optimisticMessagesRef = useRef({});
 
@@ -44,7 +45,7 @@ const ChatPage = () => {
     });
   }, [user, isAuthenticated, isAuthLoading]);
 
-  const { socket, sendMessage, isConnected } = useSocket({
+  const { socket, videoCallSocket, sendMessage, isConnected } = useSocket({
     isAuthenticated,
     userId: user?._id,
     userInfo: user,
@@ -53,6 +54,7 @@ const ChatPage = () => {
     setConversations,
     setActionError,
     conversations,
+    setCallInvite, // Thêm setCallInvite vào đây
   });
 
   const handlers = useHandlers({
@@ -197,7 +199,6 @@ const ChatPage = () => {
     if (conversations.length > 0 && !activeChat) {
       console.log('Auto-selecting first conversation:', conversations[0]);
       setActiveChat(conversations[0]);
-      // Đặt isMobileChatActive thành true nếu đang ở chế độ mobile
       const isMobileView = window.innerWidth <= 768;
       if (isMobileView) {
         setIsMobileChatActive(true);
@@ -307,6 +308,8 @@ const ChatPage = () => {
       onUploadProgress={handlers.handleUploadProgress}
       userInfo={user}
       socket={socket}
+      videoCallSocket={videoCallSocket}
+      callInvite={callInvite} // Truyền callInvite xuống ChatPageLayout
     />
   );
 };
