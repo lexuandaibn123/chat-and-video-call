@@ -114,7 +114,6 @@ export const useSocket = ({
       console.log('Received callStarted event:', data);
       if (data.roomId === activeChatId) {
         setCallInvite(data);
-        alert(`${data.username} đã bắt đầu cuộc gọi video trong phòng ${data.roomId}. Tham gia hay từ chối?`);
       }
     });
 
