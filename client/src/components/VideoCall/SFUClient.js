@@ -33,17 +33,27 @@ SFUClient.prototype = {
   onStreamRemoved: null,
 
   async connect(roomId) {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: true,
-      audio: true,
-    });
-    this.localStream = stream;
-    this.createLocalPeer(roomId);
-    this.localStream.getTracks().forEach((track) => {
-      if (this.localPeer) {
-        this.localPeer.addTrack(track, stream);
-      }
-    });
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true,
+      });
+      this.localStream = stream;
+      console.log("Local stream initialized:", stream);
+      this.createLocalPeer(roomId);
+      this.localStream.getTracks().forEach((track) => {
+        console.log(`Track: ${track.kind}, enabled: ${track.enabled}`);
+        if (this.localPeer) {
+          this.localPeer.addTrack(track, stream);
+        }
+      });
+    } catch (error) {
+      console.error("getUserMedia failed:", error);
+      alert(
+        "Không thể truy cập camera/microphone. Vui lòng kiểm tra quyền hoặc thiết bị."
+      );
+      throw error;
+    }
   },
 
   getLocalStream() {
@@ -134,6 +144,9 @@ SFUClient.prototype = {
         this.localStream.getTracks().forEach((track) => {
           this.localPeer.addTrack(track, this.localStream);
         });
+      }
+      if (this.localPeer.iceConnectionState === "failed") {
+        console.error("ICE connection failed, consider restarting peer");
       }
     };
   },
