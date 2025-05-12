@@ -73,6 +73,7 @@ const initVideoCallNamespace = (videoCallNamespace, defaultNamespace) => {
 
     // Connect to a room
     client.on("joinRoom", async ({ conversationId, sdp }) => {
+      console.log("joinRoom event received");
       try {
         const conversation =
           await ConversationService.verifyConversationAndUserByWs({
