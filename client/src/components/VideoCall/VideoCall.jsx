@@ -8,7 +8,7 @@ import Video from './Video';
 // import Hark from "./Hark";
 import "./VideoCall.css";
 
-const API_BASE_URL = `${import.meta.env.VITE_SERVER_URL}/api`;
+const API_BASE_URL = `${import.meta.env.VITE_SERVER_URL}/video-call`;
 
 export default function VideoCall({ userId, roomId, onClose }) {
   const sfuClientRef = useRef(null);
