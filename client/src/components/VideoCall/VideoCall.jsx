@@ -8,6 +8,8 @@ import Video from './Video';
 // import Hark from "./Hark";
 import "./VideoCall.css";
 
+const API_BASE_URL = `${import.meta.env.VITE_SERVER_URL}/api`;
+
 export default function VideoCall({ userId, roomId, onClose }) {
   const sfuClientRef = useRef(null);
   const [localStream, setLocalStream] = useState(null);
@@ -24,7 +26,7 @@ export default function VideoCall({ userId, roomId, onClose }) {
     }
 
     const sfuClient = new SFUClient(
-      "http://localhost:8080/video-call",
+      API_BASE_URL,
       userId,
       (streamInfo) => {
         setRemoteStreams((prev) => {
