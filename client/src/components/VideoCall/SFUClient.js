@@ -268,13 +268,13 @@ SFUClient.prototype = {
       console.error("Socket error:", error);
       alert("Đã xảy ra lỗi kết nối. Vui lòng thử lại.");
     });
-    this.socket.on("disconnect", () => {
-      console.warn("Socket disconnected, attempting to reconnect...");
-      setTimeout(() => {
-        this.socket.connect();
-        if (roomId) this.connect(roomId);
-      }, 3000);
-    });
+    // this.socket.on("disconnect", () => {
+    //   console.warn("Socket disconnected, attempting to reconnect...");
+    //   setTimeout(() => {
+    //     this.socket.connect();
+    //     if (this.roomId) this.connect(this.roomId);
+    //   }, 3000);
+    // });
   },
 
   close() {
