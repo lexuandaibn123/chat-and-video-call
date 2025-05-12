@@ -34,13 +34,7 @@ const PasswordForm = () => {
           currentPassword,
           newPassword
         );
-        if (result.success) {
-          alert("Đã cập nhật mật khẩu thành công!");
-          setCurrentPassword("");
-          setNewPassword("");
-          setConfirmPassword("");
-          setPasswordError("");
-        } else {
+        if (!result.success) {
           setPasswordError(result.message || "Cập nhật mật khẩu thất bại");
         }
       } else {
@@ -48,17 +42,13 @@ const PasswordForm = () => {
       }
     } catch (err) {
       setError(err.message);
+    } finally {
+      alert("Đã cập nhật mật khẩu thành công!");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setPasswordError("");
     }
-  };
-
-  const handleCurrentPasswordChange = (e) => {
-    setCurrentPassword(e.target.value);
-    setPasswordError("");
-  };
-
-  const handleNewPasswordChange = (e) => {
-    setNewPassword(e.target.value);
-    setPasswordError("");
   };
 
   return (
@@ -72,7 +62,7 @@ const PasswordForm = () => {
             type="password"
             className="form-input"
             value={currentPassword}
-            onChange={handleCurrentPasswordChange()}
+            onChange={(e) => setCurrentPassword(e.target.value)}
             required
           />
         </div>
@@ -83,7 +73,7 @@ const PasswordForm = () => {
             type="password"
             className="form-input"
             value={newPassword}
-            onChange={handleNewPasswordChange()}
+            onChange={(e) => setNewPassword(e.target.value)}
             required
           />
         </div>
@@ -94,7 +84,7 @@ const PasswordForm = () => {
             type="password"
             className="form-input"
             value={confirmPassword}
-            onChange={handleNewPasswordChange()}
+            onChange={(e) => setConfirmPassword(e.target.value)}
             required
           />
         </div>
