@@ -1,0 +1,595 @@
+// Import variables
+@use "sass:color";
+@use "../../styles/variables" as *;
+
+// Mixins
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin transition($property: all, $duration: $transition-fast) {
+  transition: $property $duration;
+}
+
+/* Base styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: $font-family-base;
+  background-color: $container-bg-color;
+  color: $text-color;
+  overflow-y: auto; /* Đảm bảo body có thể cuộn */
+  min-height: 100vh; /* Đảm bảo body có chiều cao tối thiểu là viewport */
+}
+
+html {
+  overflow-y: auto; /* Đảm bảo html có thể cuộn */
+}
+
+/* Content area */
+.content-area {
+  flex: 1;
+  padding: $spacing-lg;
+  //   margin-left: $sidebar-width-desktop; /* Tạo khoảng cách cho sidebar */
+  overflow-y: auto; /* Cho phép cuộn nội dung */
+  min-height: 100vh;
+  max-height: 100vh; /* Giới hạn chiều cao toàn màn hình */
+
+  .search-container {
+    position: relative;
+    margin-bottom: $spacing-lg;
+
+    .search-icon {
+      position: absolute;
+      left: $spacing-md;
+      top: 50%;
+      transform: translateY(-50%);
+      color: $text-muted-color;
+    }
+
+    .search-input {
+      width: 100%;
+      max-width: 400px;
+      padding: $spacing-sm $spacing-md $spacing-sm $spacing-xxl;
+      border-radius: $border-radius-button-main;
+      border: none;
+      background-color: $secondary-color;
+      font-size: $font-size-large;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+
+      &::placeholder {
+        color: $text-muted-color;
+      }
+
+      &:focus {
+        outline: none;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+    }
+  }
+}
+
+/* Settings container */
+.settings-container {
+  background-color: $secondary-color;
+  border-radius: $border-radius-form;
+  padding: $spacing-xl;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+
+  .settings-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: $spacing-sm;
+
+    .settings-icon {
+      width: 40px;
+      height: 40px;
+      background-color: $input-bg-color;
+      border-radius: $border-radius-sm;
+      @include flex-center;
+      margin-right: $spacing-md;
+
+      svg {
+        color: $text-color;
+        width: 20px;
+        height: 20px;
+      }
+    }
+
+    h1 {
+      font-size: $font-size-h2;
+      font-weight: $font-weight-bold;
+    }
+  }
+
+  .settings-subheader {
+    font-size: $font-size-large;
+    font-weight: $font-weight-bold;
+    margin-bottom: $spacing-xl;
+    padding-left: 55px;
+  }
+}
+
+/* Settings content */
+.settings-content {
+  display: flex;
+  gap: $spacing-xl;
+
+  .settings-sidebar {
+    width: 150px;
+
+    ul {
+      list-style: none;
+
+      li {
+        padding: $spacing-sm $spacing-md;
+        cursor: pointer;
+        border-radius: $border-radius-sm;
+        margin-bottom: $spacing-xs;
+        @include transition(background-color);
+
+        &:hover {
+          background-color: $input-bg-color;
+        }
+
+        &.active {
+          background-color: $primary-color;
+          color: $secondary-color;
+        }
+      }
+    }
+  }
+
+  .settings-form {
+    flex: 1;
+
+    .form-group {
+      margin-bottom: $spacing-xl;
+
+      label {
+        display: block;
+        margin-bottom: $spacing-sm;
+        font-weight: $font-weight-bold;
+      }
+    }
+
+    .theme-options {
+      display: flex;
+      gap: $spacing-md;
+
+      .theme-option {
+        flex: 1;
+        height: 80px;
+        border: 1px solid $input-border-color;
+        border-radius: $border-radius-sm;
+        @include flex-center;
+        cursor: pointer;
+        background-color: $secondary-color;
+        font-weight: $font-weight-bold;
+        @include transition;
+
+        &.dark {
+          background-color: #1a202c;
+          color: $secondary-color;
+        }
+
+        &.active {
+          border: 2px solid $primary-color;
+        }
+      }
+    }
+
+    .font-options {
+      display: flex;
+      gap: $spacing-md;
+
+      .font-option {
+        flex: 1;
+        padding: $spacing-sm;
+        border: 1px solid $input-border-color;
+        border-radius: $border-radius-sm;
+        @include flex-center;
+        cursor: pointer;
+        background-color: $secondary-color;
+        font-weight: $font-weight-bold;
+        @include transition;
+
+        &.active {
+          border: 2px solid $primary-color;
+          background-color: color.adjust($primary-color, $lightness: 40%);
+        }
+      }
+    }
+
+    .language-select {
+      width: 100%;
+      padding: $spacing-sm $spacing-md;
+      border-radius: $border-radius-input;
+      border: 1px solid $input-border-color;
+      background-color: $input-bg-color;
+      font-size: $font-size-base;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 15px center;
+      background-size: 16px;
+
+      &:focus {
+        outline: none;
+        border-color: $primary-color;
+      }
+    }
+
+    .save-button {
+      width: 100%;
+      padding: $spacing-md;
+      background-color: $primary-color;
+      color: $secondary-color;
+      border: none;
+      border-radius: $border-radius-input;
+      font-size: $font-size-base;
+      font-weight: $font-weight-bold;
+      cursor: pointer;
+      @include transition(background-color);
+      margin-top: $spacing-lg;
+
+      &:hover {
+        background-color: color.adjust($primary-color, $lightness: -10%);
+      }
+
+      &:disabled {
+        background-color: $input-border-color;
+        cursor: not-allowed;
+      }
+    }
+  }
+}
+
+/* Account section styles */
+.account-section {
+  width: 100%;
+}
+
+.account-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: $spacing-xl;
+  padding-bottom: $spacing-lg;
+  border-bottom: 1px solid $input-border-color;
+
+  .account-avatar {
+    position: relative;
+    margin-right: $spacing-lg;
+    width: 80px; /* Đặt chiều rộng cố định */
+    height: 80px; /* Đặt chiều cao cố định */
+
+    img {
+      width: 100%;
+      height: 100%;
+      border-radius: $border-radius-social;
+      object-fit: cover;
+      border: 2px solid $primary-color;
+      aspect-ratio: 1 / 1;
+      overflow: hidden;
+    }
+
+    .change-avatar-btn {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 30px;
+      height: 30px;
+      border-radius: $border-radius-social;
+      background-color: $primary-color;
+      border: none;
+      @include flex-center;
+      cursor: pointer;
+      color: $secondary-color;
+
+      .icon {
+        width: 16px;
+        height: 16px;
+      }
+    }
+  }
+
+  .account-info {
+    h3 {
+      font-size: $font-size-large;
+      font-weight: $font-weight-bold;
+      margin-bottom: $spacing-xs;
+    }
+
+    p {
+      color: $text-muted-color;
+      font-size: $font-size-small;
+    }
+  }
+}
+
+.account-options {
+  display: flex;
+  gap: $spacing-md;
+  margin-bottom: $spacing-xl;
+  flex-wrap: wrap;
+
+  .account-option-btn {
+    display: flex;
+    align-items: center;
+    padding: $spacing-sm $spacing-lg;
+    border-radius: $border-radius-input;
+    border: 1px solid $input-border-color;
+    background-color: $secondary-color;
+    cursor: pointer;
+    @include transition;
+
+    .icon {
+      width: 18px;
+      height: 18px;
+      margin-right: $spacing-sm;
+      color: $text-muted-color;
+    }
+
+    span {
+      font-weight: $font-weight-bold;
+    }
+
+    &:hover {
+      background-color: color.adjust($primary-color, $lightness: 40%);
+      border-color: $primary-color;
+    }
+
+    &.active {
+      background-color: $primary-color;
+      color: $secondary-color;
+      border-color: $primary-color;
+
+      .icon {
+        color: $secondary-color;
+      }
+    }
+  }
+}
+
+.account-details {
+  background-color: $container-bg-color;
+  border-radius: $border-radius-sm;
+  padding: $spacing-xl;
+
+  h4 {
+    font-size: $font-size-base;
+    font-weight: $font-weight-bold;
+    margin-bottom: $spacing-lg;
+    color: $text-color;
+  }
+}
+
+.form-input,
+.form-textarea {
+  width: 100%;
+  padding: $spacing-sm $spacing-md;
+  border-radius: $border-radius-input;
+  border: 1px solid $input-border-color;
+  background-color: $secondary-color;
+  font-size: $font-size-base;
+
+  &:focus {
+    outline: none;
+    border-color: $primary-color;
+  }
+}
+
+.form-textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+/* Avatar upload styles */
+.avatar-upload {
+  display: flex;
+  gap: $spacing-xl;
+  margin-bottom: $spacing-xl;
+  align-items: flex-start;
+
+  .avatar-preview {
+    width: 100%;
+    height: 100%;
+    border-radius: $border-radius-social;
+    object-fit: cover;
+    border: 3px solid $primary-color;
+    margin-bottom: $spacing-sm;
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+  }
+
+  .preview-label {
+    font-size: $font-size-small;
+    color: $text-muted-color;
+    text-align: center;
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.upload-controls {
+  flex: 1;
+
+  .upload-instruction {
+    font-size: $font-size-base;
+    font-weight: $font-weight-bold;
+    margin-bottom: $spacing-md;
+  }
+
+  .upload-actions {
+    margin-bottom: $spacing-lg;
+  }
+
+  .upload-button {
+    display: inline-flex;
+    align-items: center;
+    padding: $spacing-sm $spacing-lg;
+    background-color: $primary-color;
+    color: $secondary-color;
+    border-radius: $border-radius-input;
+    cursor: pointer;
+    font-weight: $font-weight-bold;
+    @include transition(background-color);
+
+    &:hover {
+      background-color: color.adjust($primary-color, $lightness: -10%);
+    }
+
+    .upload-icon {
+      width: 18px;
+      height: 18px;
+      margin-right: $spacing-sm;
+    }
+  }
+
+  .file-requirements {
+    background-color: $input-bg-color;
+    padding: $spacing-md;
+    border-radius: $border-radius-input;
+
+    p {
+      font-weight: $font-weight-bold;
+      margin-bottom: $spacing-sm;
+    }
+
+    ul {
+      padding-left: $spacing-lg;
+
+      li {
+        margin-bottom: $spacing-xs;
+        font-size: $font-size-small;
+      }
+    }
+  }
+}
+
+/* Password change styles */
+.password-requirements {
+  background-color: $input-bg-color;
+  padding: $spacing-md;
+  border-radius: $border-radius-input;
+  margin-bottom: $spacing-lg;
+
+  p {
+    font-weight: $font-weight-bold;
+    margin-bottom: $spacing-sm;
+  }
+
+  ul {
+    list-style: none;
+
+    li {
+      display: flex;
+      align-items: center;
+      margin-bottom: $spacing-xs;
+      font-size: $font-size-small;
+
+      &.valid {
+        color: $success-color;
+
+        .check-icon {
+          color: $success-color;
+        }
+      }
+
+      &.invalid {
+        color: $error-color;
+
+        .x-icon {
+          color: $error-color;
+        }
+      }
+
+      .check-icon,
+      .x-icon {
+        width: 16px;
+        height: 16px;
+        margin-right: $spacing-sm;
+        flex-shrink: 0;
+      }
+    }
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: $breakpoint-medium) {
+  .settings-content {
+    flex-direction: column;
+
+    .settings-sidebar {
+      width: 100%;
+      margin-bottom: $spacing-lg;
+
+      ul {
+        display: flex;
+        gap: $spacing-sm;
+
+        li {
+          flex: 1;
+          text-align: center;
+        }
+      }
+    }
+
+    .settings-form {
+      .theme-options,
+      .font-options {
+        flex-direction: column;
+
+        .theme-option,
+        .font-option {
+          width: 100%;
+        }
+      }
+    }
+  }
+
+  .account-options {
+    flex-direction: column;
+
+    .account-option-btn {
+      width: 100%;
+    }
+  }
+
+  .account-header {
+    flex-direction: column;
+    text-align: center;
+
+    .account-avatar {
+      margin-right: 0;
+      margin-bottom: $spacing-md;
+      width: 80px; /* Giữ nguyên kích thước */
+      height: 80px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+  }
+
+  .avatar-upload {
+    flex-direction: column;
+    align-items: center;
+
+    .upload-controls {
+      width: 100%;
+      margin-top: $spacing-lg;
+    }
+
+    .current-avatar {
+      width: 120px;
+      height: 120px;
+    }
+  }
+}
