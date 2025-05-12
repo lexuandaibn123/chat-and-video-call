@@ -10,12 +10,8 @@ export default function SFUClient(url, userId, onStreamAdded, onStreamRemoved) {
   this.clients = new Map();
   this.configuration = {
     iceServers: [
+      { urls: "stun:stun.stunprotocol.org:3478" },
       { urls: "stun:stun.l.google.com:19302" },
-      {
-        urls: "turn:your-turn-server.com",
-        username: "username",
-        credential: "password",
-      },
     ],
   };
   this.onStreamAdded = onStreamAdded;
@@ -110,12 +106,13 @@ SFUClient.prototype = {
   async handleNegotiation(roomId) {
     if (!this.localPeer) return;
     const offer = await this.localPeer.createOffer();
-    offer.sdp = this.limitBandwidth(offer.sdp, 500);
+    offer.sdp = this.limitBandwidth(offer.sdp, 1000);
     await this.localPeer.setLocalDescription(offer);
-    if (roomId) this.socket.emit("joinRoom", {
-      conversationId: roomId,
-      sdp: this.localPeer.localDescription,
-    });
+    if (roomId)
+      this.socket.emit("joinRoom", {
+        conversationId: roomId,
+        sdp: this.localPeer.localDescription,
+      });
   },
 
   limitBandwidth(sdp, bandwidth) {
@@ -125,7 +122,9 @@ SFUClient.prototype = {
   createLocalPeer(roomId) {
     this.localPeer = new RTCPeerConnection(this.configuration);
     this.localPeer.onicecandidate = (event) => {
-      if (event.candidate) this.handleIceCandidate({ candidate: event.candidate });
+      console.log("ICE Candidate:", event.candidate);
+      if (event.candidate)
+        this.handleIceCandidate({ candidate: event.candidate });
     };
     this.localPeer.onnegotiationneeded = () => this.handleNegotiation(roomId);
     this.localPeer.oniceconnectionstatechange = () => {
@@ -256,7 +255,7 @@ SFUClient.prototype = {
     this.socket.on("consumerReady", (data) => this.handleConsume(data));
     this.socket.on("userLeft", (data) => this.removeUser(data));
     this.socket.on("statusUpdate", ({ userId, micEnabled, cameraEnabled }) => {
-      setRemoteStreams((prev) =>
+      this.setRemoteStreams((prev) =>
         prev.map((streamInfo) =>
           streamInfo.id === userId
             ? { ...streamInfo, micEnabled, cameraEnabled }
@@ -281,7 +280,9 @@ SFUClient.prototype = {
     console.log(`Closing SFUClient for user ${this.userId}`);
     if (this.localStream) {
       this.localStream.getTracks().forEach((track) => {
-        console.log(`Stopping track: ${track.kind}, id: ${track.id}, enabled: ${track.enabled}`);
+        console.log(
+          `Stopping track: ${track.kind}, id: ${track.id}, enabled: ${track.enabled}`
+        );
         track.stop();
         track.enabled = false;
       });

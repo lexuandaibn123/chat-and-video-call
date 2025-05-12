@@ -3,13 +3,13 @@
 
 .main-layout-container {
   display: flex;
-  min-height: 100vh; // Đảm bảo container ít nhất cao bằng màn hình
+  min-height: 100svh; // Đảm bảo container ít nhất cao bằng màn hình
   background-color: $container-bg-color; 
 }
 
 .main-content {
   flex-grow: 1;
-  height: 100vh; // <<< Quan trọng: Chiếm đúng 100% chiều cao viewport
+  height: 100svh; // <<< Quan trọng: Chiếm đúng 100% chiều cao viewport
   overflow: hidden; // <<< QUAN TRỌNG: Ngăn .main-content cuộn
   transition: margin-left $transition-default, padding-bottom $transition-default;
 

@@ -20,7 +20,7 @@ $icon-size-nav-mobile: 20px;               // Giữ kích thước icon mobile c
   background-color: $primary-color;
   // <<< Sử dụng biến màu chữ/icon phụ >>>
   color: $secondary-color;
-  height: 100vh;
+  height: 100svh;
   width: $sidebar-width-desktop; // <<< Sử dụng biến chiều rộng
   position: fixed;
   left: 0;

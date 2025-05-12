@@ -1,11 +1,11 @@
 // src/layouts/AuthLayout.scss
-@use '../styles/variables' as *;
+@use "../styles/variables" as *;
 
 .auth-layout-container {
   display: flex;
   justify-content: center; // Căn giữa ngang
-  align-items: center;     // Căn giữa dọc
-  min-height: 100vh;
+  align-items: center; // Căn giữa dọc
+  min-height: 100svh;
   width: 100%;
   padding: $spacing-lg;
   background-color: $container-bg-color;
