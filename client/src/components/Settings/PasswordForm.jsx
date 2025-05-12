@@ -51,6 +51,7 @@ const PasswordForm = () => {
     }
   };
 
+
   const handleCurrentPasswordChange = (e) => {
     setCurrentPassword(e.target.value);
     setPasswordError("");
@@ -60,6 +61,7 @@ const PasswordForm = () => {
     setNewPassword(e.target.value);
     setPasswordError("");
   };
+
 
   return (
     <div className="account-details">
@@ -73,6 +75,7 @@ const PasswordForm = () => {
             className="form-input"
             value={currentPassword}
             onChange={handleCurrentPasswordChange()}
+
             required
           />
         </div>
@@ -84,6 +87,7 @@ const PasswordForm = () => {
             className="form-input"
             value={newPassword}
             onChange={handleNewPasswordChange()}
+
             required
           />
         </div>
@@ -95,6 +99,7 @@ const PasswordForm = () => {
             className="form-input"
             value={confirmPassword}
             onChange={handleNewPasswordChange()}
+
             required
           />
         </div>

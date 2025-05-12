@@ -10,12 +10,8 @@ export default function SFUClient(url, userId, onStreamAdded, onStreamRemoved) {
   this.clients = new Map();
   this.configuration = {
     iceServers: [
+      { urls: "stun:stun.stunprotocol.org:3478" },
       { urls: "stun:stun.l.google.com:19302" },
-      {
-        urls: "turn:your-turn-server.com",
-        username: "username",
-        credential: "password",
-      },
     ],
   };
   this.onStreamAdded = onStreamAdded;
@@ -37,17 +33,27 @@ SFUClient.prototype = {
   onStreamRemoved: null,
 
   async connect(roomId) {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: true,
-      audio: true,
-    });
-    this.localStream = stream;
-    this.createLocalPeer(roomId);
-    this.localStream.getTracks().forEach((track) => {
-      if (this.localPeer) {
-        this.localPeer.addTrack(track, stream);
-      }
-    });
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true,
+      });
+      this.localStream = stream;
+      console.log("Local stream initialized:", stream);
+      this.createLocalPeer(roomId);
+      this.localStream.getTracks().forEach((track) => {
+        console.log(`Track: ${track.kind}, enabled: ${track.enabled}`);
+        if (this.localPeer) {
+          this.localPeer.addTrack(track, stream);
+        }
+      });
+    } catch (error) {
+      console.error("getUserMedia failed:", error);
+      alert(
+        "Không thể truy cập camera/microphone. Vui lòng kiểm tra quyền hoặc thiết bị."
+      );
+      throw error;
+    }
   },
 
   getLocalStream() {
@@ -110,12 +116,13 @@ SFUClient.prototype = {
   async handleNegotiation(roomId) {
     if (!this.localPeer) return;
     const offer = await this.localPeer.createOffer();
-    offer.sdp = this.limitBandwidth(offer.sdp, 500);
+    offer.sdp = this.limitBandwidth(offer.sdp, 1000);
     await this.localPeer.setLocalDescription(offer);
-    if (roomId) this.socket.emit("joinRoom", {
-      conversationId: roomId,
-      sdp: this.localPeer.localDescription,
-    });
+    if (roomId)
+      this.socket.emit("joinRoom", {
+        conversationId: roomId,
+        sdp: this.localPeer.localDescription,
+      });
   },
 
   limitBandwidth(sdp, bandwidth) {
@@ -125,7 +132,9 @@ SFUClient.prototype = {
   createLocalPeer(roomId) {
     this.localPeer = new RTCPeerConnection(this.configuration);
     this.localPeer.onicecandidate = (event) => {
-      if (event.candidate) this.handleIceCandidate({ candidate: event.candidate });
+      console.log("ICE Candidate:", event.candidate);
+      if (event.candidate)
+        this.handleIceCandidate({ candidate: event.candidate });
     };
     this.localPeer.onnegotiationneeded = () => this.handleNegotiation(roomId);
     this.localPeer.oniceconnectionstatechange = () => {
@@ -135,6 +144,9 @@ SFUClient.prototype = {
         this.localStream.getTracks().forEach((track) => {
           this.localPeer.addTrack(track, this.localStream);
         });
+      }
+      if (this.localPeer.iceConnectionState === "failed") {
+        console.error("ICE connection failed, consider restarting peer");
       }
     };
   },
@@ -256,7 +268,7 @@ SFUClient.prototype = {
     this.socket.on("consumerReady", (data) => this.handleConsume(data));
     this.socket.on("userLeft", (data) => this.removeUser(data));
     this.socket.on("statusUpdate", ({ userId, micEnabled, cameraEnabled }) => {
-      setRemoteStreams((prev) =>
+      this.setRemoteStreams((prev) =>
         prev.map((streamInfo) =>
           streamInfo.id === userId
             ? { ...streamInfo, micEnabled, cameraEnabled }
@@ -281,7 +293,9 @@ SFUClient.prototype = {
     console.log(`Closing SFUClient for user ${this.userId}`);
     if (this.localStream) {
       this.localStream.getTracks().forEach((track) => {
-        console.log(`Stopping track: ${track.kind}, id: ${track.id}, enabled: ${track.enabled}`);
+        console.log(
+          `Stopping track: ${track.kind}, id: ${track.id}, enabled: ${track.enabled}`
+        );
         track.stop();
         track.enabled = false;
       });

@@ -1,12 +1,19 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
-import { FaVideo, FaVideoSlash, FaMicrophone, FaMicrophoneSlash } from "react-icons/fa";
-import { toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import {
+  FaVideo,
+  FaVideoSlash,
+  FaMicrophone,
+  FaMicrophoneSlash,
+} from "react-icons/fa";
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import SFUClient from "./SFUClient";
-import Video from './Video';
+import Video from "./Video";
 // import Hark from "./Hark";
 import "./VideoCall.css";
+
+const API_BASE_URL = `${import.meta.env.VITE_SERVER_URL}/video-call`;
 
 export default function VideoCall({ userId, roomId, onClose }) {
   const sfuClientRef = useRef(null);
@@ -24,19 +31,27 @@ export default function VideoCall({ userId, roomId, onClose }) {
     }
 
     const sfuClient = new SFUClient(
-      "http://localhost:8080/video-call",
+      API_BASE_URL,
       userId,
       (streamInfo) => {
         setRemoteStreams((prev) => {
-          const existingStream = prev.find((s) => s.consumerId === streamInfo.consumerId);
+          const existingStream = prev.find(
+            (s) => s.consumerId === streamInfo.consumerId
+          );
           if (existingStream) {
             // Cập nhật trạng thái cho stream đã tồn tại
             return prev.map((s) =>
               s.consumerId === streamInfo.consumerId
                 ? {
                     ...s,
-                    micEnabled: streamInfo.micEnabled !== undefined ? streamInfo.micEnabled : s.micEnabled,
-                    cameraEnabled: streamInfo.cameraEnabled !== undefined ? streamInfo.cameraEnabled : s.cameraEnabled,
+                    micEnabled:
+                      streamInfo.micEnabled !== undefined
+                        ? streamInfo.micEnabled
+                        : s.micEnabled,
+                    cameraEnabled:
+                      streamInfo.cameraEnabled !== undefined
+                        ? streamInfo.cameraEnabled
+                        : s.cameraEnabled,
                   }
                 : s
             );
@@ -48,14 +63,22 @@ export default function VideoCall({ userId, roomId, onClose }) {
               stream: streamInfo.stream,
               username: streamInfo.username || "Unknown",
               consumerId: streamInfo.consumerId || "",
-              micEnabled: streamInfo.micEnabled !== undefined ? streamInfo.micEnabled : true,
-              cameraEnabled: streamInfo.cameraEnabled !== undefined ? streamInfo.cameraEnabled : true,
+              micEnabled:
+                streamInfo.micEnabled !== undefined
+                  ? streamInfo.micEnabled
+                  : true,
+              cameraEnabled:
+                streamInfo.cameraEnabled !== undefined
+                  ? streamInfo.cameraEnabled
+                  : true,
             },
           ];
         });
       },
       (consumerId) => {
-        setRemoteStreams((prev) => prev.filter((s) => s.consumerId !== consumerId));
+        setRemoteStreams((prev) =>
+          prev.filter((s) => s.consumerId !== consumerId)
+        );
       }
     );
     sfuClientRef.current = sfuClient;
@@ -72,9 +95,13 @@ export default function VideoCall({ userId, roomId, onClose }) {
           track.enabled = cameraEnabled;
         });
         setHasJoined(true);
-        if (localVideoRef.current) {
+        if (localVideoRef.current && localStream) {
           localVideoRef.current.srcObject = localStream;
-          localVideoRef.current.play().catch((e) => console.error("Local video play failed:", e));
+          localVideoRef.current
+            .play()
+            .catch((e) => console.error("Lỗi phát video local:", e));
+        } else {
+          console.error("Không tìm thấy video element hoặc stream");
         }
       }
     };
@@ -88,7 +115,9 @@ export default function VideoCall({ userId, roomId, onClose }) {
       }
       if (localStream) {
         localStream.getTracks().forEach((track) => {
-          console.log(`Stopping track in cleanup: ${track.kind}, id: ${track.id}, enabled: ${track.enabled}`);
+          console.log(
+            `Stopping track in cleanup: ${track.kind}, id: ${track.id}, enabled: ${track.enabled}`
+          );
           track.stop();
           track.enabled = false;
         });
@@ -146,7 +175,9 @@ export default function VideoCall({ userId, roomId, onClose }) {
     }
     if (localStream) {
       localStream.getTracks().forEach((track) => {
-        console.log(`Stopping track in handleLeaveCall: ${track.kind}, id: ${track.id}, enabled: ${track.enabled}`);
+        console.log(
+          `Stopping track in handleLeaveCall: ${track.kind}, id: ${track.id}, enabled: ${track.enabled}`
+        );
         track.stop();
         track.enabled = false;
       });
@@ -159,6 +190,13 @@ export default function VideoCall({ userId, roomId, onClose }) {
     });
     onClose();
   };
+
+  useEffect(() => {
+    if (localVideoRef.current) {
+      console.log("Stream được gắn:", localVideoRef.current.srcObject);
+      console.log("Trạng thái video:", localVideoRef.current.readyState);
+    }
+  }, [localVideoRef]);
 
   return (
     <div className="video-call-container">
@@ -180,7 +218,11 @@ export default function VideoCall({ userId, roomId, onClose }) {
                 <span className={`icon ${micEnabled ? "mic-on" : "mic-off"}`}>
                   {micEnabled ? <FaMicrophone /> : <FaMicrophoneSlash />}
                 </span>
-                <span className={`icon ${cameraEnabled ? "camera-on" : "camera-off"}`}>
+                <span
+                  className={`icon ${
+                    cameraEnabled ? "camera-on" : "camera-off"
+                  }`}
+                >
                   {cameraEnabled ? <FaVideo /> : <FaVideoSlash />}
                 </span>
               </div>
@@ -210,16 +252,10 @@ export default function VideoCall({ userId, roomId, onClose }) {
         >
           {cameraEnabled ? "Turn Off Camera" : "Turn On Camera"}
         </button>
-        <button
-          onClick={toggleFullScreen}
-          className="control-btn"
-        >
+        <button onClick={toggleFullScreen} className="control-btn">
           {document.fullscreenElement ? "Exit Full Screen" : "Full Screen"}
         </button>
-        <button
-          onClick={handleLeaveCall}
-          className="control-btn leave"
-        >
+        <button onClick={handleLeaveCall} className="control-btn leave">
           End Call
         </button>
       </div>
