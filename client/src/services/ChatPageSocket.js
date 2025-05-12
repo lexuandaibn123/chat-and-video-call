@@ -172,6 +172,7 @@ export const useSocket = ({
 
     // Xử lý tin nhắn bị xóa
     socketRef.current.on('deletedMessage', (deletedMessage) => {
+      console.log("deletedMessage: ", deletedMessage);
       if (deletedMessage.conversationId && deletedMessage.conversationId === activeChatId) {
         setMessages((prevMessages) =>
           prevMessages.filter((msg) => msg.id !== deletedMessage._id)

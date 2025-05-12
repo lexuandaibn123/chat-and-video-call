@@ -460,7 +460,27 @@
                   flex-direction: column; // Stack images if multiple
                   gap: $spacing-xs; // Space between multiple images
                   margin-top: $spacing-xs; // Optional: space above if text/sender info precedes
-                   position: relative; // For overlay positioning
+                  position: relative; // For overlay positioning
+
+                  .skeleton-image {
+                      width: 200px;
+                      height: 150px;
+                      background-color: #e2e2e2;
+                      border-radius: 8px;
+                      animation: pulse 1.5s infinite ease-in-out;
+                  }
+
+                  @keyframes pulse {
+                      0% {
+                          background-color: #e2e2e2;
+                      }
+                      50% {
+                          background-color: #f0f0f0;
+                      }
+                      100% {
+                          background-color: #e2e2e2;
+                      }
+                  }
               }
 
               .message-image {
