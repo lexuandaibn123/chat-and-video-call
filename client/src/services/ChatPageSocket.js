@@ -122,8 +122,8 @@ export const useSocket = ({
     });
 
     socketRef.current.on('connected', () => {
-    console.log('Received connected event from server');
-  });
+      console.log('Received connected event from server');
+    });
 
     socketRef.current.on('receiveMessage', (receivedMessage) => {
       console.log("receivedMessage: ", receivedMessage);

@@ -4,7 +4,7 @@ import Picker from 'emoji-picker-react';
 import MessageBubble from './MessageBubble';
 import defaultAvatarPlaceholder from '../../assets/images/avatar_placeholder.jpg';
 import { UploadButton } from '../../utils/uploadthing';
-import VideoCall from './VideoCall';
+import VideoCall from '../VideoCall/VideoCall';
 
 const ChatWindow = ({
   activeContact,

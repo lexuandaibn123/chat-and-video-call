@@ -276,4 +276,29 @@ SFUClient.prototype = {
       }, 3000);
     });
   },
+
+  close() {
+    console.log(`Closing SFUClient for user ${this.userId}`);
+    if (this.localStream) {
+      this.localStream.getTracks().forEach((track) => {
+        console.log(`Stopping track: ${track.kind}, id: ${track.id}, enabled: ${track.enabled}`);
+        track.stop();
+        track.enabled = false;
+      });
+      this.localStream = null;
+    }
+    if (this.localPeer) {
+      this.localPeer.close();
+      this.localPeer = null;
+    }
+    for (const [consumerId, consumer] of this.consumers) {
+      consumer.close();
+      this.consumers.delete(consumerId);
+    }
+    this.remoteStreams.clear();
+    this.clients.clear();
+    if (this.socket.connected) {
+      this.socket.disconnect();
+    }
+  },
 };

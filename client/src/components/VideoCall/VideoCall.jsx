@@ -1,9 +1,11 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
+import { FaVideo, FaVideoSlash, FaMicrophone, FaMicrophoneSlash } from "react-icons/fa";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import SFUClient from "./SFUClient";
-import Hark from "./Hark";
+import Video from './Video';
+// import Hark from "./Hark";
 import "./VideoCall.css";
 
 export default function VideoCall({ userId, roomId, onClose }) {
@@ -26,24 +28,34 @@ export default function VideoCall({ userId, roomId, onClose }) {
       userId,
       (streamInfo) => {
         setRemoteStreams((prev) => {
-          if (prev.some((s) => s.consumerId === streamInfo.consumerId))
-            return prev;
+          const existingStream = prev.find((s) => s.consumerId === streamInfo.consumerId);
+          if (existingStream) {
+            // Cập nhật trạng thái cho stream đã tồn tại
+            return prev.map((s) =>
+              s.consumerId === streamInfo.consumerId
+                ? {
+                    ...s,
+                    micEnabled: streamInfo.micEnabled !== undefined ? streamInfo.micEnabled : s.micEnabled,
+                    cameraEnabled: streamInfo.cameraEnabled !== undefined ? streamInfo.cameraEnabled : s.cameraEnabled,
+                  }
+                : s
+            );
+          }
+          // Thêm stream mới
           return [
             ...prev,
             {
               stream: streamInfo.stream,
               username: streamInfo.username || "Unknown",
               consumerId: streamInfo.consumerId || "",
-              micEnabled: true,
-              cameraEnabled: true,
+              micEnabled: streamInfo.micEnabled !== undefined ? streamInfo.micEnabled : true,
+              cameraEnabled: streamInfo.cameraEnabled !== undefined ? streamInfo.cameraEnabled : true,
             },
           ];
         });
       },
       (consumerId) => {
-        setRemoteStreams((prev) =>
-          prev.filter((s) => s.consumerId !== consumerId)
-        );
+        setRemoteStreams((prev) => prev.filter((s) => s.consumerId !== consumerId));
       }
     );
     sfuClientRef.current = sfuClient;
@@ -69,12 +81,19 @@ export default function VideoCall({ userId, roomId, onClose }) {
     connectAndJoin();
 
     return () => {
+      console.log("Cleaning up VideoCall");
       if (sfuClientRef.current) {
+        sfuClientRef.current.close();
         sfuClientRef.current = null;
       }
       if (localStream) {
-        localStream.getTracks().forEach((track) => track.stop());
+        localStream.getTracks().forEach((track) => {
+          console.log(`Stopping track in cleanup: ${track.kind}, id: ${track.id}, enabled: ${track.enabled}`);
+          track.stop();
+          track.enabled = false;
+        });
       }
+      setLocalStream(null);
     };
   }, [userId, roomId]);
 
@@ -119,11 +138,32 @@ export default function VideoCall({ userId, roomId, onClose }) {
     }
   };
 
+  const handleLeaveCall = () => {
+    console.log(`Leaving call for user ${userId} in room ${roomId}`);
+    if (sfuClientRef.current) {
+      sfuClientRef.current.close();
+      sfuClientRef.current = null;
+    }
+    if (localStream) {
+      localStream.getTracks().forEach((track) => {
+        console.log(`Stopping track in handleLeaveCall: ${track.kind}, id: ${track.id}, enabled: ${track.enabled}`);
+        track.stop();
+        track.enabled = false;
+      });
+    }
+    setLocalStream(null);
+    toast.info("Bạn đã rời cuộc gọi", {
+      position: "top-right",
+      autoClose: 3000,
+      theme: "dark",
+    });
+    onClose();
+  };
+
   return (
     <div className="video-call-container">
       <div className="video-call-header">
-        {/* <img src="/logo.png" alt="Logo" className="logo" /> */}
-        <h2>Cuộc gọi video ({participantCount} người tham gia)</h2>
+        <h2>Video Call ({participantCount} participants)</h2>
       </div>
       <div className={`video-grid participant-count-${participantCount}`}>
         {localStream && (
@@ -138,10 +178,10 @@ export default function VideoCall({ userId, roomId, onClose }) {
               <span className="username">Bạn</span>
               <div className="status-icons">
                 <span className={`icon ${micEnabled ? "mic-on" : "mic-off"}`}>
-                  {micEnabled ? "🎙️" : "🔇"}
+                  {micEnabled ? <FaMicrophone /> : <FaMicrophoneSlash />}
                 </span>
                 <span className={`icon ${cameraEnabled ? "camera-on" : "camera-off"}`}>
-                  {cameraEnabled ? "📹" : "📷"}
+                  {cameraEnabled ? <FaVideo /> : <FaVideoSlash />}
                 </span>
               </div>
             </div>
@@ -162,82 +202,26 @@ export default function VideoCall({ userId, roomId, onClose }) {
           onClick={toggleMic}
           className={micEnabled ? "control-btn" : "control-btn off"}
         >
-          {micEnabled ? "Tắt Mic" : "Bật Mic"}
+          {micEnabled ? "Mute Mic" : "Turn On Mic"}
         </button>
         <button
           onClick={toggleCamera}
           className={cameraEnabled ? "control-btn" : "control-btn off"}
         >
-          {cameraEnabled ? "Tắt Camera" : "Bật Camera"}
+          {cameraEnabled ? "Turn Off Camera" : "Turn On Camera"}
         </button>
-        {/* <button
-          onClick={() => sfuClientRef.current.shareScreen()}
-          className="control-btn"
-        >
-          Chia sẻ màn hình
-        </button> */}
         <button
           onClick={toggleFullScreen}
           className="control-btn"
         >
-          {document.fullscreenElement ? "Thoát toàn màn hình" : "Toàn màn hình"}
+          {document.fullscreenElement ? "Exit Full Screen" : "Full Screen"}
         </button>
         <button
-          onClick={onClose}
+          onClick={handleLeaveCall}
           className="control-btn leave"
         >
-          Rời cuộc gọi
+          End Call
         </button>
-      </div>
-    </div>
-  );
-}
-
-function Video({ stream, username, micEnabled, cameraEnabled }) {
-  const videoRef = useRef(null);
-  const harkRef = useRef(null);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-
-  useEffect(() => {
-    if (videoRef.current && stream) {
-      videoRef.current.srcObject = stream;
-      videoRef.current.play().catch((e) => console.error("Remote video play failed:", e));
-    }
-
-    if (stream.getAudioTracks().length > 0) {
-      const hark = new Hark(stream, { threshold: -50, smoothing: 0.2 });
-      hark.on("speaking", () => {
-        setIsSpeaking(true);
-        videoRef.current.classList.add("speaking");
-      });
-      hark.on("stopped_speaking", () => {
-        setIsSpeaking(false);
-        videoRef.current.classList.remove("speaking");
-      });
-      harkRef.current = hark;
-    }
-
-    return () => {
-      if (harkRef.current) {
-        harkRef.current.stop();
-      }
-    };
-  }, [stream]);
-
-  return (
-    <div className="video-wrapper">
-      <video ref={videoRef} autoPlay playsInline className="video-element" />
-      <div className="video-info">
-        <span className="username">{username}</span>
-        {isSpeaking && <span className="sound-wave">🔊</span>}
-        <div className="status-icons">
-          <span className={`icon ${micEnabled ? "mic-on" : "mic-off"}`}>
-            {micEnabled ? "🎙️" : "🔇"}
-          </span>
-          <span className={`icon ${cameraEnabled ? "camera-on" : "camera-off"}`}>
-            {cameraEnabled ? "📹" : "📷"}
-          </span>
-        </div>
       </div>
     </div>
   );
