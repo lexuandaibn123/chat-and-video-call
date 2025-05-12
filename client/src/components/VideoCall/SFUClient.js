@@ -112,7 +112,7 @@ SFUClient.prototype = {
     const offer = await this.localPeer.createOffer();
     offer.sdp = this.limitBandwidth(offer.sdp, 500);
     await this.localPeer.setLocalDescription(offer);
-    this.socket.emit("joinRoom", {
+    if (roomId) this.socket.emit("joinRoom", {
       conversationId: roomId,
       sdp: this.localPeer.localDescription,
     });
@@ -272,7 +272,7 @@ SFUClient.prototype = {
       console.warn("Socket disconnected, attempting to reconnect...");
       setTimeout(() => {
         this.socket.connect();
-        this.connect(roomId);
+        if (roomId) this.connect(roomId);
       }, 3000);
     });
   },
