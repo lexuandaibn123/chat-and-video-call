@@ -1,4 +1,3 @@
-/* eslint-disable */
 import io from "socket.io-client";
 
 export default function SFUClient(url, userId, onStreamAdded, onStreamRemoved) {
@@ -11,8 +10,12 @@ export default function SFUClient(url, userId, onStreamAdded, onStreamRemoved) {
   this.clients = new Map();
   this.configuration = {
     iceServers: [
-      { urls: "stun:stun.stunprotocol.org:3478" },
       { urls: "stun:stun.l.google.com:19302" },
+      {
+        urls: "turn:your-turn-server.com",
+        username: "username",
+        credential: "password",
+      },
     ],
   };
   this.onStreamAdded = onStreamAdded;
@@ -51,6 +54,45 @@ SFUClient.prototype = {
     return this.localStream;
   },
 
+  toggleMic() {
+    if (this.localStream) {
+      const audioTrack = this.localStream.getAudioTracks()[0];
+      this.socket.emit("updateStatus", {
+        userId: this.userId,
+        micEnabled: audioTrack.enabled,
+      });
+    }
+  },
+
+  toggleCamera() {
+    if (this.localStream) {
+      const videoTrack = this.localStream.getVideoTracks()[0];
+      this.socket.emit("updateStatus", {
+        userId: this.userId,
+        cameraEnabled: videoTrack.enabled,
+      });
+    }
+  },
+
+  async shareScreen() {
+    const screenStream = await navigator.mediaDevices.getDisplayMedia({
+      video: true,
+    });
+    const screenTrack = screenStream.getVideoTracks()[0];
+    this.localPeer.replaceTrack(
+      this.localStream.getVideoTracks()[0],
+      screenTrack,
+      this.localStream
+    );
+    screenTrack.onended = () => {
+      this.localPeer.replaceTrack(
+        screenTrack,
+        this.localStream.getVideoTracks()[0],
+        this.localStream
+      );
+    };
+  },
+
   async subscribe() {
     await this.consumeAll();
   },
@@ -68,11 +110,16 @@ SFUClient.prototype = {
   async handleNegotiation(roomId) {
     if (!this.localPeer) return;
     const offer = await this.localPeer.createOffer();
+    offer.sdp = this.limitBandwidth(offer.sdp, 500);
     await this.localPeer.setLocalDescription(offer);
     this.socket.emit("joinRoom", {
       conversationId: roomId,
       sdp: this.localPeer.localDescription,
     });
+  },
+
+  limitBandwidth(sdp, bandwidth) {
+    return sdp.replace(/b=AS:.*\r\n/, `b=AS:${bandwidth}\r\n`);
   },
 
   createLocalPeer(roomId) {
@@ -81,6 +128,15 @@ SFUClient.prototype = {
       if (event.candidate) this.handleIceCandidate({ candidate: event.candidate });
     };
     this.localPeer.onnegotiationneeded = () => this.handleNegotiation(roomId);
+    this.localPeer.oniceconnectionstatechange = () => {
+      if (this.localPeer.iceConnectionState === "disconnected") {
+        console.warn("ICE disconnected, restarting peer...");
+        this.createLocalPeer(roomId);
+        this.localStream.getTracks().forEach((track) => {
+          this.localPeer.addTrack(track, this.localStream);
+        });
+      }
+    };
   },
 
   handleConsumerIceCandidate(candidate, id, consumerId) {
@@ -92,7 +148,6 @@ SFUClient.prototype = {
   async createConsumeTransport(peer) {
     const consumerId = `${this.userId}-${peer.id}`;
     if (this.consumers.has(consumerId)) {
-      console.log(`Consumer for ${consumerId} already exists, skipping`);
       return { transport: this.consumers.get(consumerId), consumerId };
     }
     const consumerTransport = new RTCPeerConnection(this.configuration);
@@ -109,9 +164,7 @@ SFUClient.prototype = {
       consumer.addTransceiver("video", { direction: "recvonly" });
       consumer.addTransceiver("audio", { direction: "recvonly" });
       const offer = await consumer.createOffer();
-      console.log(`Before setLocalDescription for ${consumerId}, state: ${consumer.signalingState}`);
       await consumer.setLocalDescription(offer);
-      console.log(`After setLocalDescription for ${consumerId}, state: ${consumer.signalingState}`);
       consumer.onicecandidate = (event) => {
         if (event.candidate) {
           this.handleConsumerIceCandidate(event.candidate, peer.id, consumerId);
@@ -119,13 +172,6 @@ SFUClient.prototype = {
       };
       consumer.ontrack = (e) => {
         if (e.streams && e.streams[0]) {
-          const stream = e.streams[0];
-          console.log(`Received stream for ${consumerId}:`, stream);
-          console.log(`Video tracks:`, stream.getVideoTracks());
-          console.log(`Audio tracks:`, stream.getAudioTracks());
-          if (stream.getAudioTracks().length > 0) {
-            console.log(`Audio track enabled:`, stream.getAudioTracks()[0].enabled);
-          }
           const streamInfo = {
             stream: e.streams[0],
             id: peer.id,
@@ -135,8 +181,6 @@ SFUClient.prototype = {
           };
           this.remoteStreams.set(consumerId, streamInfo);
           this.onStreamAdded(streamInfo);
-        } else {
-          console.warn(`No streams received for ${consumerId}`);
         }
       };
     }
@@ -145,11 +189,7 @@ SFUClient.prototype = {
 
   async consumeOnce(peer) {
     const { transport, consumerId } = await this.createConsumeTransport(peer);
-    console.log(`Emitting consume for consumerId: ${consumerId}`);
-    if (!transport) {
-      console.error(`Transport is undefined for consumerId: ${consumerId}`);
-      return;
-    }
+    if (!transport) return;
     this.socket.emit("consume", {
       id: peer.id,
       sdp: transport.localDescription,
@@ -160,37 +200,26 @@ SFUClient.prototype = {
   async handleAnswer({ sdp }) {
     if (!this.localPeer) return;
     const desc = new RTCSessionDescription(sdp);
-    try {
-      await this.localPeer.setRemoteDescription(desc);
-      await this.subscribe();
-    } catch (e) {
-      console.error("Error setting remote description:", e);
-    }
+    await this.localPeer.setRemoteDescription(desc);
+    await this.subscribe();
   },
 
   async handlePeers({ peers }) {
-    console.log("*** handle peers ***", peers);
     for (const peer of peers) {
       const consumerId = `${this.userId}-${peer.id}`;
       if (!this.consumers.has(consumerId)) {
         await this.consumeOnce(peer);
-      } else {
-        console.log(`Consumer for ${peer.id} already exists, skipping`);
       }
     }
   },
 
   handleConsume({ sdp, consumerId }) {
-    console.log(`Received consumerReady for consumerId: ${consumerId}`);
     const desc = new RTCSessionDescription(sdp);
     const consumer = this.consumers.get(consumerId);
     if (consumer) {
-      console.log(`Before setRemoteDescription for ${consumerId}, state: ${consumer.signalingState}`);
       consumer.setRemoteDescription(desc).catch((e) => {
         console.error(`Error setting remote description for ${consumerId}:`, e);
       });
-    } else {
-      console.error(`Consumer with ID ${consumerId} not found.`);
     }
   },
 
@@ -207,7 +236,6 @@ SFUClient.prototype = {
     if (!client) return;
     const { consumerId } = client;
     if (consumerId) {
-      console.log(`Removing consumer for ${consumerId}`);
       const consumer = this.consumers.get(consumerId);
       if (consumer) {
         consumer.close();
@@ -227,6 +255,25 @@ SFUClient.prototype = {
     this.socket.on("newProducer", (data) => this.handleNewProducer(data));
     this.socket.on("consumerReady", (data) => this.handleConsume(data));
     this.socket.on("userLeft", (data) => this.removeUser(data));
-    this.socket.on("error", (error) => console.error("Socket error:", error));
-  }
+    this.socket.on("statusUpdate", ({ userId, micEnabled, cameraEnabled }) => {
+      setRemoteStreams((prev) =>
+        prev.map((streamInfo) =>
+          streamInfo.id === userId
+            ? { ...streamInfo, micEnabled, cameraEnabled }
+            : streamInfo
+        )
+      );
+    });
+    this.socket.on("error", (error) => {
+      console.error("Socket error:", error);
+      alert("Đã xảy ra lỗi kết nối. Vui lòng thử lại.");
+    });
+    this.socket.on("disconnect", () => {
+      console.warn("Socket disconnected, attempting to reconnect...");
+      setTimeout(() => {
+        this.socket.connect();
+        this.connect(roomId);
+      }, 3000);
+    });
+  },
 };

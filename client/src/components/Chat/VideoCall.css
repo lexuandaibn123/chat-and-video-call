@@ -1,37 +1,59 @@
 .video-call-container {
   position: fixed;
-  top: 15%;
-  left: 15%;
-  width: 70%;
-  height: 70%;
+  top: 10%;
+  left: 10%;
+  width: 80%;
+  height: 80%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  /* height: 100vh; */
-  background-color: #1a1a1a;
+  background: linear-gradient(135deg, #1e1e2f, #2a2a3d);
   color: #fff;
-  font-family: Arial, sans-serif;
+  font-family: 'Segoe UI', sans-serif;
   padding: 20px;
   box-sizing: border-box;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
   z-index: 1000;
 }
 
-.video-call-container h2 {
+.video-call-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   margin-bottom: 20px;
+}
+
+.logo {
+  width: 40px;
+  height: 40px;
+}
+
+.video-call-container h2 {
+  margin: 0;
   font-size: 24px;
+  font-weight: 600;
 }
 
 .video-grid {
   display: grid;
   gap: 10px;
   width: 100%;
-  max-width: 1200px;
-  height: 70%;
+  max-width: 1400px;
+  height: 80%;
   margin-bottom: 20px;
+  overflow-y: auto;
 }
 
-/* Responsive grid based on participant count */
+.video-grid::-webkit-scrollbar {
+  width: 8px;
+}
+
+.video-grid::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 4px;
+}
+
 .video-grid.participant-count-1 {
   grid-template-columns: 1fr;
 }
@@ -51,7 +73,9 @@
 .video-grid.participant-count-9 {
   grid-template-columns: repeat(3, 1fr);
 }
-.video-grid.participant-count-10 {
+.video-grid.participant-count-10,
+.video-grid.participant-count-11,
+.video-grid.participant-count-12 {
   grid-template-columns: repeat(4, 1fr);
 }
 
@@ -74,12 +98,29 @@
   object-fit: cover;
 }
 
+.video-element.speaking {
+  border: 3px solid #55ff55;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(85, 255, 85, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(85, 255, 85, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(85, 255, 85, 0);
+  }
+}
+
 .video-info {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.7);
   padding: 8px;
   display: flex;
   justify-content: space-between;
@@ -91,23 +132,41 @@
   font-weight: bold;
 }
 
+.sound-wave {
+  color: #55ff55;
+  font-size: 16px;
+  animation: wave 0.5s infinite alternate;
+}
+
+@keyframes wave {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.2);
+  }
+}
+
 .status-icons {
   display: flex;
   gap: 8px;
 }
 
-.icon {
+.status-icons .icon {
   font-size: 16px;
-}
-
-.mic-off,
-.camera-off {
-  color: #ff5555;
+  transition: color 0.3s ease, transform 0.3s ease;
 }
 
 .mic-on,
 .camera-on {
   color: #55ff55;
+  transform: scale(1.1);
+}
+
+.mic-off,
+.camera-off {
+  color: #ff5555;
+  transform: scale(0.9);
 }
 
 .controls {
@@ -118,42 +177,47 @@
 .control-btn {
   padding: 10px 20px;
   font-size: 16px;
+  font-weight: 600;
+  text-transform: uppercase;
   border: none;
-  border-radius: 5px;
+  border-radius: 8px;
   cursor: pointer;
-  background-color: #007bff;
+  background: #4a90e2;
   color: #fff;
   transition: background-color 0.3s;
 }
 
 .control-btn:hover {
-  background-color: #0056b3;
+  background: #357abd;
 }
 
 .control-btn.off {
-  background-color: #dc3545;
+  background: #e74c3c;
 }
 
 .control-btn.off:hover {
-  background-color: #b02a37;
+  background: #c0392b;
 }
 
 .control-btn.leave {
-  background-color: #ff5555;
+  background: #e74c3c;
 }
 
 .control-btn.leave:hover {
-  background-color: #cc4444;
+  background: #c0392b;
 }
 
 .control-btn:disabled {
-  background-color: #6c757d;
+  background: #6c757d;
   cursor: not-allowed;
 }
 
-/* Responsive adjustments */
 @media (max-width: 768px) {
   .video-call-container {
+    top: 5%;
+    left: 5%;
+    width: 90%;
+    height: 90%;
     padding: 10px;
   }
 
@@ -171,7 +235,9 @@
   .video-grid.participant-count-7,
   .video-grid.participant-count-8,
   .video-grid.participant-count-9,
-  .video-grid.participant-count-10 {
+  .video-grid.participant-count-10,
+  .video-grid.participant-count-11,
+  .video-grid.participant-count-12 {
     grid-template-columns: repeat(2, 1fr);
   }
 

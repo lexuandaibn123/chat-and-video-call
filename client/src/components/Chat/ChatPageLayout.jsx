@@ -35,7 +35,6 @@ const ChatPageLayout = ({
   onUploadProgress,
   userInfo,
   socket,
-  videoCallSocket
 }) => {
   // Filter conversations for groups and friends
   const filteredConversations = conversations.filter((conv) => {
@@ -46,7 +45,7 @@ const ChatPageLayout = ({
     return nameMatch;
   });
 
-  console.log("activechat: ", activeChat);
+  // console.log("activechat: ", activeChat);
 
   const filteredGroups = filteredConversations.filter((c) => c.isGroup);
   const filteredFriends = filteredConversations.filter((c) => !c.isGroup);
@@ -145,7 +144,6 @@ const ChatPageLayout = ({
         onUploadProgress={onUploadProgress}
         userInfo = {userInfo}
         socket={socket}
-        videoCallSocket={videoCallSocket}
       />
 
       {isSettingsOpen && activeChat?.isGroup && activeChat.detailedMembers && (

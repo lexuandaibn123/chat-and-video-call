@@ -13,12 +13,9 @@ export const useSocket = ({
   setConversations,
   setActionError,
   conversations,
-  setCallInvite,
 }) => {
   const socketRef = useRef(null);
-  const videoCallSocketRef = useRef(null);
   const isConnectedRef = useRef(false);
-  const isVideoCallConnectedRef = useRef(false);
   const joinedRoomsRef = useRef(new Set());
 
   const sendMessage = useCallback(
@@ -64,14 +61,6 @@ export const useSocket = ({
       auth: { userInfo },
     });
 
-    videoCallSocketRef.current = io(`${SERVER_URL}/video-call`, {
-      withCredentials: true,
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-      auth: { userInfo },
-    });
-
     socketRef.current.on('connect', () => {
       console.log('Socket.IO connected:', socketRef.current.id);
       isConnectedRef.current = true;
@@ -110,21 +99,6 @@ export const useSocket = ({
       );
     });
 
-    socketRef.current.on('callStarted', (data) => {
-      console.log('Received callStarted event:', data);
-      if (data.roomId === activeChatId) {
-        setCallInvite(data);
-      }
-    });
-
-    socketRef.current.on('callEnded', (data) => {
-      console.log('Received callEnded event:', data);
-      if (data.roomId === activeChatId) {
-        setCallInvite(null);
-        alert('Cuộc gọi đã kết thúc');
-      }
-    });
-
     socketRef.current.on('error', (error) => {
       console.error('Socket.IO error:', error);
       setActionError(error.message || 'Real-time connection error');
@@ -142,46 +116,14 @@ export const useSocket = ({
       joinedRoomsRef.current.clear();
     });
 
-    videoCallSocketRef.current.on('connect', () => {
-      console.log('Video Call Socket.IO connected:', videoCallSocketRef.current.id);
-      isVideoCallConnectedRef.current = true;
-    });
-
-    videoCallSocketRef.current.on('unauthorized', () => {
-      console.error('Video Call Socket: Unauthorized');
-      setActionError('Unauthorized: Please log in again');
-      videoCallSocketRef.current.disconnect();
-      isVideoCallConnectedRef.current = false;
-    });
-
-    videoCallSocketRef.current.on('error', (error) => {
-      console.error('Video Call Socket.IO error:', error);
-      setActionError(error.message || 'Video call connection error');
-    });
-
-    videoCallSocketRef.current.on('connect_error', (err) => {
-      console.error('Video Call Socket.IO connection error:', err);
-      setActionError('Failed to connect to video call server');
-      isVideoCallConnectedRef.current = false;
-    });
-
-    videoCallSocketRef.current.on('disconnect', () => {
-      console.log('Video Call Socket.IO disconnected');
-      isVideoCallConnectedRef.current = false;
-    });
-
     return () => {
       if (socketRef.current) {
         socketRef.current.disconnect();
         isConnectedRef.current = false;
         joinedRoomsRef.current.clear();
       }
-      if (videoCallSocketRef.current) {
-        videoCallSocketRef.current.disconnect();
-        isVideoCallConnectedRef.current = false;
-      }
     };
-  }, [isAuthenticated, userId, userInfo, activeChatId, setMessages, setConversations, setActionError, setCallInvite]);
+  }, [isAuthenticated, userId, userInfo, activeChatId, setMessages, setConversations, setActionError]);
 
   useEffect(() => {
     if (socketRef.current && isConnectedRef.current && conversations?.length) {
@@ -198,9 +140,7 @@ export const useSocket = ({
 
   return {
     socket: socketRef.current,
-    videoCallSocket: videoCallSocketRef.current,
     sendMessage,
     isConnected: isConnectedRef.current,
-    isVideoCallConnected: isVideoCallConnectedRef.current,
   };
 };

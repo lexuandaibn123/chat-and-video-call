@@ -45,7 +45,7 @@ const ChatPage = () => {
     });
   }, [user, isAuthenticated, isAuthLoading]);
 
-  const { socket, videoCallSocket, sendMessage, isConnected } = useSocket({
+  const { socket, sendMessage, isConnected } = useSocket({
     isAuthenticated,
     userId: user?._id,
     userInfo: user,
@@ -246,7 +246,7 @@ const ChatPage = () => {
         limit: 100,
         skip: 0,
       });
-      const formattedMessages = processRawMessages(messages, userId);
+      const formattedMessages = await processRawMessages(messages, userId);
       setMessages(formattedMessages);
       console.log("Formatted messages (oldest first):", formattedMessages);
     } catch (err) {
@@ -308,7 +308,6 @@ const ChatPage = () => {
       onUploadProgress={handlers.handleUploadProgress}
       userInfo={user}
       socket={socket}
-      videoCallSocket={videoCallSocket}
       callInvite={callInvite} // Truyền callInvite xuống ChatPageLayout
     />
   );

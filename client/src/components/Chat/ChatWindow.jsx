@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { toast } from 'react-toastify';
 import Picker from 'emoji-picker-react';
 import MessageBubble from './MessageBubble';
 import defaultAvatarPlaceholder from '../../assets/images/avatar_placeholder.jpg';
@@ -28,7 +29,6 @@ const ChatWindow = ({
   onUploadProgress,
   userInfo,
   socket,
-  videoCallSocket,
 }) => {
   const messageListEndRef = useRef(null);
   const messageInputRef = useRef(null);
@@ -46,59 +46,36 @@ const ChatWindow = ({
       return;
     }
 
-    // Tham gia phòng cuộc trò chuyện trong defaultNamespace
+    // Tham gia phòng cuộc trò chuyện
     socket.emit('joinConversationRoom', { conversationId: activeContact.id });
 
-    socket.on('callStarted', (data) => {
+    const handleCallStarted = (data) => {
       console.log('Received callStarted event:', data);
-      if (data.roomId === activeContact.id && !isVideoCallOpen) {
+      if (data.roomId === activeContact.id && !isVideoCallOpen && !callInvite) {
         setCallInvite(data);
+        toast.info(`${data.username} đã bắt đầu một cuộc gọi video`, {
+          position: 'top-right',
+          autoClose: 5000,
+          theme: 'dark',
+        });
       } else {
         console.warn('callStarted ignored:', {
           receivedRoomId: data.roomId,
           activeContactId: activeContact.id,
           isVideoCallOpen,
+          hasCallInvite: !!callInvite,
         });
       }
-    });
+    };
 
-    socket.on('callEnded', (data) => {
-      console.log('Received callEnded event:', data);
-      setCallInvite(null);
-      alert('Cuộc gọi đã kết thúc');
-    });
-
-    socket.on('userLeft', (data) => {
-      console.log('Received userLeft event:', data);
-    });
-
-    socket.on('error', (message) => {
-      console.error('Server error:', message);
-      alert(`Lỗi từ server: ${message}`);
-    });
-
-    socket.on('connect_error', (error) => {
-      console.error('Socket connection error:', error);
-      alert('Mất kết nối đến server. Vui lòng thử lại.');
-    });
-
-    socket.on('disconnect', () => {
-      console.warn('Socket disconnected');
-      alert('Mất kết nối đến server.');
-    });
+    socket.on('callStarted', handleCallStarted);
 
     return () => {
       console.log('Cleaning up socket listeners for activeContact:', activeContact?.id);
-      socket.off('callStarted');
-      socket.off('callEnded');
-      socket.off('userLeft');
-      socket.off('error');
-      socket.off('connect_error');
-      socket.off('disconnect');
-      // Rời phòng cuộc trò chuyện khi component unmount
+      socket.off('callStarted', handleCallStarted);
       socket.emit('leaveConversationRoom', { conversationId: activeContact.id });
     };
-  }, [socket, activeContact?.id, userInfo?.id, isVideoCallOpen]);
+  }, [socket, activeContact?.id, userInfo?.id, isVideoCallOpen, callInvite]);
 
   useEffect(() => {
     if (!isLoadingMessages && editingMessageId === null) {
@@ -164,6 +141,11 @@ const ChatWindow = ({
   const handleJoinCall = () => {
     if (!activeContact?.id) {
       console.warn('No active contact selected');
+      toast.error('Không có liên hệ đang hoạt động', {
+        position: 'top-right',
+        autoClose: 3000,
+        theme: 'dark',
+      });
       return;
     }
     console.log('User joined call for room:', activeContact.id);
@@ -174,10 +156,37 @@ const ChatWindow = ({
   const handleDeclineCall = () => {
     if (!activeContact?.id) {
       console.warn('No active contact selected');
+      toast.error('Không có liên hệ đang hoạt động', {
+        position: 'top-right',
+        autoClose: 3000,
+        theme: 'dark',
+      });
       return;
     }
     console.log('User declined call for room:', activeContact.id);
     setCallInvite(null);
+    toast.info('Đã từ chối cuộc gọi', {
+      position: 'top-right',
+      autoClose: 3000,
+      theme: 'dark',
+    });
+  };
+
+  const handleLeaveRoom = () => {
+    if (socket && activeContact?.id && userInfo?.id) {
+      console.log('Emitting leaveRoom for user:', userInfo.id, 'in room:', activeContact.id);
+      socket.emit('leaveRoom', {
+        conversationId: activeContact.id,
+        userId: userInfo.id,
+      });
+    }
+    setIsVideoCallOpen(false);
+    setCallInvite(null);
+    toast.info('Bạn đã rời cuộc gọi', {
+      position: 'top-right',
+      autoClose: 3000,
+      theme: 'dark',
+    });
   };
 
   if (!activeContact) {
@@ -401,8 +410,7 @@ const ChatWindow = ({
         <VideoCall
           roomId={activeContact.id}
           userId={userInfo.id}
-          // videoCallSocket={videoCallSocket}
-          onClose={() => setIsVideoCallOpen(false)}
+          onClose={handleLeaveRoom}
         />
       )}
     </section>
