@@ -33,6 +33,8 @@ const ChatPageLayout = ({
   onClientUploadComplete,
   onUploadError,
   onUploadProgress,
+  userInfo,
+  socket,
 }) => {
   // Filter conversations for groups and friends
   const filteredConversations = conversations.filter((conv) => {
@@ -42,6 +44,8 @@ const ChatPageLayout = ({
       conv.name.toLowerCase().includes(searchTerm);
     return nameMatch;
   });
+
+  // console.log("activechat: ", activeChat);
 
   const filteredGroups = filteredConversations.filter((c) => c.isGroup);
   const filteredFriends = filteredConversations.filter((c) => !c.isGroup);
@@ -138,6 +142,8 @@ const ChatPageLayout = ({
         onClientUploadComplete={onClientUploadComplete}
         onUploadError={onUploadError}
         onUploadProgress={onUploadProgress}
+        userInfo = {userInfo}
+        socket={socket}
       />
 
       {isSettingsOpen && activeChat?.isGroup && activeChat.detailedMembers && (

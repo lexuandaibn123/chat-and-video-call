@@ -460,7 +460,27 @@
                   flex-direction: column; // Stack images if multiple
                   gap: $spacing-xs; // Space between multiple images
                   margin-top: $spacing-xs; // Optional: space above if text/sender info precedes
-                   position: relative; // For overlay positioning
+                  position: relative; // For overlay positioning
+
+                  .skeleton-image {
+                      width: 200px;
+                      height: 150px;
+                      background-color: #e2e2e2;
+                      border-radius: 8px;
+                      animation: pulse 1.5s infinite ease-in-out;
+                  }
+
+                  @keyframes pulse {
+                      0% {
+                          background-color: #e2e2e2;
+                      }
+                      50% {
+                          background-color: #f0f0f0;
+                      }
+                      100% {
+                          background-color: #e2e2e2;
+                      }
+                  }
               }
 
               .message-image {
@@ -825,6 +845,13 @@
             font-size: 1em;
         }
     }
+
+    .emoji-picker-container { 
+      position: absolute;
+      right: 0;
+      bottom: 57px;
+      z-index: 1000;
+    }
   }
 
   // Overlay for message editing dialog (if used)
@@ -836,6 +863,63 @@
     align-items: center;
     justify-content: center;
     z-index: 1000;
+  }
+
+  .call-invite-popup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+
+    .call-invite-content {
+      width: 90%;
+      max-width: 400px;
+      padding: 24px;
+      background-color: #fff;
+      border-radius: 12px;
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+      text-align: center;
+
+      p {
+        font-size: 1.1rem;
+        margin-bottom: 20px;
+        color: #333;
+      }
+
+      button {
+        margin: 0 10px;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+
+        &:first-of-type {
+          background-color: #4CAF50;
+          color: white;
+
+          &:hover {
+            background-color: #45a049;
+          }
+        }
+
+        &:last-of-type {
+          background-color: #f44336;
+          color: white;
+
+          &:hover {
+            background-color: #e53935;
+          }
+        }
+      }
+    }
   }
 }
 
