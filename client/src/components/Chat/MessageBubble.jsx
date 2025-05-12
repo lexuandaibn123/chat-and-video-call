@@ -14,7 +14,7 @@ const MessageBubble = ({
     currentUserId,
     senderName,
     senderAvatar,
-    status, // NHẬN STATUS PROP (uploading, sending, sent, failed)
+    status, 
     onDeleteMessage, // Nhận handler delete
     onEditMessage, // Nhận handler edit
     editingMessageId, // <<< Nhận prop này

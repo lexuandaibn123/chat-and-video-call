@@ -74,7 +74,11 @@ const initDefaultNameSpace = (defaultNamespace) => {
 
           if (Array.isArray(data)) {
             const isValid = data.every((part) => {
-              return typeof part === "object" && part.type == "image" && part.data.length > 0;
+              return (
+                typeof part === "object" &&
+                part.type == "image" &&
+                part.data.length > 0
+              );
             });
             if (!isValid || data.length < 1) {
               console.error("Invalid data type");
@@ -119,10 +123,10 @@ const initDefaultNameSpace = (defaultNamespace) => {
         const updatedMessage = await ConversationService.editMessageByWs({
           userId: userInfo.id,
           messageId,
-          data,
+          newData,
         });
         client
-          .in(updatedMessage.conversationId)
+          .in(updatedMessage.conversationId.toString())
           .emit("editedMessage", updatedMessage);
       } catch (error) {
         console.error(error);
@@ -142,7 +146,7 @@ const initDefaultNameSpace = (defaultNamespace) => {
           messageId,
         });
         client
-          .in(deletedMessage.conversationId)
+          .in(deletedMessage.conversationId.toString())
           .emit("deletedMessage", deletedMessage);
       } catch (error) {
         console.error(error);
