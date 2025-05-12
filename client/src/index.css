@@ -33,7 +33,7 @@ body {
   justify-content: center; /* Căn giữa theo chiều ngang */
   align-items: center; /* Căn giữa theo chiều dọc */
   min-width: 320px;
-  min-height: 100vh; /* Đảm bảo chiếm toàn bộ chiều cao màn hình */
+  min-height: 100svh;
 }
 
 h1 {
