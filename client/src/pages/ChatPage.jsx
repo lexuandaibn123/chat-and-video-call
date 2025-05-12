@@ -45,7 +45,7 @@ const ChatPage = () => {
     });
   }, [user, isAuthenticated, isAuthLoading]);
 
-  const { socket, sendMessage, isConnected } = useSocket({
+  const { socket, sendMessage, editMessage, deleteMessage, isConnected } = useSocket({
     isAuthenticated,
     userId: user?._id,
     userInfo: user,
@@ -73,6 +73,8 @@ const ChatPage = () => {
     editingGroupName,
     socket,
     sendMessage,
+    editMessage,
+    deleteMessage,
     isConnected,
     setConversations,
     setActiveChat,

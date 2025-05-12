@@ -18,6 +18,7 @@ export const useSocket = ({
   const isConnectedRef = useRef(false);
   const joinedRoomsRef = useRef(new Set());
 
+  // Hàm gửi tin nhắn
   const sendMessage = useCallback(
     ({ conversationId, data, type, replyToMessageId = null }) => {
       if (!socketRef.current || !isConnectedRef.current) {
@@ -38,6 +39,49 @@ export const useSocket = ({
 
       const payload = { conversationId, type, data: finalData, replyToMessageId };
       socketRef.current.emit('newMessage', payload);
+      return true;
+    },
+    [setActionError]
+  );
+
+  // Hàm chỉnh sửa tin nhắn
+  const editMessage = useCallback(
+    ({ messageId, newData }) => {
+      if (!socketRef.current || !isConnectedRef.current) {
+        setActionError('Socket is not connected. Please try again.');
+        return false;
+      }
+
+      if (typeof messageId !== 'string' || messageId.length < 1) {
+        setActionError('Invalid message ID');
+        return false;
+      }
+
+      if (typeof newData !== 'string' || newData.length < 1) {
+        setActionError('Invalid message data');
+        return false;
+      }
+
+      socketRef.current.emit('editMessage', { messageId, newData });
+      return true;
+    },
+    [setActionError]
+  );
+
+  // Hàm xóa tin nhắn
+  const deleteMessage = useCallback(
+    ({ messageId }) => {
+      if (!socketRef.current || !isConnectedRef.current) {
+        setActionError('Socket is not connected. Please try again.');
+        return false;
+      }
+
+      if (typeof messageId !== 'string' || messageId.length < 1) {
+        setActionError('Invalid message ID');
+        return false;
+      }
+
+      socketRef.current.emit('deleteMessage', { messageId });
       return true;
     },
     [setActionError]
@@ -77,7 +121,12 @@ export const useSocket = ({
       }
     });
 
+    socketRef.current.on('connected', () => {
+    console.log('Received connected event from server');
+  });
+
     socketRef.current.on('receiveMessage', (receivedMessage) => {
+      console.log("receivedMessage: ", receivedMessage);
       if (receivedMessage.conversationId && receivedMessage.conversationId === activeChatId) {
         setMessages((prevMessages) => {
           const isDuplicate = prevMessages.some(
@@ -95,7 +144,42 @@ export const useSocket = ({
         });
       }
       setConversations((prevConvs) =>
-        updateConversationsListLatestMessage(prevConvs, receivedMessage.conversationId, receivedMessage)
+        updateConversationsListLatestMessage (prevConvs, receivedMessage.conversationId, receivedMessage)
+      );
+    });
+
+    // Xử lý tin nhắn được chỉnh sửa
+    socketRef.current.on('editedMessage', (updatedMessage) => {
+      console.log("updated: ", updatedMessage);
+      if (updatedMessage.conversationId && updatedMessage.conversationId === activeChatId) {
+        setMessages((prevMessages) =>
+          prevMessages.map(msg =>
+            msg.id === updatedMessage._id
+              ? {
+                  ...msg,
+                  content: updatedMessage.content,
+                  isEdited: true,
+                  lastUpdated: updatedMessage.last_updated,
+                }
+              : msg
+          )
+        );
+      }
+      setConversations((prevConvs) =>
+        updateConversationsListLatestMessage(prevConvs, updatedMessage.conversationId, updatedMessage)
+      );
+    });
+
+    // Xử lý tin nhắn bị xóa
+    socketRef.current.on('deletedMessage', (deletedMessage) => {
+      if (deletedMessage.conversationId && deletedMessage.conversationId === activeChatId) {
+        setMessages((prevMessages) =>
+          prevMessages.filter((msg) => msg.id !== deletedMessage._id)
+        );
+      }
+      // Cập nhật danh sách cuộc hội thoại nếu tin nhắn bị xóa là tin nhắn mới nhất
+      setConversations((prevConvs) =>
+        updateConversationsListLatestMessage(prevConvs, deletedMessage.conversationId, deletedMessage)
       );
     });
 
@@ -141,6 +225,8 @@ export const useSocket = ({
   return {
     socket: socketRef.current,
     sendMessage,
+    editMessage,
+    deleteMessage,
     isConnected: isConnectedRef.current,
   };
 };

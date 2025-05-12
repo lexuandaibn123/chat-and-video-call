@@ -55,6 +55,8 @@ export const useHandlers = ({
   editingGroupName,
   socket,
   sendMessage, // Thêm sendMessage
+  editMessage, // Truyền editMessage
+  deleteMessage,
   isConnected, // Thêm isConnected
   setConversations,
   setActiveChat,
@@ -1369,23 +1371,19 @@ export const useHandlers = ({
           ? { ...messageToDelete }
           : null;
 
+        // Cập nhật giao diện lạc quan (optimistic update)
         setMessages((prevMessages) =>
           updateMessagesOptimisticDelete(prevMessages, messageId)
         );
         setActionError(null);
 
         try {
-          const response = await deleteMessageApi({ messageId });
+          // Gọi hàm deleteMessage trên socket
+          const success = await deleteMessage({ messageId });
 
-          if (response && response.success === false) {
-            console.error(
-              `Failed to delete message ${messageId} on server:`,
-              response?.message || response?.error || "API reported failure."
-            );
-            let detailedErrorMessage =
-              response?.message ||
-              response?.error ||
-              "Failed to delete message on server.";
+          if (!success) {
+            console.error(`Failed to delete message ${messageId} via socket.`);
+            let detailedErrorMessage = "Failed to delete message via socket.";
             setActionError(detailedErrorMessage);
 
             if (originalMessageStateCopy) {
@@ -1403,11 +1401,9 @@ export const useHandlers = ({
               );
             }
           } else {
-            console.log(
-              `Message ${messageId} deleted successfully on server.`,
-              response
-            );
+            console.log(`Message ${messageId} deleted successfully via socket.`);
 
+            // Cập nhật danh sách cuộc hội thoại
             setConversations((prevConvs) =>
               updateConversationsListAfterMessageAction(
                 prevConvs,
@@ -1419,12 +1415,12 @@ export const useHandlers = ({
           }
         } catch (err) {
           console.error(
-            `Error calling delete message API for ${messageId}:`,
+            `Error deleting message ${messageId} via socket:`,
             err
           );
 
           const detailedErrorMessage =
-            err.message || "An API error occurred while deleting message.";
+            err.message || "An error occurred while deleting message via socket.";
           setActionError(detailedErrorMessage);
 
           if (originalMessageStateCopy) {
@@ -1438,7 +1434,7 @@ export const useHandlers = ({
             console.warn(
               "Could not revert optimistic delete for message:",
               messageId,
-              "Original state was not captured on API error."
+              "Original state was not captured on socket error."
             );
           }
         }
@@ -1454,6 +1450,7 @@ export const useHandlers = ({
       setMessages,
       setActionError,
       setConversations,
+      deleteMessage, // Thêm dependency deleteMessage
     ]
   );
 
@@ -1525,111 +1522,117 @@ export const useHandlers = ({
   );
 
   // --- Handler for saving edited message ---
-  const handleSaveEditedMessage = useCallback(async () => {
-    const messageId = editingMessageId;
-    const currentUserId = currentUserIdRef.current;
-    const newText = messageInput;
+  const handleSaveEditedMessage = useCallback(
+    async () => {
+      const messageId = editingMessageId;
+      const currentUserId = currentUserIdRef.current;
+      const newText = messageInput;
 
-    if (!messageId || !activeChat?.id || !currentUserId) {
-      console.warn(
-        "Cannot save edit: Invalid state (no message ID, no chat, or no user)."
+      if (!messageId || !activeChat?.id || !currentUserId) {
+        console.warn(
+          "Cannot save edit: Invalid state (no message ID, no chat, or no user)."
+        );
+        setEditingMessageId(null);
+        setMessageInput("");
+        setActionError("Invalid request to save message.");
+        return;
+      }
+
+      const messageToEdit = messages.find((msg) => msg.id === messageId);
+
+      if (!messageToEdit) {
+        console.warn(
+          `Cannot save edit for message ${messageId}: Message not found in state.`
+        );
+        setEditingMessageId(null);
+        setMessageInput("");
+        setActionError("Message to edit not found in current view.");
+        return;
+      }
+
+      const originalText = messageToEdit?.content?.text?.data || "";
+      const trimmedNewText = newText.trim();
+
+      if (trimmedNewText === originalText.trim()) {
+        console.log("No change in message text, cancelling save.");
+        setActionError(null);
+        setEditingMessageId(null);
+        setMessageInput("");
+        return;
+      }
+
+      if (sendingMessage) {
+        console.warn("Cannot save edit: Already saving/sending another item.");
+        setActionError("Save in progress. Please wait.");
+        return;
+      }
+
+      if (!trimmedNewText) {
+        console.warn("Cannot save empty message.");
+        setActionError("Edited message cannot be empty.");
+        return;
+      }
+
+      const originalMessageState = {
+        id: messageId,
+        content: messageToEdit.content,
+        isEdited: messageToEdit.isEdited,
+        time: messageToEdit.time,
+        createdAt: messageToEdit.createdAt,
+        status: messageToEdit.status,
+      };
+
+      // Cập nhật giao diện lạc quan (optimistic update)
+      setMessages((prevMessages) =>
+        updateMessagesOptimisticEdit(prevMessages, messageId, trimmedNewText)
       );
       setEditingMessageId(null);
       setMessageInput("");
-      setActionError("Invalid request to save message.");
-      return;
-    }
 
-    const messageToEdit = messages.find((msg) => msg.id === messageId);
-
-    if (!messageToEdit) {
-      console.warn(
-        `Cannot save edit for message ${messageId}: Message not found in state.`
-      );
-      setEditingMessageId(null);
-      setMessageInput("");
-      setActionError("Message to edit not found in current view.");
-      return;
-    }
-
-    const originalText = messageToEdit?.content?.text?.data || "";
-    const trimmedNewText = newText.trim();
-
-    if (trimmedNewText === originalText.trim()) {
-      console.log("No change in message text, cancelling save.");
+      setSendingMessage(true);
       setActionError(null);
-      setEditingMessageId(null);
-      setMessageInput("");
-      return;
-    }
 
-    if (sendingMessage) {
-      console.warn("Cannot save edit: Already saving/sending another item.");
-      setActionError("Save in progress. Please wait.");
-      return;
-    }
+      try {
+        // Gọi hàm editMessage trên socket
+        const success = await editMessage({ messageId, newData: trimmedNewText });
 
-    if (!trimmedNewText) {
-      console.warn("Cannot save empty message.");
-      setActionError("Edited message cannot be empty.");
-      return;
-    }
+        if (success) {
+          console.log(`Message ${messageId} edited successfully via socket.`);
 
-    const originalMessageState = {
-      id: messageId,
-      content: messageToEdit.content,
-      isEdited: messageToEdit.isEdited,
-      time: messageToEdit.time,
-      createdAt: messageToEdit.createdAt,
-      status: messageToEdit.status,
-    };
+          // Cập nhật danh sách cuộc hội thoại
+          setConversations((prevConvs) =>
+            updateConversationsListAfterMessageAction(
+              prevConvs,
+              activeChat.id,
+              messages,
+              messageId
+            )
+          );
+        } else {
+          console.error(
+            `Failed to edit message ${messageId} via socket.`
+          );
 
-    setMessages((prevMessages) =>
-      updateMessagesOptimisticEdit(prevMessages, messageId, trimmedNewText)
-    );
-    setEditingMessageId(null);
-    setMessageInput("");
+          let detailedErrorMessage = "Failed to edit message via socket.";
+          setActionError(detailedErrorMessage);
 
-    setSendingMessage(true);
-    setActionError(null);
+          if (originalMessageState) {
+            setMessages((prevMessages) =>
+              revertMessagesOptimisticEdit(prevMessages, originalMessageState)
+            );
+          } else {
+            console.warn(
+              "Could not revert optimistic edit for message:",
+              messageId,
+              "Original state was not captured."
+            );
+          }
+        }
+      } catch (err) {
+        console.error(`Error editing message ${messageId} via socket:`, err);
 
-    try {
-      const response = await editMessageApi({
-        messageId,
-        newData: trimmedNewText,
-      });
-
-      if (response && response._id === messageId) {
-        console.log(
-          `Message ${messageId} edited successfully on server.`,
-          response
-        );
-
-        setMessages((prevMessages) =>
-          updateMessagesEditSuccess(prevMessages, response)
-        );
-
-        setConversations((prevConvs) =>
-          updateConversationsListAfterMessageAction(
-            prevConvs,
-            activeChat.id,
-            messages,
-            messageId
-          )
-        );
-      } else {
-        console.error(
-          `Failed to edit message ${messageId} on server. API response did not match expected success format:`,
-          response
-        );
-
-        let detailedErrorMessage =
-          "Failed to edit message on server (unexpected response).";
-        if (response && response.message)
-          detailedErrorMessage = response.message;
-        else if (response && response.error)
-          detailedErrorMessage = response.error;
-
+        const detailedErrorMessage =
+          err.message || "An error occurred while editing message via socket.";
         setActionError(detailedErrorMessage);
 
         if (originalMessageState) {
@@ -1640,45 +1643,29 @@ export const useHandlers = ({
           console.warn(
             "Could not revert optimistic edit for message:",
             messageId,
-            "Original state was not captured."
+            "Original state was not captured on socket error."
           );
         }
+      } finally {
+        setSendingMessage(false);
       }
-    } catch (err) {
-      console.error(`Error calling edit message API for ${messageId}:`, err);
-
-      const detailedErrorMessage =
-        err.message || "An API error occurred while editing message.";
-      setActionError(detailedErrorMessage);
-
-      if (originalMessageState) {
-        setMessages((prevMessages) =>
-          revertMessagesOptimisticEdit(prevMessages, originalMessageState)
-        );
-      } else {
-        console.warn(
-          "Could not revert optimistic edit for message:",
-          messageId,
-          "Original state was not captured on API error."
-        );
-      }
-    } finally {
-      setSendingMessage(false);
-    }
-  }, [
-    activeChat?.id,
-    editingMessageId,
-    messageInput,
-    messages,
-    currentUserIdRef,
-    sendingMessage,
-    setMessages,
-    setActionError,
-    setConversations,
-    setEditingMessageId,
-    setMessageInput,
-    setSendingMessage,
-  ]);
+    },
+    [
+      activeChat?.id,
+      editingMessageId,
+      messageInput,
+      messages,
+      currentUserIdRef,
+      sendingMessage,
+      setMessages,
+      setActionError,
+      setConversations,
+      setEditingMessageId,
+      setMessageInput,
+      setSendingMessage,
+      editMessage, // Thêm dependency editMessage
+    ]
+  );
 
   // --- Handler for canceling edit ---
   const handleCancelEdit = useCallback(() => {

@@ -122,7 +122,7 @@ export default function VideoCall({ userId, roomId, onClose }) {
   return (
     <div className="video-call-container">
       <div className="video-call-header">
-        <img src="/logo.png" alt="Logo" className="logo" />
+        {/* <img src="/logo.png" alt="Logo" className="logo" /> */}
         <h2>Cuộc gọi video ({participantCount} người tham gia)</h2>
       </div>
       <div className={`video-grid participant-count-${participantCount}`}>
@@ -170,12 +170,12 @@ export default function VideoCall({ userId, roomId, onClose }) {
         >
           {cameraEnabled ? "Tắt Camera" : "Bật Camera"}
         </button>
-        <button
+        {/* <button
           onClick={() => sfuClientRef.current.shareScreen()}
           className="control-btn"
         >
           Chia sẻ màn hình
-        </button>
+        </button> */}
         <button
           onClick={toggleFullScreen}
           className="control-btn"
