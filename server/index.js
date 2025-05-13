@@ -25,8 +25,6 @@ const initDefaultNameSpace = require("./socket/default");
 const initVideoCallNamespace = require("./socket/video");
 const initAdminNamespace = require("./socket/admin");
 
-const { createPeer } = require("./utils/wrtc");
-
 db.connect();
 
 /* Session */

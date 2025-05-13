@@ -15,3 +15,7 @@ function createPeer() {
 
   return peer;
 }
+
+module.exports = {
+  createPeer,
+};
