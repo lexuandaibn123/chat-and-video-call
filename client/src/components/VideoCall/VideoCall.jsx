@@ -102,6 +102,8 @@ export default function VideoCall({ userId, roomId, onClose }) {
             .catch((e) => console.error("Lỗi phát video local:", e));
         } else {
           console.error("Không tìm thấy video element hoặc stream");
+          console.log("Local Video element:", localVideoRef.current);
+          console.log("Local Stream:", localStream);
         }
       }
     };
@@ -125,6 +127,31 @@ export default function VideoCall({ userId, roomId, onClose }) {
       setLocalStream(null);
     };
   }, [userId, roomId]);
+
+  useEffect(() => {
+    if (localVideoRef.current && localStream) {
+      console.log(
+        "Attempting to attach localStream to video element:",
+        localVideoRef.current
+      );
+      console.log("Local stream object:", localStream);
+      localVideoRef.current.srcObject = localStream;
+      localVideoRef.current
+        .play()
+        .catch((e) => console.error("Local video play error:", e));
+    } else {
+      console.log(
+        "Cannot attach stream. Ref available:",
+        !!localVideoRef.current,
+        "Stream available:",
+        !!localStream
+      );
+      // Reset nếu stream bị hủy
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = null;
+      }
+    }
+  }, [localStream]); // Phụ thuộc vào localStream
 
   const participantCount = remoteStreams.length + (localStream ? 1 : 0);
 
@@ -210,6 +237,7 @@ export default function VideoCall({ userId, roomId, onClose }) {
               ref={localVideoRef}
               autoPlay
               muted
+              playsInline
               className="video-element"
             />
             <div className="video-info">
