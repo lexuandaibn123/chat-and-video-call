@@ -1,7 +1,7 @@
 import React from 'react';
 // Đảm bảo đường dẫn placeholder chính xác
-import defaultUserAvatar from '../../assets/images/avatar_placeholder.jpg';
-import defaultGroupAvatar from '../../assets/images/avatar_placeholder.jpg';
+import defaultUserAvatar from '../../assets/images/avatar_male.jpg';
+import defaultGroupAvatar from '../../assets/images/group-chat.png';
 
 const ConversationItem = ({ type, id, avatar, name, lastMessage, time, unread, status, onClick, isActive }) => {
   // Chọn avatar mặc định dựa trên type

@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import Picker from 'emoji-picker-react';
 import MessageBubble from './MessageBubble';
-import defaultAvatarPlaceholder from '../../assets/images/avatar_placeholder.jpg';
+import defaultUserAvatar from '../../assets/images/avatar_male.jpg';
+import defaultGroupAvatar from '../../assets/images/group-chat.png';
 import { UploadButton } from '../../utils/uploadthing';
 import VideoCall from '../VideoCall/VideoCall';
 
@@ -200,6 +201,7 @@ const ChatWindow = ({
 
   const isGroupChat = activeContact.isGroup;
   const isEditingMode = editingMessageId !== null;
+  const defaultAvatarPlaceholder = isGroupChat ? defaultGroupAvatar : defaultUserAvatar;
 
   return (
     <section className="active-chat-panel">

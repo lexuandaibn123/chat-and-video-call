@@ -1,6 +1,6 @@
 // src/components/Chat/MessageBubble.jsx
 import React, { useState, useRef, useEffect } from 'react';
-import defaultAvatarPlaceholder from '../../assets/images/avatar_placeholder.jpg';
+import defaultAvatarPlaceholder from '../../assets/images/avatar_male.jpg';
 
 const MessageBubble = ({
     time,

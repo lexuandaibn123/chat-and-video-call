@@ -1,6 +1,7 @@
 // src/components/Chat/ChatSettingsOverlay.jsx
 import React, { useState, useEffect } from 'react';
-import defaultAvatarPlaceholder from '../../assets/images/avatar_placeholder.jpg';
+import defaultUserAvatar from '../../assets/images/avatar_male.jpg';
+import defaultGroupAvatar from '../../assets/images/group-chat.png';
 
 // Component overlay cài đặt chat
 // Nhận props:
@@ -136,7 +137,7 @@ const ChatSettingsOverlay = ({
                 <div className="settings-body">
                     {/* Thông tin chung về nhóm */}
                     <div className="group-info">
-                        <img src={group.avatar || defaultAvatarPlaceholder} alt={group.name} className="avatar large" />
+                        <img src={group.avatar || defaultGroupAvatar} alt={group.name} className="avatar large" />
                         {/* Tên nhóm được hiển thị ở header */}
                     </div>
 
@@ -154,7 +155,7 @@ const ChatSettingsOverlay = ({
                                     className={`member-item ${member.leftAt ? 'left-member' : ''}`}
                                 >
                                     {/* Sử dụng thông tin từ member.id (populated user object) */}
-                                    <img src={member.id?.avatar || defaultAvatarPlaceholder} alt={member.id?.fullName || 'User Avatar'} className="avatar small" />
+                                    <img src={member.id?.avatar || defaultUserAvatar} alt={member.id?.fullName || 'User Avatar'} className="avatar small" />
                                     <span className="member-name">
                                         {member.id?.fullName || member.id?.email || 'Unknown User'} {/* Lấy tên đầy đủ hoặc email */}
                                         {member.role === 'leader' && member.leftAt === null && " (Leader)"} {/* Chỉ hiển thị (Leader) nếu còn active */}
@@ -186,7 +187,7 @@ const ChatSettingsOverlay = ({
                                             </button>
                                         )}
                                          {/* Nút Rời khỏi vai trò Leader (Chỉ leader, khi có > 1 leader active) */}
-                                         {member.role === 'leader' && member.id?._id === currentUserId && numberOfLeaders > 1 && (
+                                         {/* {member.role === 'leader' && member.id?._id === currentUserId && numberOfLeaders > 1 && (
                                             <button
                                                 className="icon-button small secondary"
                                                 title="Step Down as Leader"
@@ -194,8 +195,8 @@ const ChatSettingsOverlay = ({
                                                 disabled={isPerformingAction}
                                             >
                                                  {isPerformingAction ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-user-tie"></i>} {/* Icon đổi vai trò */}
-                                            </button>
-                                        )}
+                                            {/* </button>
+                                        )}  */}
                                     </div>
                                 </li>
                             ))}
@@ -221,7 +222,7 @@ const ChatSettingsOverlay = ({
                                         className={`search-result-item ${selectedUserToAdd?._id === user._id ? 'selected' : ''}`}
                                         onClick={() => setSelectedUserToAdd(user)}
                                     >
-                                        <img src={user.avatar || defaultAvatarPlaceholder} alt={user.fullName || 'User Avatar'} className="avatar tiny" />
+                                        <img src={user.avatar || defaultUserAvatar} alt={user.fullName || 'User Avatar'} className="avatar tiny" />
                                         <span>{user.fullName || user.email || user._id}</span> {/* Hiển thị tên, email, hoặc ID */}
                                     </div>
                                 ))}
