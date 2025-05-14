@@ -4,7 +4,7 @@ import { logoutApi } from '../../api/auth';
 import './Navigation.scss';
 import avatarPlaceholder from '../../assets/images/avatar_placeholder.jpg';
 
-const Navigation = () => {
+const Navigation = (userInfo) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [activeLink, setActiveLink] = useState('');
@@ -12,6 +12,8 @@ const Navigation = () => {
   const currentUser = {
     avatar: avatarPlaceholder
   };
+
+  console.log("userInfo: ", userInfo);
 
   const handleLogout = async () => {
     const confirmLogout = window.confirm("Do you really want to log out?");

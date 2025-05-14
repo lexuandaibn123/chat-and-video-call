@@ -74,7 +74,7 @@ const PasswordForm = () => {
             type="password"
             className="form-input"
             value={currentPassword}
-            onChange={handleCurrentPasswordChange()}
+            onChange={handleCurrentPasswordChange}
 
             required
           />
@@ -86,7 +86,7 @@ const PasswordForm = () => {
             type="password"
             className="form-input"
             value={newPassword}
-            onChange={handleNewPasswordChange()}
+            onChange={handleNewPasswordChange}
 
             required
           />
@@ -98,7 +98,7 @@ const PasswordForm = () => {
             type="password"
             className="form-input"
             value={confirmPassword}
-            onChange={handleNewPasswordChange()}
+            onChange={handleNewPasswordChange}
 
             required
           />
