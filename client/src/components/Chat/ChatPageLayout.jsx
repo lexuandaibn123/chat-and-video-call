@@ -106,6 +106,7 @@ const ChatPageLayout = ({
       }`}
     >
       <ConversationListPanel
+        userInfo={userInfo}
         groups={filteredGroups}
         friends={filteredFriends}
         onSearchChange={handlers.handleSearchChange}

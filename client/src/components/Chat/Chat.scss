@@ -40,7 +40,7 @@
 .conversation-list-panel {
   display: flex;
   flex-direction: column;
-  flex-basis: 320px;
+  flex-basis: 400px;
   flex-shrink: 0;
   height: 100%;
   background-color: $secondary-color;
@@ -132,7 +132,7 @@
       overflow-y: auto;
       flex-grow: 1;
 
-      &::-webkit-scrollbar { width: 6px; }
+      &::-webkit-scrollbar { width: 0px; }
       &::-webkit-scrollbar-track { background: transparent; }
       &::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
       &::-webkit-scrollbar-thumb:hover { background: #aaa; }
@@ -1392,12 +1392,17 @@
       }
       .active-chat-panel {
         display: flex; // HIỆN chat window
+
         // ... (các style khác của chat panel mobile, bao gồm nút back)
         .chat-header .back-button {
             display: flex; // Sử dụng flex để căn giữa icon
             align-items: center;
             justify-content: center;
             margin-right: $spacing-md; // Khoảng cách với avatar
+            background-color: white;
+        }
+        .chat-header .back-button:hover {
+          background-color: none;
         }
         .chat-header {
           // Điều chỉnh padding header trên mobile

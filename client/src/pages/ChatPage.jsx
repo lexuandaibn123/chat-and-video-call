@@ -196,18 +196,6 @@ const ChatPage = () => {
     }
   }, [isAuthLoading, isAuthenticated, user, fetchInitialData]);
 
-  // Tự động chọn conversation đầu tiên khi conversations thay đổi
-  useEffect(() => {
-    if (conversations.length > 0 && !activeChat) {
-      console.log('Auto-selecting first conversation:', conversations[0]);
-      setActiveChat(conversations[0]);
-      const isMobileView = window.innerWidth <= 768;
-      if (isMobileView) {
-        setIsMobileChatActive(true);
-      }
-    }
-  }, [conversations, activeChat]);
-
   // Ẩn/hiện mobile nav
   useEffect(() => {
     const toggleMobileNavVisibility = (hide) => {

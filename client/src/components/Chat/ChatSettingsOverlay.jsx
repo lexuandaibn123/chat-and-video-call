@@ -57,6 +57,12 @@ const ChatSettingsOverlay = ({
         setAddUserInput(e.target.value);
     };
 
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter') {
+            handleSaveGroupName();
+        }
+    };
+
     const handleSearchSubmit = (e) => {
         e.preventDefault();
         const trimmedInput = addUserInput.trim();
@@ -101,6 +107,7 @@ const ChatSettingsOverlay = ({
                                  value={newGroupName}
                                  onChange={(e) => setNewGroupName(e.target.value)}
                                  disabled={isPerformingAction}
+                                 onKeyDown={handleKeyDown}
                              />
                              <button className="icon-button" onClick={handleSaveGroupName} title="Save Group Name" disabled={isPerformingAction || !newGroupName.trim()}>
                                  {isPerformingAction ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-check"></i>}

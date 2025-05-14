@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import GroupList from './GroupList';
 import FriendList from './FriendList';
+import "./Modal.scss";
 
-const ConversationListPanel = ({ groups, friends, onSearchChange, onItemClick, activeChat, onAddClick, onCreateConversation, addUserSearchResults, onAddUserSearch }) => {
+const ConversationListPanel = ({ userInfo, groups, friends, onSearchChange, onItemClick, activeChat, onAddClick, onCreateConversation, addUserSearchResults, onAddUserSearch }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUsers, setSelectedUsers] = useState([]);
@@ -54,8 +55,20 @@ const ConversationListPanel = ({ groups, friends, onSearchChange, onItemClick, a
       return;
     }
 
+    let processedConversationName = conversationName || '';
+    if (!processedConversationName && selectedUsers.length > 0) {
+      if (selectedUsers.length <= 2) {
+        processedConversationName = selectedUsers.map(user => user.fullName || user._id || 'Unknown').join(', ');
+      } else {
+        const firstTwoUsers = selectedUsers.slice(0, 2).map(user => user.fullName || user._id || 'Unknown');
+        const remainingCount = selectedUsers.length > 2 ? filteredUsers.length - 2 : 0 ;
+        console.log(userInfo);
+        processedConversationName = `${userInfo.fullName}, ` + firstTwoUsers.join(', ') + `, ... (+${remainingCount})`;
+      }
+    }
+
     const members = selectedUsers.map((user) => user._id);
-    onCreateConversation(members, conversationName || undefined);
+    onCreateConversation(members, processedConversationName || undefined);
     handleCloseModal();
   };
 
@@ -82,10 +95,12 @@ const ConversationListPanel = ({ groups, friends, onSearchChange, onItemClick, a
       {isModalOpen && (
         <div className="modal-overlay">
           <div className="modal-content">
-            <h2>Create New Conversation</h2>
-            <button className="modal-close-button" onClick={handleCloseModal}>
-              ×
+            <h2>New Conversation</h2>
+            <button className="modal-close-button" onClick={handleCloseModal} title="Exit">
+              <i className="fas fa-times"></i>
             </button>
+
+            <hr></hr>
 
             {/* Input for group name (optional) */}
             <div className="modal-input-group">
@@ -111,7 +126,7 @@ const ConversationListPanel = ({ groups, friends, onSearchChange, onItemClick, a
                         onClick={() => handleSelectUser(user)}
                         title="Remove user"
                       >
-                        ×
+                        <i className="fas fa-trash"></i>
                       </button>
                     </li>
                   ))}
@@ -137,7 +152,7 @@ const ConversationListPanel = ({ groups, friends, onSearchChange, onItemClick, a
             </div>
 
             {/* Search results */}
-            {addUserSearchResults.length > 0 && (
+            {addUserSearchResults.length > 0 ? (
               <ul className="search-results">
                 {addUserSearchResults.map((user) => (
                   <li
@@ -154,6 +169,8 @@ const ConversationListPanel = ({ groups, friends, onSearchChange, onItemClick, a
                   </li>
                 ))}
               </ul>
+            ) : (
+              <div className="no-results">User not found</div>
             )}
 
             {/* Action buttons */}
@@ -169,162 +186,5 @@ const ConversationListPanel = ({ groups, friends, onSearchChange, onItemClick, a
     </aside>
   );
 };
-
-// Inline CSS for modal (can be moved to a separate CSS file)
-const styles = `
-  .modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-  }
-  .modal-content {
-    background: white;
-    padding: 20px;
-    border-radius: 8px;
-    width: 400px;
-    max-width: 90%;
-    position: relative;
-  }
-  .modal-close-button {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    background: none;
-    border: none;
-    font-size: 24px;
-    cursor: pointer;
-  }
-  .modal-input-group {
-    margin-bottom: 15px;
-  }
-  .modal-input-group label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: bold;
-  }
-  .modal-input-group input {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-  }
-  .search-container {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .search-container input {
-    flex: 1;
-    padding: 8px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-  }
-  .search-button {
-    padding: 8px 12px;
-    background: #007bff;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .search-button:hover {
-    background: #0056b3;
-  }
-  .selected-users-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    border: 1px solid #e0e0e0;
-    border-radius: 4px;
-    max-height: 100px;
-    overflow-y: auto;
-  }
-  .selected-user-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px;
-    border-bottom: 1px solid #f0f0f0;
-  }
-  .selected-user-item:last-child {
-    border-bottom: none;
-  }
-  .remove-user-button {
-    background: #ff4d4f;
-    color: white;
-    border: none;
-    border-radius: 50%;
-    width: 20px;
-    height: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    font-size: 12px;
-  }
-  .search-results {
-    list-style: none;
-    padding: 0;
-    max-height: 200px;
-    overflow-y: auto;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-  }
-  .search-result-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px;
-    cursor: pointer;
-  }
-  .search-result-item:hover {
-    background: #f0f0f0;
-  }
-  .search-result-item.selected {
-    background: #e0e0e0;
-  }
-  .selected-icon {
-    color: #28a745;
-    font-weight: bold;
-  }
-  .modal-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-  }
-  .modal-actions button {
-    padding: 8px 16px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-  }
-  .modal-actions button:first-child {
-    background: #ccc;
-  }
-  .modal-actions button:last-child {
-    background: #007bff;
-    color: white;
-  }
-  .modal-actions button:disabled {
-    background: #aaa;
-    cursor: not-allowed;
-  }
-`;
-
-// Inject styles into the document
-const styleSheet = document.createElement('style');
-styleSheet.type = 'text/css';
-styleSheet.innerText = styles;
-document.head.appendChild(styleSheet);
 
 export default ConversationListPanel;

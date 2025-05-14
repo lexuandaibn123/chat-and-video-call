@@ -175,7 +175,14 @@ export const useSocket = ({
       console.log("deletedMessage: ", deletedMessage);
       if (deletedMessage.conversationId && deletedMessage.conversationId === activeChatId) {
         setMessages((prevMessages) =>
-          prevMessages.filter((msg) => msg.id !== deletedMessage._id)
+          prevMessages.map((msg) => 
+            msg.id !== deletedMessage._id
+              ? {
+                  ...msg,
+                  isDeleted: true,
+                }
+              : msg
+          )
         );
       }
       // Cập nhật danh sách cuộc hội thoại nếu tin nhắn bị xóa là tin nhắn mới nhất
