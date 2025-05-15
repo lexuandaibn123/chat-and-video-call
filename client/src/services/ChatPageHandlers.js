@@ -632,12 +632,6 @@ export const useHandlers = ({
         return;
       }
 
-      const isCurrentUserLeader = activeChat.leader === currentUserId;
-      if (!isCurrentUserLeader) {
-        setActionError("Only the leader can add members.");
-        return;
-      }
-
       const isAlreadyMember = activeChat.detailedMembers?.some(
         (m) => m.id === userIdToAdd && m.leftAt === null
       );
@@ -768,12 +762,11 @@ export const useHandlers = ({
       if (
         !activeChat ||
         activeChat.id !== conversationId ||
-        !activeChat.isGroup ||
-        activeChat.leader !== currentUserId ||
+        !activeChat.isGroup || 
         !currentUserId
       ) {
         console.warn("User is not authorized to delete this group.");
-        setActionError("You must be the leader to delete the group.");
+        // setActionError("You must be the leader to delete the group.");
         return;
       }
 
@@ -820,17 +813,17 @@ export const useHandlers = ({
   const handleDeleteConversationMember = useCallback(
     async (conversationId) => {
       const currentUserId = currentUserIdRef.current;
-      if (
-        !activeChat ||
-        activeChat.id !== conversationId ||
-        activeChat.isGroup ||
-        !currentUserId
-      ) {
-        console.warn(
-          "Delete conversation action only for 1-on-1 chats and authenticated users."
-        );
-        return;
-      }
+      // if (
+      //   !activeChat ||
+      //   activeChat.id !== conversationId ||
+      //   activeChat.isGroup ||
+      //   !currentUserId
+      // ) {
+      //   console.warn(
+      //     "Delete conversation action only for 1-on-1 chats and authenticated users."
+      //   );
+      //   return;
+      // }
       if (
         window.confirm(
           "Are you sure you want to delete this conversation? (This will only delete it for you)"

@@ -981,28 +981,34 @@
          &:disabled { opacity: 0.5; cursor: not-allowed; } // Add disabled style
       }
 
-      .group-name-edit { // Style for the name edit mode in header
+      .name-edit-wrap {
         display: flex;
-        align-items: center;
-        flex-grow: 1;
-        margin-right: $spacing-md;
+        flex-direction: row;
 
-        input[type="text"] {
-            flex-grow: 1;
-            padding: $spacing-xs $spacing-sm;
-            border: 1px solid $input-border-color;
-            border-radius: $border-radius-sm;
-            font-size: $font-size-base; // Smaller font for edit mode
-            margin-right: $spacing-sm;
-        }
-        .icon-button {
-            font-size: $font-size-base; // Smaller icon buttons
-            padding: $spacing-xs;
+        .group-name-edit { // Style for the name edit mode in header
+          display: flex;
+          align-items: center;
+          flex-grow: 1;
+          margin-right: $spacing-md;
+          justify-content: space-between;
+
+          input[type="text"] {
+              flex-grow: 1;
+              padding: $spacing-xs $spacing-sm;
+              border: 1px solid $input-border-color;
+              border-radius: $border-radius-sm;
+              font-size: $font-size-base; // Smaller font for edit mode
+              margin-right: $spacing-sm;
+          }
+          .icon-button {
+              font-size: $font-size-large; // Smaller icon buttons
+              padding: $spacing-xs;
+          }
         }
       }
 
       .edit-name-button { // Style for the edit icon button
-        font-size: $font-size-base;
+        font-size: $font-size-large;
         padding: $spacing-xs;
         margin-left: $spacing-sm;
         color: $text-muted-color;
@@ -1131,6 +1137,7 @@
               display: flex;
               gap: $spacing-sm;
               margin-bottom: $spacing-md;
+              flex-direction: row;
 
               input {
                   flex-grow: 1;
@@ -1138,7 +1145,7 @@
                   border: 1px solid $input-border-color;
                   border-radius: $border-radius-md;
                   font-size: $font-size-base;
-                   &:disabled { opacity: 0.8; cursor: not-allowed; }
+                  &:disabled { opacity: 0.8; cursor: not-allowed; }
               }
               button {
                   background-color: $primary-color;
@@ -1156,10 +1163,10 @@
                   &:hover:not(:disabled) {
                       background-color: color.adjust($primary-color, $lightness: -5%);
                   }
-                   &:disabled {
-                       opacity: 0.5;
-                       cursor: not-allowed;
-                   }
+                  &:disabled {
+                      opacity: 0.5;
+                      cursor: not-allowed;
+                  }
               }
           }
 

@@ -162,12 +162,14 @@ const ChatPageLayout = ({
           searchResults={addUserSearchResults}
           onLeaveGroup={handlers.handleLeaveGroup}
           onDeleteGroup={handlers.handleDeleteGroup}
+          onDeleteConversationMember={handlers.handleDeleteConversationMember}
           onUpdateGroupName={handlers.handleUpdateGroupName}
           isEditingName={isEditingName}
           editingGroupName={editingGroupName}
           onStartEditGroupName={handlers.handleStartEditGroupName}
           onCancelEditGroupName={handlers.handleCancelEditGroupName}
           onSaveEditGroupName={handlers.handleSaveEditGroupName}
+          onAddClick={() => setAddUserSearchResults([])}
         />
       )}
     </div>

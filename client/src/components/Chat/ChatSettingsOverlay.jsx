@@ -22,7 +22,8 @@ const ChatSettingsOverlay = ({
     searchResults,
     onLeaveGroup,
     onDeleteGroup,
-    onUpdateGroupName,
+    onDeleteConversationMember,
+    onUpdateGroupName
 }) => {
     // Ensure group is valid and is a group conversation with populated members
     // activeChat.members đã được set là mảng populated users trong ChatPage
@@ -101,22 +102,23 @@ const ChatSettingsOverlay = ({
         <div className="chat-settings-overlay">
             <div className="settings-content">
                 <header className="settings-header">
+                    <div className="name-edit-wrap">
                      {isEditingName ? (
                          <div className="group-name-edit">
-                             <input
-                                 type="text"
-                                 value={newGroupName}
-                                 onChange={(e) => setNewGroupName(e.target.value)}
-                                 disabled={isPerformingAction}
-                                 onKeyDown={handleKeyDown}
-                             />
-                             <button className="icon-button" onClick={handleSaveGroupName} title="Save Group Name" disabled={isPerformingAction || !newGroupName.trim()}>
-                                 {isPerformingAction ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-check"></i>}
-                             </button>
-                              <button className="icon-button" onClick={() => setIsEditingName(false)} title="Cancel" disabled={isPerformingAction}>
-                                 <i className="fas fa-times"></i>
-                             </button>
-                         </div>
+                                <input
+                                    type="text"
+                                    value={newGroupName}
+                                    onChange={(e) => setNewGroupName(e.target.value)}
+                                    disabled={isPerformingAction}
+                                    onKeyDown={handleKeyDown}
+                                />
+                                <button className="icon-button" onClick={handleSaveGroupName} title="Save Group Name" disabled={isPerformingAction || !newGroupName.trim()}>
+                                    {isPerformingAction ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-check"></i>}
+                                </button>
+                                <button className="icon-button" onClick={() => setIsEditingName(false)} title="Cancel" disabled={isPerformingAction}>
+                                    <i className="fas fa-times"></i>
+                                </button>
+                            </div>
                      ) : (
                           <>
                             <h2>{group.name || 'Group Settings'}</h2>
@@ -128,7 +130,7 @@ const ChatSettingsOverlay = ({
                              )}
                          </>
                      )}
-
+                    </div>
                     <button className="icon-button" onClick={onClose} title="Close Settings" disabled={isPerformingAction}>
                         <i className="fas fa-times"></i>
                     </button>
@@ -260,7 +262,13 @@ const ChatSettingsOverlay = ({
                            )}
                             <button
                                     className="button secondary danger"
-                                    onClick={() => onDeleteGroup(group.id)}
+                                    onClick={() => {
+                                        if (isCurrentUserLeader) {
+                                        onDeleteGroup(group.id);
+                                        } else {
+                                        onDeleteConversationMember(group.id); // Gọi hàm khác nếu không phải leader
+                                        }
+                                    }}
                                     disabled={isPerformingAction}
                             >
                                 Delete Group
