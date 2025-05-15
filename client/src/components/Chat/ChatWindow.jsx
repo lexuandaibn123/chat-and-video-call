@@ -30,12 +30,17 @@ const ChatWindow = ({
   onUploadProgress,
   userInfo,
   socket,
+  sendTyping, // New prop from useSocket
+  sendStopTyping, // New prop from useSocket
 }) => {
   const messageListEndRef = useRef(null);
   const messageInputRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
+  const prevTypingUsersLengthRef = useRef(0);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isVideoCallOpen, setIsVideoCallOpen] = useState(false);
   const [callInvite, setCallInvite] = useState(null);
+  const [typingUsers, setTypingUsers] = useState([]);
 
   useEffect(() => {
     if (!socket || !activeContact?.id || !userInfo?.id) {
@@ -69,20 +74,45 @@ const ChatWindow = ({
       }
     };
 
+    // Handle typing event
+    const handleTyping = (memberId) => {
+      if (memberId !== userInfo.id) { // Don't show own typing
+        setTypingUsers((prev) => {
+          if (!prev.includes(memberId)) {
+            return [...prev, memberId];
+          }
+          return prev;
+        });
+      }
+    };
+
+    // Handle stopTyping event
+    const handleStopTyping = (memberId) => {
+      setTypingUsers((prev) => prev.filter((id) => id !== memberId));
+    };
+
     socket.on('callStarted', handleCallStarted);
+    socket.on('typing', handleTyping);
+    socket.on('stopTyping', handleStopTyping);
 
     return () => {
       console.log('Cleaning up socket listeners for activeContact:', activeContact?.id);
       socket.off('callStarted', handleCallStarted);
+      socket.off('typing', handleTyping);
+      socket.off('stopTyping', handleStopTyping);
       socket.emit('leaveConversationRoom', { conversationId: activeContact.id });
+      setTypingUsers([]); // Clear typing users on cleanup
     };
   }, [socket, activeContact?.id, userInfo?.id, isVideoCallOpen, callInvite]);
 
   useEffect(() => {
-    if (!isLoadingMessages && editingMessageId === null) {
-      messageListEndRef.current?.scrollIntoView({ behavior: 'auto' });
-    }
-  }, [messages, isLoadingMessages, editingMessageId]);
+  if (!isLoadingMessages && editingMessageId === null) {
+    const behavior = prevTypingUsersLengthRef.current !== typingUsers.length ? 'smooth' : 'auto';
+    messageListEndRef.current?.scrollIntoView({ behavior });
+  }
+  // Update the ref after the effect
+  prevTypingUsersLengthRef.current = typingUsers.length;
+}, [messages, isLoadingMessages, editingMessageId, typingUsers]);
 
   useEffect(() => {
     if (editingMessageId !== null) {
@@ -104,9 +134,26 @@ const ChatWindow = ({
     } else if (messageText) {
       onSendTextMessage(messageText);
     }
+    // Clear typing state after sending
+    if (sendStopTyping) {
+      sendStopTyping(activeContact.id);
+    }
   };
 
-  const handleInputChange = (e) => setMessageInput(e.target.value);
+  const handleInputChange = (e) => {
+    setMessageInput(e.target.value);
+    // Trigger typing event
+    if (sendTyping && e.target.value.trim() && !editingMessageId) {
+      sendTyping(activeContact.id);
+      // Debounce stopTyping
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      typingTimeoutRef.current = setTimeout(() => {
+        sendStopTyping(activeContact.id);
+      }, 2000); // Stop typing after 2 seconds of inactivity
+    }
+  };
 
   const handleEmojiClick = (emojiObject) => {
     const emoji = emojiObject.emoji;
@@ -121,6 +168,16 @@ const ChatWindow = ({
         textarea.selectionEnd = start + emoji.length;
         textarea.focus();
       }, 0);
+      // Trigger typing event after emoji insertion
+      if (sendTyping && !editingMessageId) {
+        sendTyping(activeContact.id);
+        if (typingTimeoutRef.current) {
+          clearTimeout(typingTimeoutRef.current);
+        }
+        typingTimeoutRef.current = setTimeout(() => {
+          sendStopTyping(activeContact.id);
+        }, 2000);
+      }
     }
     setShowEmojiPicker(false);
   };
@@ -227,9 +284,6 @@ const ChatWindow = ({
           </div>
         </div>
         <div className="chat-actions">
-          {/* <button className="icon-button" title="Call" disabled={isEditingMode || sendingMessage}>
-            <i className="fas fa-phone-alt"></i>
-          </button> */}
           <button
             className="icon-button"
             title="Video Call"
@@ -279,6 +333,16 @@ const ChatWindow = ({
               editingMessageId={editingMessageId}
             />
           ))
+        )}
+        {typingUsers.length > 0 && (
+          <div className="typing-bubble">
+            {/* {isGroupChat ? `${typingUsers.length} people are typing` : ''} */}
+            <div className="dots">
+              <span className="dot"></span>
+              <span className="dot"></span>
+              <span className="dot"></span>
+            </div>
+          </div>
         )}
         <div ref={messageListEndRef} />
       </div>

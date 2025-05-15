@@ -45,7 +45,7 @@ const ChatPage = () => {
     });
   }, [user, isAuthenticated, isAuthLoading]);
 
-  const { socket, sendMessage, editMessage, deleteMessage, isConnected } = useSocket({
+  const { socket, sendMessage, editMessage, deleteMessage, sendTyping, sendStopTyping, isConnected } = useSocket({
     isAuthenticated,
     userId: user?._id,
     userInfo: user,
@@ -299,6 +299,8 @@ const ChatPage = () => {
       userInfo={user}
       socket={socket}
       callInvite={callInvite} // Truyền callInvite xuống ChatPageLayout
+      sendTyping={sendTyping} 
+      sendStopTyping={sendStopTyping}
     />
   );
 };

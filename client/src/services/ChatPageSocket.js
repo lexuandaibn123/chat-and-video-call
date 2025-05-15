@@ -87,6 +87,34 @@ export const useSocket = ({
     [setActionError]
   );
 
+  // Hàm gửi sự kiện typing
+  const sendTyping = useCallback(
+    (roomId) => {
+      if (!socketRef.current || !isConnectedRef.current) {
+        setActionError('Socket is not connected. Please try again.');
+        return false;
+      }
+
+      socketRef.current.emit('typing', { roomId, memberId: userId });
+      return true;
+    },
+    [userId, setActionError]
+  );
+
+  // Hàm gửi sự kiện stopTyping
+  const sendStopTyping = useCallback(
+    (roomId) => {
+      if (!socketRef.current || !isConnectedRef.current) {
+        setActionError('Socket is not connected. Please try again.');
+        return false;
+      }
+
+      socketRef.current.emit('stopTyping', { roomId, memberId: userId });
+      return true;
+    },
+    [userId, setActionError]
+  );
+
   useEffect(() => {
     if (!isAuthenticated || !userId || !userInfo) {
       console.warn('useSocket: Not authenticated, missing userId, or missing userInfo. Skipping socket initialization.', {
@@ -191,6 +219,20 @@ export const useSocket = ({
       );
     });
 
+    // Xử lý sự kiện typing từ server
+    socketRef.current.on('typing', (memberId) => {
+      console.log(`User ${memberId} is typing in room ${activeChatId}`);
+      // Bạn có thể cập nhật trạng thái UI, ví dụ: hiển thị "User is typing..."
+      // Ví dụ: setTypingUsers((prev) => [...prev, memberId]);
+    });
+
+    // Xử lý sự kiện stopTyping từ server
+    socketRef.current.on('stopTyping', (memberId) => {
+      console.log(`User ${memberId} stopped typing in room ${activeChatId}`);
+      // Bạn có thể cập nhật trạng thái UI, ví dụ: xóa "User is typing..."
+      // Ví dụ: setTypingUsers((prev) => prev.filter((id) => id !== memberId));
+    });
+
     socketRef.current.on('error', (error) => {
       console.error('Socket.IO error:', error);
       setActionError(error.message || 'Real-time connection error');
@@ -235,6 +277,8 @@ export const useSocket = ({
     sendMessage,
     editMessage,
     deleteMessage,
+    sendTyping,
+    sendStopTyping,
     isConnected: isConnectedRef.current,
   };
 };

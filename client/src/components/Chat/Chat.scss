@@ -687,8 +687,39 @@
                    display: none;
                }
            }
-
       }
+
+      .typing-bubble {
+        width: 60px;
+        display: flex;
+        align-items: center;
+        padding: 15px $spacing-md;
+        margin: 4px 8px;
+        background: #f0f2f5;
+        border-radius: $border-radius-md;
+        max-width: 100px;
+        font-size: 14px;
+        color: #333;
+      }
+      .typing-bubble .dots {
+        display: flex;
+        align-items: center;
+        // margin-left: 8px;
+      }
+      .typing-bubble .dot {
+        width: 8px;
+        height: 8px;
+        background: #666;
+        border-radius: 50%;
+        margin: 0 2px;
+        animation: typing 1s infinite;
+      }
+      .typing-bubble .dot:nth-child(2) { animation-delay: 0.2s; }
+      .typing-bubble .dot:nth-child(3) { animation-delay: 0.4s; }
+      @keyframes typing {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-4px); }
+    }
   }
 
   // --- Khu vực nhập liệu ---

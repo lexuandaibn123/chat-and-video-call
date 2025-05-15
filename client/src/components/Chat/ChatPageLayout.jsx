@@ -35,6 +35,8 @@ const ChatPageLayout = ({
   onUploadProgress,
   userInfo,
   socket,
+  sendTyping,
+  sendStopTyping
 }) => {
   // Filter conversations for groups and friends
   const filteredConversations = conversations.filter((conv) => {
@@ -145,6 +147,8 @@ const ChatPageLayout = ({
         onUploadProgress={onUploadProgress}
         userInfo = {userInfo}
         socket={socket}
+        sendTyping={sendTyping} 
+        sendStopTyping={sendStopTyping}
       />
 
       {isSettingsOpen && activeChat?.isGroup && activeChat.detailedMembers && (
