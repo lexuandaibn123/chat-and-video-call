@@ -13,33 +13,13 @@
   transition: $property $duration;
 }
 
-/* Base styles */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  font-family: $font-family-base;
-  background-color: $container-bg-color;
-  color: $text-color;
-  overflow-y: auto; /* Đảm bảo body có thể cuộn */
-  min-height: 100vh; /* Đảm bảo body có chiều cao tối thiểu là viewport */
-}
-
-html {
-  overflow-y: auto; /* Đảm bảo html có thể cuộn */
-}
-
 /* Content area */
 .content-area {
   flex: 1;
   padding: $spacing-lg;
-  //   margin-left: $sidebar-width-desktop; /* Tạo khoảng cách cho sidebar */
   overflow-y: auto; /* Cho phép cuộn nội dung */
-  min-height: 100vh;
-  max-height: 100vh; /* Giới hạn chiều cao toàn màn hình */
+  min-height: 100svh;
+  max-height: 100svh;
 
   .search-container {
     position: relative;
@@ -81,6 +61,7 @@ html {
   border-radius: $border-radius-form;
   padding: $spacing-xl;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  margin-bottom: $navbar-height-mobile;
 
   .settings-header {
     display: flex;
@@ -417,8 +398,8 @@ html {
   align-items: flex-start;
 
   .avatar-preview {
-    width: 100%;
-    height: 100%;
+    width: 600px;
+    height: 600px;
     border-radius: $border-radius-social;
     object-fit: cover;
     border: 3px solid $primary-color;
@@ -436,59 +417,77 @@ html {
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-}
 
-.upload-controls {
-  flex: 1;
+  .avatar-controls {
+    flex: 1;
 
-  .upload-instruction {
-    font-size: $font-size-base;
-    font-weight: $font-weight-bold;
-    margin-bottom: $spacing-md;
-  }
-
-  .upload-actions {
-    margin-bottom: $spacing-lg;
-  }
-
-  .upload-button {
-    display: inline-flex;
-    align-items: center;
-    padding: $spacing-sm $spacing-lg;
-    background-color: $primary-color;
-    color: $secondary-color;
-    border-radius: $border-radius-input;
-    cursor: pointer;
-    font-weight: $font-weight-bold;
-    @include transition(background-color);
-
-    &:hover {
-      background-color: color.adjust($primary-color, $lightness: -10%);
-    }
-
-    .upload-icon {
-      width: 18px;
-      height: 18px;
-      margin-right: $spacing-sm;
-    }
-  }
-
-  .file-requirements {
-    background-color: $input-bg-color;
-    padding: $spacing-md;
-    border-radius: $border-radius-input;
-
-    p {
+    .upload-instruction {
+      font-size: $font-size-base;
       font-weight: $font-weight-bold;
-      margin-bottom: $spacing-sm;
+      margin-bottom: $spacing-md;
     }
 
-    ul {
-      padding-left: $spacing-lg;
+    .upload-button {
+      display: inline-flex;
+      align-items: center;
+      padding: $spacing-sm $spacing-lg;
+      background-color: $primary-color;
+      color: $secondary-color;
+      border-radius: $border-radius-input;
+      cursor: pointer;
+      font-weight: $font-weight-bold;
+      @include transition(background-color);
 
-      li {
-        margin-bottom: $spacing-xs;
-        font-size: $font-size-small;
+      &:hover {
+        background-color: color.adjust($primary-color, $lightness: -10%);
+      }
+
+      .upload-icon {
+        width: 18px;
+        height: 18px;
+        margin-right: $spacing-sm;
+      }
+    }
+
+    .file-requirements {
+      background-color: $input-bg-color;
+      padding: $spacing-md;
+      border-radius: $border-radius-input;
+      margin-bottom: $spacing-md;
+
+      p {
+        font-weight: $font-weight-bold;
+        margin-bottom: $spacing-sm;
+      }
+
+      ul {
+        padding-left: $spacing-lg;
+
+        li {
+          margin-bottom: $spacing-xs;
+          font-size: $font-size-small;
+        }
+      }
+    }
+
+    .error-message {
+      color: red;
+      font-size: 14px;
+      margin-top: 8px;
+      margin-bottom: $spacing-md;
+    }
+
+    .save-button {
+      padding: 8px 16px;
+      background: #28a745;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+
+      &:disabled {
+        background: #ccc;
+        cursor: not-allowed;
       }
     }
   }
@@ -590,7 +589,7 @@ html {
     .account-avatar {
       margin-right: 0;
       margin-bottom: $spacing-md;
-      width: 80px; /* Giữ nguyên kích thước */
+      width: 80px;
       height: 80px;
       margin-left: auto;
       margin-right: auto;
@@ -601,14 +600,26 @@ html {
     flex-direction: column;
     align-items: center;
 
-    .upload-controls {
-      width: 100%;
-      margin-top: $spacing-lg;
+    .avatar-preview {
+      width: 150px;
+      height: 150px;
     }
 
-    .current-avatar {
-      width: 120px;
-      height: 120px;
+    .avatar-controls {
+      width: 100%;
+      margin-top: $spacing-lg;
+      text-align: center;
+
+      .upload-button,
+      .save-button {
+        width: 100%;
+        max-width: 200px;
+        justify-content: center;
+      }
+
+      .file-requirements {
+        text-align: left;
+      }
     }
   }
 }

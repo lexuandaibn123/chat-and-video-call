@@ -1,5 +1,5 @@
-// D:\project_hust\Web\chat-and-video-call\client\src\untils\uploadthing.js (CORRECT Frontend file)
-"use client"; // Đánh dấu đây là component client-side
+// src\untils\uploadthing.js 
+"use client"; 
 
 import { generateUploadButton } from "@uploadthing/react"; // Import hàm từ thư viện frontend
 
