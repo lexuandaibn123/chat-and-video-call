@@ -24,7 +24,9 @@ export default function Video({ stream, username, micEnabled, cameraEnabled }) {
       });
       hark.on("stopped_speaking", () => {
         setIsSpeaking(false);
-        videoRef.current.classList.remove("speaking");
+        if (videoRef.current && videoRef.current.classList) {
+          videoRef.current.classList.remove("speaking");
+        }
       });
       harkRef.current = hark;
     }

@@ -273,13 +273,17 @@ SFUClient.prototype = {
     this.socket.on("consumerReady", (data) => this.handleConsume(data));
     this.socket.on("userLeft", (data) => this.removeUser(data));
     this.socket.on("statusUpdate", ({ userId, micEnabled, cameraEnabled }) => {
-      this.setRemoteStreams((prev) =>
-        prev.map((streamInfo) =>
-          streamInfo.id === userId
-            ? { ...streamInfo, micEnabled, cameraEnabled }
-            : streamInfo
-        )
+      const streamInfo = Array.from(this.remoteStreams.values()).find(
+        (info) => info.id === userId
       );
+      if (streamInfo) {
+        const updatedStreamInfo = {
+          ...streamInfo,
+          micEnabled,
+          cameraEnabled,
+        };
+        this.onStreamAdded(updatedStreamInfo);
+      }
     });
     this.socket.on("error", (error) => {
       console.error("Socket error:", error);

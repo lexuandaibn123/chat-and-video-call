@@ -1315,12 +1315,17 @@
       .active-chat-panel {
         display: flex; // HIỆN chat window
 
+        .chat-header .back-avatar_wrap {
+          display: flex;
+          flex-direction: row;
+          text-align: left;
+        }
+
         // ... (các style khác của chat panel mobile, bao gồm nút back)
         .chat-header .back-button {
             display: flex; // Sử dụng flex để căn giữa icon
             align-items: center;
             justify-content: center;
-            margin-right: $spacing-md; // Khoảng cách với avatar
             background-color: white;
         }
         .chat-header .back-button:hover {
@@ -1339,6 +1344,12 @@
         // Styles cho loading messages trên mobile nếu cần khác
         .loading-messages, .no-messages {
              font-size: $font-size-base; // Có thể giảm font size
+        }
+
+        .chat-input-area {
+          textarea {
+            font-size: $font-size-small;
+          }
         }
       }
        // Ẩn overlay loading/error trang khi active chat trên mobile

@@ -5,12 +5,15 @@ import {
   FaVideoSlash,
   FaMicrophone,
   FaMicrophoneSlash,
+  FaExpand,
+  FaCompress,
+  FaPhoneSlash,
+  FaPhone,
 } from "react-icons/fa";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import SFUClient from "./SFUClient";
 import Video from "./Video";
-// import Hark from "./Hark";
 import "./VideoCall.css";
 
 const API_BASE_URL = `${import.meta.env.VITE_SERVER_URL}/video-call`;
@@ -153,6 +156,75 @@ export default function VideoCall({ userId, roomId, onClose }) {
     }
   }, [localStream]); // Phụ thuộc vào localStream
 
+  useEffect(() => {
+    const draggable = document.getElementById("draggable-video");
+    let isDragging = false;
+    let currentX;
+    let currentY;
+    let initialX;
+    let initialY;
+
+    const startDragging = (e) => {
+      initialX = e.clientX - currentX;
+      initialY = e.clientY - currentY;
+      isDragging = true;
+    };
+
+    const stopDragging = () => {
+      isDragging = false;
+    };
+
+    const drag = (e) => {
+      if (isDragging) {
+        e.preventDefault();
+        currentX = e.clientX - initialX;
+        currentY = e.clientY - initialY;
+        draggable.style.left = `${currentX}px`;
+        draggable.style.top = `${currentY}px`;
+        draggable.style.right = "auto"; // Reset right để kéo thả tự do
+      }
+    };
+
+    if (draggable) {
+      currentX = 20; // Khởi tạo vị trí ban đầu
+      currentY = 40;
+      draggable.style.left = `${currentX}px`;
+      draggable.style.top = `${currentY}px`;
+
+      draggable.addEventListener("mousedown", startDragging);
+      document.addEventListener("mouseup", stopDragging);
+      document.addEventListener("mousemove", drag);
+
+      // Hỗ trợ touch cho mobile
+      draggable.addEventListener("touchstart", (e) => {
+        const touch = e.touches[0];
+        initialX = touch.clientX - currentX;
+        initialY = touch.clientY - currentY;
+        isDragging = true;
+      });
+      document.addEventListener("touchend", stopDragging);
+      document.addEventListener("touchmove", (e) => {
+        if (isDragging) {
+          e.preventDefault();
+          const touch = e.touches[0];
+          currentX = touch.clientX - initialX;
+          currentY = touch.clientY - initialY;
+          draggable.style.left = `${currentX}px`;
+          draggable.style.top = `${currentY}px`;
+          draggable.style.right = "auto";
+        }
+      });
+    }
+
+    return () => {
+      if (draggable) {
+        draggable.removeEventListener("mousedown", startDragging);
+        document.removeEventListener("mouseup", stopDragging);
+        document.removeEventListener("mousemove", drag);
+      }
+    };
+  }, [localStream]);
+
   const participantCount = remoteStreams.length + (localStream ? 1 : 0);
 
   const toggleMic = () => {
@@ -230,15 +302,26 @@ export default function VideoCall({ userId, roomId, onClose }) {
       <div className="video-call-header">
         <h2>Video Call ({participantCount} participants)</h2>
       </div>
-      <div className={`video-grid participant-count-${participantCount}`}>
+      <div className={`video-layout participant-count-${participantCount}`}>
+        <div className="remote-streams-grid">
+          {remoteStreams.map((streamInfo) => (
+            <Video
+              key={streamInfo.consumerId}
+              stream={streamInfo.stream}
+              username={streamInfo.username}
+              micEnabled={streamInfo.micEnabled}
+              cameraEnabled={streamInfo.cameraEnabled}
+            />
+          ))}
+        </div>
         {localStream && (
-          <div className="video-wrapper">
+          <div className="local-video-wrapper" id="draggable-video">
             <video
               ref={localVideoRef}
               autoPlay
               muted
               playsInline
-              className="video-element"
+              className="local-video-element"
             />
             <div className="video-info">
               <span className="username">Bạn</span>
@@ -247,9 +330,7 @@ export default function VideoCall({ userId, roomId, onClose }) {
                   {micEnabled ? <FaMicrophone /> : <FaMicrophoneSlash />}
                 </span>
                 <span
-                  className={`icon ${
-                    cameraEnabled ? "camera-on" : "camera-off"
-                  }`}
+                  className={`icon ${cameraEnabled ? "camera-on" : "camera-off"}`}
                 >
                   {cameraEnabled ? <FaVideo /> : <FaVideoSlash />}
                 </span>
@@ -257,34 +338,25 @@ export default function VideoCall({ userId, roomId, onClose }) {
             </div>
           </div>
         )}
-        {remoteStreams.map((streamInfo) => (
-          <Video
-            key={streamInfo.consumerId}
-            stream={streamInfo.stream}
-            username={streamInfo.username}
-            micEnabled={streamInfo.micEnabled}
-            cameraEnabled={streamInfo.cameraEnabled}
-          />
-        ))}
       </div>
       <div className="controls">
         <button
           onClick={toggleMic}
           className={micEnabled ? "control-btn" : "control-btn off"}
         >
-          {micEnabled ? "Mute Mic" : "Turn On Mic"}
+          {micEnabled ? <FaMicrophone /> : <FaMicrophoneSlash />}
         </button>
         <button
           onClick={toggleCamera}
           className={cameraEnabled ? "control-btn" : "control-btn off"}
         >
-          {cameraEnabled ? "Turn Off Camera" : "Turn On Camera"}
+          {cameraEnabled ? <FaVideo /> : <FaVideoSlash />}
         </button>
         <button onClick={toggleFullScreen} className="control-btn">
-          {document.fullscreenElement ? "Exit Full Screen" : "Full Screen"}
+          {document.fullscreenElement ? <FaCompress /> : <FaExpand />}
         </button>
         <button onClick={handleLeaveCall} className="control-btn leave">
-          End Call
+          <FaPhone />
         </button>
       </div>
     </div>

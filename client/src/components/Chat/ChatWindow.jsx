@@ -206,28 +206,30 @@ const ChatWindow = ({
   return (
     <section className="active-chat-panel">
       <header className="chat-header">
-        {isMobile && (
-          <button className="icon-button back-button" title="Back" onClick={onMobileBack}>
-            <i className="fas fa-arrow-left"></i>
-          </button>
-        )}
-        <div className="contact-info">
-          <img
-            src={activeContact.avatar || defaultAvatarPlaceholder}
-            alt={activeContact.name || 'User Avatar'}
-            className="avatar"
-          />
-          <div className="name-status">
-            <span className="contact-name">{activeContact.name || 'Unknown'}</span>
-            <span className="contact-status">
-              {activeContact.statusText || (isGroupChat ? 'Group' : 'Offline')}
-            </span>
+        <div className="back-avatar_wrap">
+          {isMobile && (
+            <button className="icon-button back-button" title="Back" onClick={onMobileBack}>
+              <i className="fas fa-arrow-left"></i>
+            </button>
+          )}
+          <div className="contact-info">
+            <img
+              src={activeContact.avatar || defaultAvatarPlaceholder}
+              alt={activeContact.name || 'User Avatar'}
+              className="avatar"
+            />
+            <div className="name-status">
+              <span className="contact-name">{activeContact.name || 'Unknown'}</span>
+              <span className="contact-status">
+                {activeContact.statusText || (isGroupChat ? 'Group' : 'Offline')}
+              </span>
+            </div>
           </div>
         </div>
         <div className="chat-actions">
-          <button className="icon-button" title="Call" disabled={isEditingMode || sendingMessage}>
+          {/* <button className="icon-button" title="Call" disabled={isEditingMode || sendingMessage}>
             <i className="fas fa-phone-alt"></i>
-          </button>
+          </button> */}
           <button
             className="icon-button"
             title="Video Call"
@@ -344,7 +346,7 @@ const ChatWindow = ({
               }
             }
           }}
-          placeholder={isEditingMode ? 'Editing message...' : 'Type your message here...'}
+          placeholder={isEditingMode ? 'Editing message...' : 'Type your message here'}
           className={`message-input ${isEditingMode ? 'editing-mode' : ''}`}
           name="messageInput"
           autoComplete="off"
