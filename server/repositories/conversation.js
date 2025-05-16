@@ -112,6 +112,21 @@ class ConversationRepository {
       }
     );
   }
+
+  async deleteConversationByMemberId(conversationId, userId) {
+    return await Conversation.findByIdAndUpdate(
+      conversationId,
+      {
+        $set: {
+          "members.$[elem].latestDeletedAt": new Date(),
+        },
+      },
+      {
+        arrayFilters: [{ "elem.id": userId }],
+        new: true,
+      }
+    );
+  }
 }
 
 module.exports = new ConversationRepository();

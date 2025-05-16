@@ -93,6 +93,27 @@ class UserService {
     }
   }
 
+  async updateUserName(req, res) {
+    try {
+      const { fullName } = req.body;
+
+      const userId = req.session.userInfo.id;
+
+      const updatedUser = await UserRepository.updateById(userId, { fullName });
+      if (!updatedUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      return res.status(200).json({
+        success: true,
+        message: "User name updated successfully",
+        data: updatedUser,
+      });
+    } catch (error) {
+      console.error("Error updating user name:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+
   async updateUserAvatar(req, res) {
     try {
       const { avatar } = req.body;
