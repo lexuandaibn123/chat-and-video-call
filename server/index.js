@@ -42,6 +42,7 @@ app.use(sessionMiddleware);
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+// eslint-disable-next-line no-undef
 app.use(express.static(path.join(__dirname, "public")));
 app.set("view engine", "ejs");
 
@@ -123,6 +124,7 @@ route(app);
 
 if (NODE_ENV === "production") {
   app.get("*", (req, res) => {
+    // eslint-disable-next-line no-undef
     res.sendFile(path.join(__dirname, "public", "index.html"));
   });
 }

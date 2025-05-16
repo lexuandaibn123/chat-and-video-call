@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const { ImagePartSchema, FilePartSchema, TextPartSchema } = require("./part");
+const { TextPartSchema } = require("./part");
 /**
  * @openapi
  * components:
