@@ -204,7 +204,7 @@ export const useSocket = ({
       if (deletedMessage.conversationId && deletedMessage.conversationId === activeChatId) {
         setMessages((prevMessages) =>
           prevMessages.map((msg) => 
-            msg.id !== deletedMessage._id
+            msg.id == deletedMessage._id
               ? {
                   ...msg,
                   isDeleted: true,
