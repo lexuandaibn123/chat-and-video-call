@@ -1,3 +1,4 @@
+import { getUserDetailsApi } from "../api/users";
 // services/chatService.js
 
 // Import các API cần thiết (đảm bảo các hàm API đã được định nghĩa ở đâu đó và import vào đây nếu cần,
@@ -6,7 +7,6 @@
 
 // Hàm trợ giúp xử lý ID người dùng nhất quán (vì nó có thể là object._id hoặc string)
 const getProcessedUserId = (userData) => {
-    console.log("userData: ", userData);
     if (!userData) return null;
     if (typeof userData === 'object' && userData._id) {
         return String(userData._id).trim();
@@ -131,43 +131,81 @@ export const processRawRooms = (rawRooms, currentUserId) => {
 };
 
 // Hàm xử lý danh sách tin nhắn thô từ API
-export const processRawMessages = (rawMessages, currentUserId) => {
-    if (!rawMessages || !Array.isArray(rawMessages)) {
-        return [];
+export const processRawMessages = async (rawMessages, currentUserId) => {
+  if (!rawMessages || !Array.isArray(rawMessages) || rawMessages.length === 0) {
+    return [];
+  }
+
+  // 1. Tập hợp unique senderId (chuỗi) cần fetch, loại bỏ current user
+  const uniqueIdsToFetch = Array.from(
+    new Set(
+      rawMessages
+        .map(msg => msg.senderId)
+        .filter(id => id && id !== currentUserId)
+    )
+  );
+
+  // 2. Fetch song song, lưu vào cache
+  const userCache = {};
+  await Promise.all(
+    uniqueIdsToFetch.map(async userId => {
+      try {
+        const user = await getUserDetailsApi(userId);
+        userCache[userId] = {
+          name: user.fullName || 'Unknown User',
+          avatar: user.avatar || null
+        };
+      } catch (err) {
+        console.error(`Error fetching details for ${userId}:`, err);
+        userCache[userId] = { name: 'Unknown User', avatar: null };
+      }
+    })
+  );
+
+  // 3. Map từng message
+  const formatted = rawMessages.map(msg => {
+    const senderId = msg.senderId || null;
+    let senderName = 'Unknown User';
+    let senderAvatar = null;
+
+    if (senderId === currentUserId) {
+      senderName = 'You';
+    } else if (userCache[senderId]) {
+      senderName = userCache[senderId].name;
+      senderAvatar = userCache[senderId].avatar;
     }
 
-    const formattedMessages = rawMessages.map(msg => {
-        // Sử dụng helper để xử lý senderId nhất quán
-        const messageSenderId = getProcessedUserId(msg.senderId);
+    // Format thời gian
+    let timeLabel = 'Unknown time';
+    if (msg.datetime_created) {
+      const dt = new Date(msg.datetime_created);
+      if (!isNaN(dt)) {
+        timeLabel = dt
+          .toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true })
+          .toLowerCase();
+      }
+    }
 
-        // Lấy tên và avatar người gửi (có thể lấy từ object senderId nếu API populate)
-        const messageSenderName = msg.senderId?.fullName || (messageSenderId === currentUserId ? 'You' : 'Unknown User'); // Giả định nếu API không populate thì là mình
-        const messageSenderAvatar = msg.senderId?.avatar || null; // Giả định nếu API không populate thì không có avatar
+    return {
+      id: msg._id || null,
+      type: msg.type || 'text',
+      content: msg.content && typeof msg.content === 'object' ? msg.content : {},
+      time: timeLabel,
+      createdAt: msg.datetime_created || null,
+      lastUpdated: msg.last_updated || msg.datetime_created || null,
+      isEdited: msg.isEdited || false,
+      isDeleted: msg.isDeleted || false,
+      senderId,
+      senderName,
+      senderAvatar,
+      replyToMessageId: msg.replyToMessageId || null,
+      conversationId: msg.conversationId || null,
+      status: msg.status || 'sent',
+    };
+  });
 
-        // Format thời gian
-        const messageTime = msg.datetime_created
-            ? new Date(msg.datetime_created).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase()
-            : '';
-
-        return {
-            id: msg._id,
-            type: msg.type,
-            content: msg.content, // Giữ nguyên cấu trúc content thô từ API
-            time: messageTime,
-            createdAt: msg.datetime_created,
-            isEdited: msg.isEdited || false,
-            isDeleted: msg.isDeleted || false,
-            senderId: messageSenderId, // ID người gửi đã xử lý
-            senderName: messageSenderName,
-            senderAvatar: messageSenderAvatar,
-            status: 'sent', // Tin nhắn từ API mặc định là 'sent'
-        };
-    });
-
-    // Đảo ngược thứ tự để tin nhắn mới nhất ở cuối
-    formattedMessages.reverse();
-
-    return formattedMessages;
+  // 4. Đảo ngược để message mới nhất ở cuối
+  return formatted.reverse();
 };
 
 
@@ -373,17 +411,6 @@ export const formatReceivedMessage = (rawMessage, currentUserId) => {
           status: 'sent', // Message từ API luôn là 'sent' (hoặc có thể có trạng thái khác nếu API hỗ trợ)
      };
 };
-
-// services/chatService.js
-
-// Import các helper đã tạo trước đó (nếu có)
-// Ví dụ:
-// import { getProcessedUserId } from './chatService'; // Nếu bạn tách helper này ra file khác
-
-// Hàm trợ giúp xử lý ID người dùng nhất quán (vì nó có thể là object._id hoặc string)
-// Các hàm processRawRooms, processRawMessages, createOptimisticTextMessage, buildTextMessagePayload,
-// createOptimisticFileMessage, buildFileMessagePayload, updateConversationsListLatestMessage,
-// findMemberInDetailedList, formatReceivedMessage... giữ nguyên như lần trước.
 
 // --- Các hàm xử lý State Update sau khi gọi API Settings thành công ---
 

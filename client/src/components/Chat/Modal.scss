@@ -1,0 +1,213 @@
+@use '../../styles/variables' as *;
+@use "sass:color";
+@use "sass:math";
+
+// Additional variables for modal
+$modal-overlay-bg: rgba(0, 0, 0, 0.5);
+$hover-bg-color: #f0f0f0;
+$selected-bg-color: #e0e0e0;
+
+// Modal overlay
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: $modal-overlay-bg;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: $zindex-popup;
+}
+
+// Modal content
+.modal-content {
+  background: $secondary-color;
+  padding: $spacing-lg;
+  border-radius: $border-radius-form;
+  width: 400px;
+  max-width: 90%;
+  position: relative;
+
+  hr {
+    margin-bottom: 5px;
+  }
+}
+
+// Close button
+.modal-close-button {
+  position: absolute;
+  top: $spacing-sm;
+  right: $spacing-sm;
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+// Input group
+.modal-input-group {
+  margin-bottom: $spacing-md;
+
+  label {
+    display: block;
+    margin-bottom: $spacing-xs;
+    font-weight: $font-weight-bold;
+    font-size: $font-size-large;
+  }
+
+  input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid $input-border-color;
+    border-radius: $border-radius-input;
+  }
+}
+
+// Search container
+.search-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  input {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid $input-border-color;
+    border-radius: $border-radius-input;
+    font-size: $font-size-common;
+  }
+
+  .search-button {
+    padding: 8px 12px;
+    background: $primary-color;
+    color: $secondary-color;
+    border: none;
+    border-radius: $border-radius-button-common;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover {
+      background: color.adjust($primary-color, $lightness: -10%);
+    }
+  }
+}
+
+// Selected users list
+.selected-users-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  border: 1px solid $input-border-color;
+  border-radius: $border-radius-sm;
+  max-height: 100px;
+  overflow-y: auto;
+
+  .selected-user-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px;
+    border-bottom: 1px solid $hover-bg-color;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    .remove-user-button {
+      background: none;
+      color: $secondary-color;
+      border: none;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 12px;
+
+      .fa-trash {
+        color: $error-color;
+        font-weight: $font-weight-bold;
+        font-size: 15px;
+      }
+    }
+  }
+}
+
+// Search results
+.search-results {
+  list-style: none;
+  padding: 0;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid $input-border-color;
+  border-radius: $border-radius-sm;
+  margin-bottom: 20px;
+
+  .search-result-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px;
+    cursor: pointer;
+
+    &:hover {
+      background: $hover-bg-color;
+    }
+
+    &.selected {
+      background: $selected-bg-color;
+    }
+
+    .selected-icon {
+      color: $success-color;
+      font-weight: $font-weight-bold;
+    }
+  }
+}
+
+// Trong modal.scss
+
+.no-results {
+  padding: $spacing-sm;
+  font-size: $font-size-base;
+  color: $error-color;
+  text-align: center;
+  background: $hover-bg-color;
+  border-radius: $border-radius-sm;
+  margin: $spacing-sm 0;
+  font-style: italic;
+}
+
+// Action buttons
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: $spacing-sm;
+
+  button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: $border-radius-button-common;
+    cursor: pointer;
+
+    &:first-child {
+      background: #ccc; // Could define $button-secondary-bg if needed
+    }
+
+    &:last-child {
+      background: $primary-color;
+      color: $secondary-color;
+    }
+
+    &:disabled {
+      background: #aaa;
+      cursor: not-allowed;
+    }
+  }
+}

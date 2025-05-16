@@ -1,6 +1,7 @@
 // src/components/Chat/ChatSettingsOverlay.jsx
 import React, { useState, useEffect } from 'react';
-import defaultAvatarPlaceholder from '../../assets/images/avatar_placeholder.jpg';
+import defaultUserAvatar from '../../assets/images/avatar_male.jpg';
+import defaultGroupAvatar from '../../assets/images/group-chat.png';
 
 // Component overlay cài đặt chat
 // Nhận props:
@@ -21,7 +22,8 @@ const ChatSettingsOverlay = ({
     searchResults,
     onLeaveGroup,
     onDeleteGroup,
-    onUpdateGroupName,
+    onDeleteConversationMember,
+    onUpdateGroupName
 }) => {
     // Ensure group is valid and is a group conversation with populated members
     // activeChat.members đã được set là mảng populated users trong ChatPage
@@ -55,6 +57,12 @@ const ChatSettingsOverlay = ({
 
     const handleSearchInputChange = (e) => {
         setAddUserInput(e.target.value);
+    };
+
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter') {
+            handleSaveGroupName();
+        }
     };
 
     const handleSearchSubmit = (e) => {
@@ -94,21 +102,23 @@ const ChatSettingsOverlay = ({
         <div className="chat-settings-overlay">
             <div className="settings-content">
                 <header className="settings-header">
+                    <div className="name-edit-wrap">
                      {isEditingName ? (
                          <div className="group-name-edit">
-                             <input
-                                 type="text"
-                                 value={newGroupName}
-                                 onChange={(e) => setNewGroupName(e.target.value)}
-                                 disabled={isPerformingAction}
-                             />
-                             <button className="icon-button" onClick={handleSaveGroupName} title="Save Group Name" disabled={isPerformingAction || !newGroupName.trim()}>
-                                 {isPerformingAction ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-check"></i>}
-                             </button>
-                              <button className="icon-button" onClick={() => setIsEditingName(false)} title="Cancel" disabled={isPerformingAction}>
-                                 <i className="fas fa-times"></i>
-                             </button>
-                         </div>
+                                <input
+                                    type="text"
+                                    value={newGroupName}
+                                    onChange={(e) => setNewGroupName(e.target.value)}
+                                    disabled={isPerformingAction}
+                                    onKeyDown={handleKeyDown}
+                                />
+                                <button className="icon-button" onClick={handleSaveGroupName} title="Save Group Name" disabled={isPerformingAction || !newGroupName.trim()}>
+                                    {isPerformingAction ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-check"></i>}
+                                </button>
+                                <button className="icon-button" onClick={() => setIsEditingName(false)} title="Cancel" disabled={isPerformingAction}>
+                                    <i className="fas fa-times"></i>
+                                </button>
+                            </div>
                      ) : (
                           <>
                             <h2>{group.name || 'Group Settings'}</h2>
@@ -120,7 +130,7 @@ const ChatSettingsOverlay = ({
                              )}
                          </>
                      )}
-
+                    </div>
                     <button className="icon-button" onClick={onClose} title="Close Settings" disabled={isPerformingAction}>
                         <i className="fas fa-times"></i>
                     </button>
@@ -129,7 +139,7 @@ const ChatSettingsOverlay = ({
                 <div className="settings-body">
                     {/* Thông tin chung về nhóm */}
                     <div className="group-info">
-                        <img src={group.avatar || defaultAvatarPlaceholder} alt={group.name} className="avatar large" />
+                        <img src={group.avatar || defaultGroupAvatar} alt={group.name} className="avatar large" />
                         {/* Tên nhóm được hiển thị ở header */}
                     </div>
 
@@ -147,7 +157,7 @@ const ChatSettingsOverlay = ({
                                     className={`member-item ${member.leftAt ? 'left-member' : ''}`}
                                 >
                                     {/* Sử dụng thông tin từ member.id (populated user object) */}
-                                    <img src={member.id?.avatar || defaultAvatarPlaceholder} alt={member.id?.fullName || 'User Avatar'} className="avatar small" />
+                                    <img src={member.id?.avatar || defaultUserAvatar} alt={member.id?.fullName || 'User Avatar'} className="avatar small" />
                                     <span className="member-name">
                                         {member.id?.fullName || member.id?.email || 'Unknown User'} {/* Lấy tên đầy đủ hoặc email */}
                                         {member.role === 'leader' && member.leftAt === null && " (Leader)"} {/* Chỉ hiển thị (Leader) nếu còn active */}
@@ -179,7 +189,7 @@ const ChatSettingsOverlay = ({
                                             </button>
                                         )}
                                          {/* Nút Rời khỏi vai trò Leader (Chỉ leader, khi có > 1 leader active) */}
-                                         {member.role === 'leader' && member.id?._id === currentUserId && numberOfLeaders > 1 && (
+                                         {/* {member.role === 'leader' && member.id?._id === currentUserId && numberOfLeaders > 1 && (
                                             <button
                                                 className="icon-button small secondary"
                                                 title="Step Down as Leader"
@@ -187,8 +197,8 @@ const ChatSettingsOverlay = ({
                                                 disabled={isPerformingAction}
                                             >
                                                  {isPerformingAction ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-user-tie"></i>} {/* Icon đổi vai trò */}
-                                            </button>
-                                        )}
+                                            {/* </button>
+                                        )}  */}
                                     </div>
                                 </li>
                             ))}
@@ -214,7 +224,7 @@ const ChatSettingsOverlay = ({
                                         className={`search-result-item ${selectedUserToAdd?._id === user._id ? 'selected' : ''}`}
                                         onClick={() => setSelectedUserToAdd(user)}
                                     >
-                                        <img src={user.avatar || defaultAvatarPlaceholder} alt={user.fullName || 'User Avatar'} className="avatar tiny" />
+                                        <img src={user.avatar || defaultUserAvatar} alt={user.fullName || 'User Avatar'} className="avatar tiny" />
                                         <span>{user.fullName || user.email || user._id}</span> {/* Hiển thị tên, email, hoặc ID */}
                                     </div>
                                 ))}
@@ -252,7 +262,13 @@ const ChatSettingsOverlay = ({
                            )}
                             <button
                                     className="button secondary danger"
-                                    onClick={() => onDeleteGroup(group.id)}
+                                    onClick={() => {
+                                        if (isCurrentUserLeader) {
+                                        onDeleteGroup(group.id);
+                                        } else {
+                                        onDeleteConversationMember(group.id); // Gọi hàm khác nếu không phải leader
+                                        }
+                                    }}
                                     disabled={isPerformingAction}
                             >
                                 Delete Group

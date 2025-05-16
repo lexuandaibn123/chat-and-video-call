@@ -5,23 +5,15 @@ function createPeer() {
     iceServers: [
       { urls: "stun:stun.stunprotocol.org:3478" },
       { urls: "stun:stun.l.google.com:19302" },
+      // {
+      //   urls: "turn:54.251.71.205:3478",
+      //   username: "seedlabs",
+      //   credential: "seedlabsturn",
+      // },
     ],
   });
 
   return peer;
-}
-
-function handleTrackEvent(event, peers, peer, io) {
-  if (e.streams && e.streams[0]) {
-    peers.get(peer).stream = e.streams[0];
-
-    const payload = {
-      type: "newProducer",
-      id: peer,
-      username: peers.get(peer).username,
-    };
-    wss.broadcast(JSON.stringify(payload));
-  }
 }
 
 module.exports = {

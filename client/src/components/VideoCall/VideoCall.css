@@ -1,0 +1,217 @@
+.video-call-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #000;
+  color: white;
+  font-family: 'Segoe UI', sans-serif;
+  box-sizing: border-box;
+  z-index: 1000;
+}
+
+.video-call-header {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 10;
+}
+
+.video-call-container h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.video-layout {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.video-layout.participant-count-2 .remote-streams-grid {
+  display: block;
+}
+
+.video-layout.participant-count-2 .video-wrapper {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 0;
+}
+
+.remote-streams-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 0px;
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  padding: 0;
+  margin: 0;
+}
+
+.video-wrapper {
+  position: relative;
+  background-color: #333;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.video-element {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.local-video-wrapper {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 250px;
+  height: 160px;
+  background-color: #333;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  cursor: move;
+  z-index: 20;
+}
+
+.local-video-element {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.video-info {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 3px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.username {
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.status-icons {
+  display: flex;
+  gap: 6px;
+}
+
+.status-icons .icon {
+  font-size: 16px;
+  transition: color 0.3s ease;
+}
+
+.mic-on,
+.camera-on {
+  color: #55ff55;
+}
+
+.mic-off,
+.camera-off {
+  color: #ff5555;
+}
+
+.controls {
+  position: absolute;
+  bottom: 30px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  padding: 10px;
+  z-index: 10;
+}
+
+.control-btn {
+  width: 65px;
+  height: 65px;
+  font-size: 20px;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.9);
+  color: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.3s;
+}
+
+.control-btn:hover {
+  background: rgba(255, 255, 255, 1);
+}
+
+.control-btn.off {
+  background: rgba(231, 76, 60, 0.9);
+  color: #fff;
+}
+
+.control-btn.off:hover {
+  background: rgba(231, 76, 60, 1);
+}
+
+.control-btn.leave {
+  background: rgba(231, 76, 60, 0.9);
+}
+
+.control-btn.leave:hover {
+  background: rgba(231, 76, 60, 1);
+}
+
+@media (max-width: 768px) {
+  .video-call-container {
+    padding: 0;
+  }
+
+  .video-call-header {
+    top: 5px;
+    left: 5px;
+  }
+
+  .video-call-container h2 {
+    font-size: 16px;
+  }
+
+  .local-video-wrapper {
+    width: 110px;
+    height: 145px;
+  }
+
+  .controls {
+    bottom: 20px;
+    gap: 10px;
+  }
+
+  .control-btn {
+    width: 55px;
+    height: 55px;
+    font-size: 18px;
+  }
+
+  .remote-streams-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 0px;
+  }
+}

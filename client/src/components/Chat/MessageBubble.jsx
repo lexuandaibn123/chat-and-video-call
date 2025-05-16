@@ -1,6 +1,6 @@
 // src/components/Chat/MessageBubble.jsx
 import React, { useState, useRef, useEffect } from 'react';
-import defaultAvatarPlaceholder from '../../assets/images/avatar_placeholder.jpg';
+import defaultAvatarPlaceholder from '../../assets/images/avatar_male.jpg';
 
 const MessageBubble = ({
     time,
@@ -14,7 +14,7 @@ const MessageBubble = ({
     currentUserId,
     senderName,
     senderAvatar,
-    status, // NHẬN STATUS PROP (uploading, sending, sent, failed)
+    status, 
     onDeleteMessage, // Nhận handler delete
     onEditMessage, // Nhận handler edit
     editingMessageId, // <<< Nhận prop này

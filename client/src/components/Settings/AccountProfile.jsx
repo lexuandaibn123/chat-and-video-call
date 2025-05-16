@@ -46,9 +46,9 @@ const AccountProfile = () => {
     <div className="account-header">
       <div className="account-avatar">
         <img src="/placeholder.svg?height=80&width=80" alt="Profile" />
-        <button className="change-avatar-btn">
+        {/* <button className="change-avatar-btn">
           <i className="fas fa-camera icon"></i>
-        </button>
+        </button> */}
       </div>
       <div className="account-info">
         <h3>{userInfo.fullName}</h3>

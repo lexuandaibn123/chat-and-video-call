@@ -33,6 +33,10 @@ const ChatPageLayout = ({
   onClientUploadComplete,
   onUploadError,
   onUploadProgress,
+  userInfo,
+  socket,
+  sendTyping,
+  sendStopTyping
 }) => {
   // Filter conversations for groups and friends
   const filteredConversations = conversations.filter((conv) => {
@@ -42,6 +46,8 @@ const ChatPageLayout = ({
       conv.name.toLowerCase().includes(searchTerm);
     return nameMatch;
   });
+
+  // console.log("activechat: ", activeChat);
 
   const filteredGroups = filteredConversations.filter((c) => c.isGroup);
   const filteredFriends = filteredConversations.filter((c) => !c.isGroup);
@@ -102,6 +108,7 @@ const ChatPageLayout = ({
       }`}
     >
       <ConversationListPanel
+        userInfo={userInfo}
         groups={filteredGroups}
         friends={filteredFriends}
         onSearchChange={handlers.handleSearchChange}
@@ -138,6 +145,10 @@ const ChatPageLayout = ({
         onClientUploadComplete={onClientUploadComplete}
         onUploadError={onUploadError}
         onUploadProgress={onUploadProgress}
+        userInfo = {userInfo}
+        socket={socket}
+        sendTyping={sendTyping} 
+        sendStopTyping={sendStopTyping}
       />
 
       {isSettingsOpen && activeChat?.isGroup && activeChat.detailedMembers && (
@@ -155,12 +166,14 @@ const ChatPageLayout = ({
           searchResults={addUserSearchResults}
           onLeaveGroup={handlers.handleLeaveGroup}
           onDeleteGroup={handlers.handleDeleteGroup}
+          onDeleteConversationMember={handlers.handleDeleteConversationMember}
           onUpdateGroupName={handlers.handleUpdateGroupName}
           isEditingName={isEditingName}
           editingGroupName={editingGroupName}
           onStartEditGroupName={handlers.handleStartEditGroupName}
           onCancelEditGroupName={handlers.handleCancelEditGroupName}
           onSaveEditGroupName={handlers.handleSaveEditGroupName}
+          onAddClick={() => setAddUserSearchResults([])}
         />
       )}
     </div>
