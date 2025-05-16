@@ -195,6 +195,7 @@ const MemberSchema = new mongoose.Schema(
 const ConversationSchema = new mongoose.Schema(
   {
     name: { type: String },
+    avatar: { type: String },
     isGroup: { type: Boolean, default: false },
     members: {
       type: [MemberSchema],

@@ -25,6 +25,7 @@ class AuthService {
         id: user._id,
         fullName: user.fullName,
         email: user.email,
+        avatar: user.avatar,
       };
 
       if (!user.emailVerified)
@@ -97,6 +98,7 @@ class AuthService {
         id: user._id,
         fullName: user.fullName,
         email: user.email,
+        avatar: user.avatar,
       };
 
       return res

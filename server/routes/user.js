@@ -138,6 +138,79 @@ router.get("/search", UserService.findUsersByName);
 
 /**
  * @openapi
+ * /api/user/update-name:
+ *   put:
+ *     tags:
+ *       - Users
+ *     summary: Update user name
+ *     description: Updates the name of the current user. Requires authentication via session.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               fullName:
+ *                 type: string
+ *                 description: The new fullName
+ *             required:
+ *               - fullName
+ *     responses:
+ *       200:
+ *         description: User name updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: User name updated successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     fullName:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *                     avatar:
+ *                       type: string
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: User not found
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Internal server error
+ */
+router.put(
+  "/update-name",
+  [check("fullName").isLength({ min: 1 }).withMessage("Full name is required")],
+  validateMiddleware,
+  UserService.updateUserName
+);
+
+/**
+ * @openapi
  * /api/user/update-avatar:
  *   put:
  *     tags:

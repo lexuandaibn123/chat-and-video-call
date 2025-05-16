@@ -652,6 +652,70 @@ router.put(
 
 /**
  * @openapi
+ * /api/conversation/update-conversation-avatar:
+ *   put:
+ *     tags:
+ *       - Conversation
+ *     summary: Update the avatar of a conversation
+ *     description: Allows a member to update the avatar of a group conversation.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               conversationId:
+ *                 type: string
+ *                 description: ID of the conversation
+ *               newAvatar:
+ *                 type: string
+ *                 description: New avatar for the conversation
+ *     responses:
+ *       200:
+ *         description: Conversation avatar updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: Validation error, not a member, or conversation not a group
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ */
+router.put(
+  "/update-conversation-avatar",
+  [
+    check("conversationId")
+      .isLength({ min: 1 })
+      .withMessage("conversationId must be string"),
+    check("newAvatar").isURL().withMessage("newAvatar must be a valid URL"),
+  ],
+  validateMiddleware,
+  ConversationService.updateConversationAvatar.bind(ConversationService)
+);
+
+/**
+ * @openapi
  * /api/conversation/get-messages:
  *   get:
  *     tags:
@@ -810,7 +874,11 @@ router.post(
           return (
             value.length > 0 &&
             value.every((item) => {
-              return typeof item === "object" && item.type == "image" && item.data.length > 0;
+              return (
+                typeof item === "object" &&
+                item.type == "image" &&
+                item.data.length > 0
+              );
             })
           );
         else if (typeof value === "object") {

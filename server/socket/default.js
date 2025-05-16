@@ -59,6 +59,167 @@ const initDefaultNameSpace = (defaultNamespace) => {
       client.in(roomId).emit("stopTyping", memberId)
     );
 
+    client.on("createConversation", async ({ members, name }) => {
+      if (members.length < 1) {
+        client.emit("error", "Members array is empty");
+        return;
+      }
+
+      try {
+        const conversation = await ConversationService.createConversationByWs({
+          userId: userInfo.id,
+          members,
+          name,
+        });
+        client.join(conversation._id.toString());
+        client.emit("createdConversation", conversation);
+      } catch (error) {
+        console.error(error);
+        client.emit("error", error);
+      }
+    });
+
+    client.on(
+      "addNewMember",
+      async ({ conversationId, newMemberId, role = "member" }) => {
+        if (!conversationId || conversationId.length < 1) {
+          client.emit("error", "Invalid conversationId");
+          return;
+        }
+
+        if (!newMemberId || newMemberId.length < 1) {
+          client.emit("error", "Invalid newMemberId");
+          return;
+        }
+
+        try {
+          const conversation = await ConversationService.addNewMemberByWs({
+            userId: userInfo.id,
+            conversationId,
+            newMemberId,
+            role,
+          });
+          client.in(conversationId).emit("addedNewMember", conversation);
+        } catch (error) {
+          console.error(error);
+          client.emit("error", error);
+        }
+      }
+    );
+
+    client.on("removeMember", async ({ conversationId, memberId }) => {
+      if (!conversationId || conversationId.length < 1) {
+        client.emit("error", "Invalid conversationId");
+        return;
+      }
+
+      if (!memberId || memberId.length < 1) {
+        client.emit("error", "Invalid memberId");
+        return;
+      }
+
+      try {
+        const conversation = await ConversationService.removeMemberByWs({
+          userId: userInfo.id,
+          conversationId,
+          memberId,
+        });
+        client.in(conversationId).emit("removedMember", conversation);
+      } catch (error) {
+        console.error(error);
+        client.emit("error", error);
+      }
+    });
+
+    client.on("leaveConversation", async ({ conversationId }) => {
+      if (!conversationId || conversationId.length < 1) {
+        client.emit("error", "Invalid conversationId");
+        return;
+      }
+
+      try {
+        const conversation = await ConversationService.leaveConversationByWs({
+          userId: userInfo.id,
+          conversationId,
+        });
+        client.in(conversationId).emit("leftConversation", conversation);
+      } catch (error) {
+        console.error(error);
+        client.emit("error", error);
+      }
+    });
+
+    client.on("deleteConversationByLeader", async ({ conversationId }) => {
+      if (!conversationId || conversationId.length < 1) {
+        client.emit("error", "Invalid conversationId");
+        return;
+      }
+
+      try {
+        const conversation =
+          await ConversationService.deleteConversationByLeaderAndWs({
+            userId: userInfo.id,
+            conversationId,
+          });
+        client
+          .in(conversationId)
+          .emit("deletedConversationByLeader", conversation);
+      } catch (error) {
+        console.error(error);
+        client.emit("error", error);
+      }
+    });
+
+    client.on("updateConversationName", async ({ conversationId, newName }) => {
+      if (!conversationId || conversationId.length < 1) {
+        client.emit("error", "Invalid conversationId");
+        return;
+      }
+
+      if (!newName || newName.length < 1) {
+        client.emit("error", "Invalid newName");
+        return;
+      }
+
+      try {
+        const conversation =
+          await ConversationService.updateConversationNameByWs({
+            userId: userInfo.id,
+            conversationId,
+            newName,
+          });
+        client.in(conversationId).emit("updatedConversationName", conversation);
+      } catch (error) {
+        console.error(error);
+        client.emit("error", error);
+      }
+    });
+
+    client.on("updateConversationAvatar", async ({ conversationId, newAvatar }) => {
+      if (!conversationId || conversationId.length < 1) {
+        client.emit("error", "Invalid conversationId");
+        return;
+      }
+
+      if (!newAvatar || newAvatar.length < 1) {
+        client.emit("error", "Invalid newAvatar");
+        return;
+      }
+
+      try {
+        const conversation =
+          await ConversationService.updateConversationAvatarByWs({
+            userId: userInfo.id,
+            conversationId,
+            newAvatar,
+          });
+        client.in(conversationId).emit("updatedConversationAvatar", conversation);
+      } catch (error) {
+        console.error(error);
+        client.emit("error", error);
+      }
+    });
+
     client.on(
       "newMessage",
       async ({ conversationId, data, type, replyToMessageId = null }) => {
