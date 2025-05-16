@@ -58,9 +58,6 @@ const handleApiResponse = async (response) => {
 };
 
 // --- API Calls for Conversations & Messages ---
-
-// Tạo cuộc trò chuyện mới (Chưa dùng trong ChatPage hiện tại)
-// URL trong screenshot: POST /conversation/create-conversation
 export const createConversationApi = async ({ members = [], name = "" }) => {
   if (!Array.isArray(members)) {
     throw new Error("Members must be an array");
