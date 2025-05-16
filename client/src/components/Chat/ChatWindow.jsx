@@ -30,8 +30,8 @@ const ChatWindow = ({
   onUploadProgress,
   userInfo,
   socket,
-  sendTyping, // New prop from useSocket
-  sendStopTyping, // New prop from useSocket
+  sendTyping,
+  sendStopTyping,
 }) => {
   const messageListEndRef = useRef(null);
   const messageInputRef = useRef(null);
@@ -41,6 +41,11 @@ const ChatWindow = ({
   const [isVideoCallOpen, setIsVideoCallOpen] = useState(false);
   const [callInvite, setCallInvite] = useState(null);
   const [typingUsers, setTypingUsers] = useState([]);
+
+  // Determine if user is in group
+  const isUserInGroup = activeContact?.isGroup
+    ? activeContact.detailedMembers.some(member => member.id === userInfo.id)
+    : true; // Always true for non-group chats
 
   useEffect(() => {
     if (!socket || !activeContact?.id || !userInfo?.id) {
@@ -57,7 +62,7 @@ const ChatWindow = ({
 
     const handleCallStarted = (data) => {
       console.log('Received callStarted event:', data);
-      if (data.roomId === activeContact.id && !isVideoCallOpen && !callInvite) {
+      if (data.roomId === activeContact.id && !isVideoCallOpen && !callInvite && isUserInGroup) {
         setCallInvite(data);
         toast.info(`${data.username} đã bắt đầu một cuộc gọi video`, {
           position: 'top-right',
@@ -70,13 +75,13 @@ const ChatWindow = ({
           activeContactId: activeContact.id,
           isVideoCallOpen,
           hasCallInvite: !!callInvite,
+          isUserInGroup,
         });
       }
     };
 
-    // Handle typing event
     const handleTyping = (memberId) => {
-      if (memberId !== userInfo.id) { // Don't show own typing
+      if (memberId !== userInfo.id && isUserInGroup) {
         setTypingUsers((prev) => {
           if (!prev.includes(memberId)) {
             return [...prev, memberId];
@@ -86,9 +91,10 @@ const ChatWindow = ({
       }
     };
 
-    // Handle stopTyping event
     const handleStopTyping = (memberId) => {
-      setTypingUsers((prev) => prev.filter((id) => id !== memberId));
+      if (isUserInGroup) {
+        setTypingUsers((prev) => prev.filter((id) => id !== memberId));
+      }
     };
 
     socket.on('callStarted', handleCallStarted);
@@ -101,18 +107,17 @@ const ChatWindow = ({
       socket.off('typing', handleTyping);
       socket.off('stopTyping', handleStopTyping);
       socket.emit('leaveConversationRoom', { conversationId: activeContact.id });
-      setTypingUsers([]); // Clear typing users on cleanup
+      setTypingUsers([]);
     };
-  }, [socket, activeContact?.id, userInfo?.id, isVideoCallOpen, callInvite]);
+  }, [socket, activeContact?.id, userInfo?.id, isVideoCallOpen, callInvite, isUserInGroup]);
 
   useEffect(() => {
-  if (!isLoadingMessages && editingMessageId === null) {
-    const behavior = prevTypingUsersLengthRef.current !== typingUsers.length ? 'smooth' : 'auto';
-    messageListEndRef.current?.scrollIntoView({ behavior });
-  }
-  // Update the ref after the effect
-  prevTypingUsersLengthRef.current = typingUsers.length;
-}, [messages, isLoadingMessages, editingMessageId, typingUsers]);
+    if (!isLoadingMessages && editingMessageId === null) {
+      const behavior = prevTypingUsersLengthRef.current !== typingUsers.length ? 'smooth' : 'auto';
+      messageListEndRef.current?.scrollIntoView({ behavior });
+    }
+    prevTypingUsersLengthRef.current = typingUsers.length;
+  }, [messages, isLoadingMessages, editingMessageId, typingUsers]);
 
   useEffect(() => {
     if (editingMessageId !== null) {
@@ -127,6 +132,14 @@ const ChatWindow = ({
 
   const handleFormSubmit = (event) => {
     event.preventDefault();
+    if (!isUserInGroup) {
+      toast.error('You are not a member of this group.', {
+        position: 'top-right',
+        autoClose: 3000,
+        theme: 'dark',
+      });
+      return;
+    }
     const messageText = messageInput.trim();
     if (editingMessageId !== null) {
       if (messageText) onSaveEditedMessage();
@@ -134,7 +147,6 @@ const ChatWindow = ({
     } else if (messageText) {
       onSendTextMessage(messageText);
     }
-    // Clear typing state after sending
     if (sendStopTyping) {
       sendStopTyping(activeContact.id);
     }
@@ -142,20 +154,27 @@ const ChatWindow = ({
 
   const handleInputChange = (e) => {
     setMessageInput(e.target.value);
-    // Trigger typing event
+    if (!isUserInGroup) return;
     if (sendTyping && e.target.value.trim() && !editingMessageId) {
       sendTyping(activeContact.id);
-      // Debounce stopTyping
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
       typingTimeoutRef.current = setTimeout(() => {
         sendStopTyping(activeContact.id);
-      }, 2000); // Stop typing after 2 seconds of inactivity
+      }, 2000);
     }
   };
 
   const handleEmojiClick = (emojiObject) => {
+    if (!isUserInGroup) {
+      toast.error('You are not a member of this group.', {
+        position: 'top-right',
+        autoClose: 3000,
+        theme: 'dark',
+      });
+      return;
+    }
     const emoji = emojiObject.emoji;
     const textarea = messageInputRef.current;
     if (textarea) {
@@ -168,7 +187,6 @@ const ChatWindow = ({
         textarea.selectionEnd = start + emoji.length;
         textarea.focus();
       }, 0);
-      // Trigger typing event after emoji insertion
       if (sendTyping && !editingMessageId) {
         sendTyping(activeContact.id);
         if (typingTimeoutRef.current) {
@@ -206,6 +224,14 @@ const ChatWindow = ({
       });
       return;
     }
+    if (!isUserInGroup) {
+      toast.error('You are not a member of this group.', {
+        position: 'top-right',
+        autoClose: 3000,
+        theme: 'dark',
+      });
+      return;
+    }
     console.log('User joined call for room:', activeContact.id);
     setIsVideoCallOpen(true);
     setCallInvite(null);
@@ -215,6 +241,14 @@ const ChatWindow = ({
     if (!activeContact?.id) {
       console.warn('No active contact selected');
       toast.error('Không có liên hệ đang hoạt động', {
+        position: 'top-right',
+        autoClose: 3000,
+        theme: 'dark',
+      });
+      return;
+    }
+    if (!isUserInGroup) {
+      toast.error('You are not a member of this group.', {
         position: 'top-right',
         autoClose: 3000,
         theme: 'dark',
@@ -231,6 +265,14 @@ const ChatWindow = ({
   };
 
   const handleLeaveRoom = () => {
+    if (!isUserInGroup) {
+      toast.error('You are not a member of this group.', {
+        position: 'top-right',
+        autoClose: 3000,
+        theme: 'dark',
+      });
+      return;
+    }
     if (socket && activeContact?.id && userInfo?.id) {
       console.log('Emitting leaveRoom for user:', userInfo.id, 'in room:', activeContact.id);
       socket.emit('leaveRoom', {
@@ -287,8 +329,16 @@ const ChatWindow = ({
           <button
             className="icon-button"
             title="Video Call"
-            disabled={isEditingMode || sendingMessage || isVideoCallOpen}
+            disabled={isEditingMode || sendingMessage || isVideoCallOpen || !isUserInGroup}
             onClick={() => {
+              if (!isUserInGroup) {
+                toast.error('You are not a member of this group.', {
+                  position: 'top-right',
+                  autoClose: 3000,
+                  theme: 'dark',
+                });
+                return;
+              }
               console.log('Starting video call for room:', activeContact.id);
               setIsVideoCallOpen(true);
             }}
@@ -299,8 +349,18 @@ const ChatWindow = ({
             <button
               className="icon-button"
               title="More Options"
-              onClick={onOpenSettings}
-              disabled={isEditingMode || sendingMessage}
+              onClick={() => {
+                if (!isUserInGroup) {
+                  toast.error('You are not a member of this group.', {
+                    position: 'top-right',
+                    autoClose: 3000,
+                    theme: 'dark',
+                  });
+                  return;
+                }
+                onOpenSettings();
+              }}
+              disabled={isEditingMode || sendingMessage || !isUserInGroup}
             >
               <i className="fas fa-ellipsis-v"></i>
             </button>
@@ -336,12 +396,16 @@ const ChatWindow = ({
         )}
         {typingUsers.length > 0 && (
           <div className="typing-bubble">
-            {/* {isGroupChat ? `${typingUsers.length} people are typing` : ''} */}
             <div className="dots">
               <span className="dot"></span>
               <span className="dot"></span>
               <span className="dot"></span>
             </div>
+          </div>
+        )}
+        {!isUserInGroup && isGroupChat && (
+          <div className="group-access-denied-message">
+            You are not a member of this group and cannot send messages or participate in this conversation. Please contact the group administrator to request access.
           </div>
         )}
         <div ref={messageListEndRef} />
@@ -351,7 +415,7 @@ const ChatWindow = ({
           <UploadButton
             endpoint="conversationUploader"
             key="file-uploader"
-            disabled={sendingMessage || !activeContact || isEditingMode}
+            disabled={sendingMessage || !activeContact || isEditingMode || !isUserInGroup}
             content={{ button: <i className="fas fa-paperclip"></i> }}
             appearance={{
               button: { padding: 0, height: 'auto', lineHeight: 'normal', pointerEvents: 'all' },
@@ -363,7 +427,17 @@ const ChatWindow = ({
                 height: '100%',
               },
             }}
-            onBeforeUploadBegin={onUploadBeforeBegin}
+            onBeforeUploadBegin={(files) => {
+              if (!isUserInGroup) {
+                toast.error('You are not a member of this group.', {
+                  position: 'top-right',
+                  autoClose: 3000,
+                  theme: 'dark',
+                });
+                return false;
+              }
+              return onUploadBeforeBegin(files);
+            }}
             onClientUploadComplete={onClientUploadComplete}
             onUploadError={onUploadError}
             onUploadProgress={onUploadProgress}
@@ -375,7 +449,7 @@ const ChatWindow = ({
             key="image-uploader"
             multiple={true}
             accept="image/*"
-            disabled={sendingMessage || !activeContact || isEditingMode}
+            disabled={sendingMessage || !activeContact || isEditingMode || !isUserInGroup}
             content={{ button: <i className="fas fa-camera"></i> }}
             appearance={{
               button: { padding: 0, height: 'auto', lineHeight: 'normal', pointerEvents: 'all' },
@@ -387,7 +461,17 @@ const ChatWindow = ({
                 height: '100%',
               },
             }}
-            onBeforeUploadBegin={onUploadBeforeBegin}
+            onBeforeUploadBegin={(files) => {
+              if (!isUserInGroup) {
+                toast.error('You are not a member of this group.', {
+                  position: 'top-right',
+                  autoClose: 3000,
+                  theme: 'dark',
+                });
+                return false;
+              }
+              return onUploadBeforeBegin(files);
+            }}
             onClientUploadComplete={onClientUploadComplete}
             onUploadError={onUploadError}
             onUploadProgress={onUploadProgress}
@@ -404,7 +488,8 @@ const ChatWindow = ({
                 !isLoadingMessages &&
                 activeContact &&
                 !sendingMessage &&
-                (isEditingMode || messageInput.trim())
+                (isEditingMode || messageInput.trim()) &&
+                isUserInGroup
               ) {
                 document.querySelector('.send-button').click();
               }
@@ -414,7 +499,7 @@ const ChatWindow = ({
           className={`message-input ${isEditingMode ? 'editing-mode' : ''}`}
           name="messageInput"
           autoComplete="off"
-          disabled={isLoadingMessages || !activeContact || sendingMessage}
+          disabled={isLoadingMessages || !activeContact || sendingMessage || !isUserInGroup}
           rows={isEditingMode ? 2 : 1}
           style={{ resize: isEditingMode ? 'vertical' : 'none' }}
         />
@@ -423,7 +508,7 @@ const ChatWindow = ({
           className="icon-button"
           title="Emoji"
           onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-          disabled={sendingMessage || !activeContact || isEditingMode}
+          disabled={sendingMessage || !activeContact || isEditingMode || !isUserInGroup}
         >
           <i className="far fa-smile"></i>
         </button>
@@ -451,7 +536,8 @@ const ChatWindow = ({
             isLoadingMessages ||
             !activeContact ||
             sendingMessage ||
-            (!isEditingMode && !messageInput.trim())
+            (!isEditingMode && !messageInput.trim()) ||
+            !isUserInGroup
           }
         >
           {sendingMessage ? (
