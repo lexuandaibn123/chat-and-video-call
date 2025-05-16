@@ -14,14 +14,12 @@ const AccountSettings = () => {
   const handleLogout = async () => {
     const confirmLogout = window.confirm("Do you really want to log out?");
     if (confirmLogout) {
-        // setIsLoggingOut(true);
         try {
             await logoutApi();
         } catch (error) {
             console.error("Logout API failed:", error);
         } finally {
             localStorage.removeItem('access_token');
-            // setIsLoggingOut(false);
             navigate('/auth', { replace: true });
         }
     }

@@ -160,7 +160,7 @@ const ChatSettingsOverlay = ({
                                     color: "white",
                                     borderRadius: "50%",
                                     cursor: "pointer",
-                                    margin: "10px 0 0 10px",
+                                    margin: "10px 0 5px 0px",
                                     fontSize: "16px",
                                     width: "36px",
                                     height: "36px",
