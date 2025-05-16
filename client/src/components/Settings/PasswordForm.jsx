@@ -26,7 +26,6 @@ const PasswordForm = () => {
       setIsSubmitting(true);
       const response = await infoApi();
       if (response.success && response.userInfo) {
-        console.log("Email la: ", response.userInfo.email);
         const email = response.userInfo.email;
 
         const result = await passwordUpdate(
@@ -34,8 +33,9 @@ const PasswordForm = () => {
           currentPassword,
           newPassword
         );
-        if (!result.success) {
+        if (result.success) {
           setPasswordError(result.message || "Cập nhật mật khẩu thất bại");
+          alert(result.error);
         }
       } else {
         setError("Không thể lấy thông tin người dùng");
@@ -43,7 +43,6 @@ const PasswordForm = () => {
     } catch (err) {
       setError(err.message);
     } finally {
-      alert("Đã cập nhật mật khẩu thành công!");
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
