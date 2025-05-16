@@ -2,21 +2,21 @@
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
+  width: 100vw; /* Use viewport width */
+  height: 100vh; /* Use viewport height */
   display: flex;
   flex-direction: column;
   background: #000;
   color: white;
   font-family: 'Segoe UI', sans-serif;
   box-sizing: border-box;
+  overflow: hidden;
   z-index: 1000;
 }
 
 .video-call-header {
-  position: absolute;
-  top: 10px;
-  left: 10px;
+  position: relative;
+  padding: 10px;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -30,43 +30,34 @@
 }
 
 .video-layout {
-  flex: 1;
-  width: 100%;
-  height: 100%;
+  width: 100vw;
+  height: 100vh; /* Occupy full viewport height */
+  display: flex;
+  justify-content: center;
+  align-items: center;
   position: relative;
   overflow: hidden;
-}
-
-.video-layout.participant-count-2 .remote-streams-grid {
-  display: block;
-}
-
-.video-layout.participant-count-2 .video-wrapper {
-  width: 100%;
-  height: 100%;
-  position: absolute;
-  top: 0;
-  left: 0;
-  border-radius: 0;
 }
 
 .remote-streams-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 0px;
   width: 100%;
   height: 100%;
-  overflow-y: auto;
-  padding: 0;
-  margin: 0;
+  gap: 5px;
+  padding: 10px;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .video-wrapper {
-  position: relative;
+  width: 100%;
+  height: 100%;
   background-color: #333;
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .video-element {
@@ -75,12 +66,52 @@
   object-fit: cover;
 }
 
+/* Grid layouts based on participant count */
+.video-layout.participant-count-2 .remote-streams-grid {
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+}
+
+.video-layout.participant-count-3 .remote-streams-grid {
+  grid-template-columns: 1fr 1fr; /* 2 columns on desktop */
+  grid-template-rows: 1fr;
+}
+
+.video-layout.participant-count-4 .remote-streams-grid {
+  @media (min-width: 769px) { /* Desktop */
+    grid-template-columns: 1fr 1fr; /* 2 columns */
+    grid-template-rows: 1fr 1fr; /* 2 rows */
+    grid-template-areas:
+      "video1 video2"
+      "video3 video3"; /* 2 on top, 1 in middle bottom */
+    .video-wrapper:nth-child(1) {
+      grid-area: video1;
+    }
+    .video-wrapper:nth-child(2) {
+      grid-area: video2;
+    }
+    .video-wrapper:nth-child(3) {
+      grid-area: video3;
+    }
+  }
+  @media (max-width: 768px) { /* Mobile */
+    grid-template-columns: 1fr; /* 1 column */
+    grid-template-rows: 1fr 1fr 1fr; /* 3 rows */
+  }
+}
+
+.video-layout.participant-count-5 .remote-streams-grid {
+  grid-template-columns: 1fr 1fr; /* 2 columns */
+  grid-template-rows: 1fr 1fr; /* 2 rows */
+}
+
+/* Local video remains unchanged but repositioned for clarity */
 .local-video-wrapper {
   position: absolute;
-  top: 20px;
+  bottom: 20px;
   right: 20px;
-  width: 250px;
-  height: 160px;
+  width: 200px;
+  height: 150px;
   background-color: #333;
   border-radius: 8px;
   overflow: hidden;
@@ -180,23 +211,36 @@
   background: rgba(231, 76, 60, 1);
 }
 
+/* Media queries for mobile adjustments */
 @media (max-width: 768px) {
-  .video-call-container {
-    padding: 0;
-  }
-
   .video-call-header {
-    top: 5px;
-    left: 5px;
+    padding: 5px;
   }
 
   .video-call-container h2 {
     font-size: 16px;
   }
 
+  .video-layout.participant-count-3 .remote-streams-grid {
+    grid-template-columns: 1fr; /* 1 column */
+    grid-template-rows: 1fr 1fr; /* 2 rows */
+  }
+
+  .video-layout.participant-count-4 .remote-streams-grid {
+    grid-template-columns: 1fr; /* 1 column */
+    grid-template-rows: 1fr 1fr 1fr; /* 3 rows */
+  }
+
+  .video-layout.participant-count-5 .remote-streams-grid {
+    grid-template-columns: 1fr 1fr; /* 2x2 layout */
+    grid-template-rows: 1fr 1fr;
+  }
+
   .local-video-wrapper {
-    width: 110px;
-    height: 145px;
+    width: 100px;
+    height: 75px;
+    bottom: 10px;
+    right: 10px;
   }
 
   .controls {
@@ -208,10 +252,5 @@
     width: 55px;
     height: 55px;
     font-size: 18px;
-  }
-
-  .remote-streams-grid {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 0px;
   }
 }
