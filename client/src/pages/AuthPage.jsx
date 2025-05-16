@@ -158,109 +158,149 @@ const AuthPage = () => {
       )}
 
       <div className={`auth-container ${isTransitionActive ? 'right-panel-active' : ''}`}>
-        {/* Form đăng nhập */}
-        <div className={`form-container sign-in-container ${!isLogin ? 'hide' : ''}`}>
-          <form onSubmit={handleLogin}>
-            <h1>Sign In</h1>
-            {/* <div className="social-container">
-              <a href="#" className="social"><i className="fab fa-google"></i></a>
-              <a href="#" className="social"><i className="fab fa-github"></i></a>
-              <a href="#" className="social"><i className="fab fa-linkedin-in"></i></a>
-            </div> */}
-            {/* <span>or use your email password</span> */}
-            <input
-              type="email"
-              placeholder="Email"
-              value={loginEmail}
-              onChange={(e) => setLoginEmail(e.target.value)}
-              required
-            />
-            <div className="password-container">
-              <input
-                type={showLoginPassword ? "text" : "password"}
-                placeholder="Password"
-                value={loginPassword}
-                onChange={(e) => setLoginPassword(e.target.value)}
-                required
-              />
-              <span className="toggle-password" onClick={() => togglePasswordVisibility('loginPassword')}>
-                {showLoginPassword ? <i className="fas fa-eye"></i> : <i className="fas fa-eye-slash"></i>}
-              </span>
-            </div>
-            <Link to="/auth/forgot-password">Forgot Your Password?</Link>
-            <button type="submit" disabled={isLoginLoading}>
-              {isLoginLoading ? 'Signing In...' : 'Sign In'}
-            </button>
-          </form>
+        {/* Tab navigation for mobile */}
+        <div className="tab-container">
+          <button
+            className={`tab ${isLogin ? 'active' : ''}`}
+            onClick={() => toggleForm(true)}
+          >
+            Sign In
+          </button>
+          <button
+            className={`tab ${!isLogin ? 'active' : ''}`}
+            onClick={() => toggleForm(false)}
+          >
+            Sign Up
+          </button>
         </div>
 
-        {/* Form đăng ký */}
-        <div className={`form-container sign-up-container ${isLogin ? 'hide' : ''}`}>
-          <form onSubmit={handleRegister}>
-            <h1>Create Account</h1>
-            <input
-              type="text"
-              placeholder="Name"
-              value={registerUsername}
-              onChange={(e) => setRegisterUsername(e.target.value)}
-              required
-            />
-            <input
-              type="email"
-              placeholder="Email"
-              value={registerEmail}
-              onChange={(e) => setRegisterEmail(e.target.value)}
-              required
-            />
-            <div className="password-container">
+        {/* Form container */}
+        <div className="form-wrapper">
+          {/* Form đăng nhập */}
+          <div className={`form-container sign-in-container ${!isLogin ? 'hide' : ''}`}>
+            <form onSubmit={handleLogin}>
+              <h1>Sign In</h1>
               <input
-                type={showRegisterPassword ? "text" : "password"}
-                placeholder="Password"
-                value={registerPassword}
-                onChange={(e) => setRegisterPassword(e.target.value)}
+                type="email"
+                placeholder="Email"
+                value={loginEmail}
+                onChange={(e) => setLoginEmail(e.target.value)}
                 required
-                minLength={6}
               />
-              <span className="toggle-password" onClick={() => togglePasswordVisibility('registerPassword')}>
-                {showRegisterPassword ? <i className="fas fa-eye"></i> : <i className="fas fa-eye-slash"></i>}
-              </span>
-            </div>
-            <div className="password-container">
-              <div className="password-input-group">
+              <div className="password-container">
                 <input
-                  type={showConfirmPassword ? "text" : "password"}
-                  placeholder="Confirm Password"
-                  value={registerConfirmPassword}
-                  onChange={(e) => setRegisterConfirmPassword(e.target.value)}
-                  className={confirmPasswordError ? 'error-input' : ''}
+                  type={showLoginPassword ? "text" : "password"}
+                  placeholder="Password"
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
                   required
                 />
-                <span className="toggle-password" onClick={() => togglePasswordVisibility('confirmPassword')}>
-                  {showConfirmPassword ? <i className="fas fa-eye"></i> : <i className="fas fa-eye-slash"></i>}
+                <span
+                  className="toggle-password"
+                  onClick={() => togglePasswordVisibility('loginPassword')}
+                >
+                  {showLoginPassword ? (
+                    <i className="fas fa-eye"></i>
+                  ) : (
+                    <i className="fas fa-eye-slash"></i>
+                  )}
                 </span>
               </div>
-            </div>
-            <div>
-              {confirmPasswordError && <p className="input-error">{confirmPasswordError}</p>}
-            </div>
-            <button type="submit" disabled={isRegisterLoading}>
-              {isRegisterLoading ? 'Signing Up...' : 'Sign Up'}
-            </button>
-          </form>
+              <Link to="/auth/forgot-password">Forgot Your Password?</Link>
+              <button type="submit" disabled={isLoginLoading}>
+                {isLoginLoading ? 'Signing In...' : 'Sign In'}
+              </button>
+            </form>
+          </div>
+
+          {/* Form đăng ký */}
+          <div className={`form-container sign-up-container ${isLogin ? 'hide' : ''}`}>
+            <form onSubmit={handleRegister}>
+              <h1>Create Account</h1>
+              <input
+                type="text"
+                placeholder="Name"
+                value={registerUsername}
+                onChange={(e) => setRegisterUsername(e.target.value)}
+                required
+              />
+              <input
+                type="email"
+                placeholder="Email"
+                value={registerEmail}
+                onChange={(e) => setRegisterEmail(e.target.value)}
+                required
+              />
+              <div className="password-container">
+                <input
+                  type={showRegisterPassword ? "text" : "password"}
+                  placeholder="Password"
+                  value={registerPassword}
+                  onChange={(e) => setRegisterPassword(e.target.value)}
+                  required
+                  minLength={6}
+                />
+                <span
+                  className="toggle-password"
+                  onClick={() => togglePasswordVisibility('registerPassword')}
+                >
+                  {showRegisterPassword ? (
+                    <i className="fas fa-eye"></i>
+                  ) : (
+                    <i className="fas fa-eye-slash"></i>
+                  )}
+                </span>
+              </div>
+              <div className="password-container">
+                <div className="password-input-group">
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="Confirm Password"
+                    value={registerConfirmPassword}
+                    onChange={(e) => setRegisterConfirmPassword(e.target.value)}
+                    className={confirmPasswordError ? 'error-input' : ''}
+                    required
+                  />
+                  <span
+                    className="toggle-password"
+                    onClick={() => togglePasswordVisibility('confirmPassword')}
+                  >
+                    {showConfirmPassword ? (
+                      <i className="fas fa-eye"></i>
+                    ) : (
+                      <i className="fas fa-eye-slash"></i>
+                    )}
+                  </span>
+                </div>
+              </div>
+              <div>
+                {confirmPasswordError && (
+                  <p className="input-error">{confirmPasswordError}</p>
+                )}
+              </div>
+              <button type="submit" disabled={isRegisterLoading}>
+                {isRegisterLoading ? 'Signing Up...' : 'Sign Up'}
+              </button>
+            </form>
+          </div>
         </div>
 
-        {/* Overlay */}
+        {/* Overlay for desktop */}
         <div className="overlay-container">
           <div className="overlay">
             <div className={`overlay-panel overlay-left ${!isLogin ? 'hide' : ''}`}>
               <h1>Welcome Back!</h1>
               <p>Enter your personal details to use all of site features</p>
-              <button type="button" className="ghost" onClick={toggleForm}>Sign In</button>
+              <button type="button" className="ghost" onClick={() => toggleForm(true)}>
+                Sign In
+              </button>
             </div>
             <div className={`overlay-panel overlay-right ${isLogin ? 'hide' : ''}`}>
               <h1>Hello, Friend!</h1>
               <p>Enter your personal details to use all of site features</p>
-              <button type="button" className="ghost" onClick={toggleForm}>Sign Up</button>
+              <button type="button" className="ghost" onClick={() => toggleForm(false)}>
+                Sign Up
+              </button>
             </div>
           </div>
         </div>
