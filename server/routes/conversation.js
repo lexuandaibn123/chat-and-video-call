@@ -708,7 +708,7 @@ router.put(
     check("conversationId")
       .isLength({ min: 1 })
       .withMessage("conversationId must be string"),
-    check("newAvatar").isLength({ min: 1 }).withMessage("newAvatar must be string"),
+    check("newAvatar").isURL().withMessage("newAvatar must be a valid URL"),
   ],
   validateMiddleware,
   ConversationService.updateConversationAvatar.bind(ConversationService)
@@ -874,7 +874,11 @@ router.post(
           return (
             value.length > 0 &&
             value.every((item) => {
-              return typeof item === "object" && item.type == "image" && item.data.length > 0;
+              return (
+                typeof item === "object" &&
+                item.type == "image" &&
+                item.data.length > 0
+              );
             })
           );
         else if (typeof value === "object") {
