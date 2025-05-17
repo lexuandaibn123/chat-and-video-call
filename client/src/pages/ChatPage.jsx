@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSocket } from '../services/ChatPageSocket';
 import { useHandlers } from '../services/ChatHandlers';
-import { useConversationHandlers } from '../services/ConversationHandlers'; // Add new hook
+import { useConversationHandlers } from '../services/ConversationHandlers';
 import ChatPageLayout from '../components/Chat/ChatPageLayout';
 import { getMyRoomsApi, getMessagesByRoomIdApi } from '../api/conversations';
 import { infoApi } from '../api/auth';
@@ -10,6 +10,7 @@ import '../components/Chat/Chat.scss';
 
 const ChatPage = () => {
   const [conversations, setConversations] = useState([]);
+  const [rawConversations, setRawConversations] = useState([]); // Thêm state cho rawConversations
   const [activeChat, setActiveChat] = useState(null);
   const [messages, setMessages] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -71,7 +72,12 @@ const ChatPage = () => {
     setConversations,
     setActionError,
     conversations,
-    setCallInvite,
+    rawConversations, // Truyền rawConversations
+    setRawConversations, // Truyền setRawConversations
+    setActiveChat,
+    setIsEditingName,
+    setEditingGroupName,
+    setAddUserSearchResults,
   });
 
   // Get handlers from useConversationHandlers
@@ -188,6 +194,7 @@ const ChatPage = () => {
     if (!currentUserId) {
       console.warn('fetchInitialData: User ID is not set.');
       setIsLoadingConversations(false);
+      setRawConversations([]); // Reset rawConversations
       setConversations([]);
       return;
     }
@@ -196,8 +203,9 @@ const ChatPage = () => {
     setError(null);
     try {
       const rooms = await getMyRoomsApi();
+      setRawConversations(rooms); // Lưu dữ liệu thô
       const conversationsData = processRawRooms(rooms, currentUserId);
-      setConversations(conversationsData);
+      setConversations(conversationsData); // Cập nhật conversations
       console.log('Processed conversations:', conversationsData);
     } catch (err) {
       console.error('Error fetching initial chat data:', err);
@@ -209,6 +217,7 @@ const ChatPage = () => {
       } else {
         setError(err.message || 'Failed to load conversations.');
       }
+      setRawConversations([]);
       setConversations([]);
     } finally {
       setIsLoadingConversations(false);
@@ -229,6 +238,7 @@ const ChatPage = () => {
       console.warn('Auth complete but user not authenticated. Cannot fetch chat data.');
       setError('User not authenticated. Please login.');
       setIsLoadingConversations(false);
+      setRawConversations([]);
       setConversations([]);
       setActiveChat(null);
       setMessages([]);

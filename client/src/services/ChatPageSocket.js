@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import io from 'socket.io-client';
-import { formatReceivedMessage, updateConversationsListLatestMessage } from './chatService';
+import { formatReceivedMessage, updateConversationsListLatestMessage, processRawRooms } from './chatService';
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL;
 
@@ -13,10 +13,17 @@ export const useSocket = ({
   setConversations,
   setActionError,
   conversations,
+  rawConversations,
+  setRawConversations,
+  setActiveChat,
+  setIsEditingName,
+  setEditingGroupName,
+  setAddUserSearchResults,
 }) => {
   const socketRef = useRef(null);
   const isConnectedRef = useRef(false);
   const joinedRoomsRef = useRef(new Set());
+  const pendingActionsRef = useRef({}); // Track pending actions for error handling
 
   // Hàm gửi tin nhắn
   const sendMessage = useCallback(
@@ -129,11 +136,9 @@ export const useSocket = ({
           { userId, page, limit },
           (response) => {
             if (response.success) {
-              const formattedConversations = response.data.map((conv) => ({
-                ...conv,
-                id: conv._id,
-              }));
-              setConversations(formattedConversations);
+              setRawConversations(response.data); // Lưu dữ liệu thô
+              const formattedConversations = processRawRooms(response.data, userId);
+              setConversations(formattedConversations); // Cập nhật conversations
               resolve(formattedConversations);
             } else {
               reject(new Error(response.error));
@@ -142,182 +147,112 @@ export const useSocket = ({
         );
       });
     },
-    [userId, setConversations]
+    [userId, setConversations, setRawConversations]
   );
 
   // Create conversation
   const createConversation = useCallback(
     ({ members, name }) => {
-      return new Promise((resolve, reject) => {
-        if (!socketRef.current || !isConnectedRef.current) {
-          reject(new Error('Socket is not connected. Please try again.'));
-          return;
-        }
-
-        socketRef.current.emit(
-          'createConversation',
-          { members, name },
-          (response) => {
-            if (response.success) {
-              resolve(response.data);
-            } else {
-              reject(new Error(response.error));
-            }
-          }
-        );
-      });
+      if (!socketRef.current || !isConnectedRef.current) {
+        setActionError('Socket is not connected. Please try again.');
+        return false;
+      }
+      const actionId = `createConversation-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+      pendingActionsRef.current[actionId] = { type: 'createConversation' };
+      socketRef.current.emit('createConversation', { members, name });
+      return true;
     },
-    []
+    [setActionError]
   );
 
   // Add new member
   const addNewMember = useCallback(
     ({ conversationId, newMemberId, role = 'member' }) => {
-      return new Promise((resolve, reject) => {
-        if (!socketRef.current || !isConnectedRef.current) {
-          reject(new Error('Socket is not connected. Please try again.'));
-          return;
-        }
-
-        socketRef.current.emit(
-          'addNewMember',
-          { conversationId, newMemberId, role },
-          (response) => {
-            if (response.success) {
-              resolve(response.data);
-            } else {
-              reject(new Error(response.error));
-            }
-          }
-        );
-      });
+      if (!socketRef.current || !isConnectedRef.current) {
+        setActionError('Socket is not connected. Please try again.');
+        return false;
+      }
+      const actionId = `addNewMember-${conversationId}-${newMemberId}-${Date.now()}`;
+      pendingActionsRef.current[actionId] = { type: 'addNewMember', conversationId, newMemberId };
+      socketRef.current.emit('addNewMember', { conversationId, newMemberId, role });
+      return true;
     },
-    []
+    [setActionError]
   );
 
   // Remove member
   const removeMember = useCallback(
     ({ conversationId, memberId }) => {
-      return new Promise((resolve, reject) => {
-        if (!socketRef.current || !isConnectedRef.current) {
-          reject(new Error('Socket is not connected. Please try again.'));
-          return;
-        }
-
-        socketRef.current.emit(
-          'removeMember',
-          { conversationId, memberId },
-          (response) => {
-            if (response.success) {
-              resolve(response.data);
-            } else {
-              reject(new Error(response.error));
-            }
-          }
-        );
-      });
+      if (!socketRef.current || !isConnectedRef.current) {
+        setActionError('Socket is not connected. Please try again.');
+        return false;
+      }
+      const actionId = `removeMember-${conversationId}-${memberId}-${Date.now()}`;
+      pendingActionsRef.current[actionId] = { type: 'removeMember', conversationId, memberId };
+      socketRef.current.emit('removeMember', { conversationId, memberId });
+      return true;
     },
-    []
+    [setActionError]
   );
 
   // Leave conversation
   const leaveConversation = useCallback(
     ({ conversationId }) => {
-      return new Promise((resolve, reject) => {
-        if (!socketRef.current || !isConnectedRef.current) {
-          reject(new Error('Socket is not connected. Please try again.'));
-          return;
-        }
-
-        socketRef.current.emit(
-          'leaveConversation',
-          { conversationId },
-          (response) => {
-            if (response.success) {
-              resolve(response.data);
-            } else {
-              reject(new Error(response.error));
-            }
-          }
-        );
-      });
+      if (!socketRef.current || !isConnectedRef.current) {
+        setActionError('Socket is not connected. Please try again.');
+        return false;
+      }
+      const actionId = `leaveConversation-${conversationId}-${Date.now()}`;
+      pendingActionsRef.current[actionId] = { type: 'leaveConversation', conversationId };
+      socketRef.current.emit('leaveConversation', { conversationId });
+      return true;
     },
-    []
+    [setActionError]
   );
 
   // Delete conversation by leader
   const deleteConversationByLeader = useCallback(
     ({ conversationId }) => {
-      return new Promise((resolve, reject) => {
-        if (!socketRef.current || !isConnectedRef.current) {
-          reject(new Error('Socket is not connected. Please try again.'));
-          return;
-        }
-
-        socketRef.current.emit(
-          'deleteConversationByLeader',
-          { conversationId },
-          (response) => {
-            if (response.success) {
-              resolve(response.data);
-            } else {
-              reject(new Error(response.error));
-            }
-          }
-        );
-      });
+      if (!socketRef.current || !isConnectedRef.current) {
+        setActionError('Socket is not connected. Please try again.');
+        return false;
+      }
+      const actionId = `deleteConversationByLeader-${conversationId}-${Date.now()}`;
+      pendingActionsRef.current[actionId] = { type: 'deleteConversationByLeader', conversationId };
+      socketRef.current.emit('deleteConversationByLeader', { conversationId });
+      return true;
     },
-    []
+    [setActionError]
   );
 
   // Update conversation name
   const updateConversationName = useCallback(
     ({ conversationId, newName }) => {
-      return new Promise((resolve, reject) => {
-        if (!socketRef.current || !isConnectedRef.current) {
-          reject(new Error('Socket is not connected. Please try again.'));
-          return;
-        }
-
-        socketRef.current.emit(
-          'updateConversationName',
-          { conversationId, newName },
-          (response) => {
-            if (response.success) {
-              resolve(response.data);
-            } else {
-              reject(new Error(response.error));
-            }
-          }
-        );
-      });
+      if (!socketRef.current || !isConnectedRef.current) {
+        setActionError('Socket is not connected. Please try again.');
+        return false;
+      }
+      const actionId = `updateConversationName-${conversationId}-${Date.now()}`;
+      pendingActionsRef.current[actionId] = { type: 'updateConversationName', conversationId, newName };
+      socketRef.current.emit('updateConversationName', { conversationId, newName });
+      return true;
     },
-    []
+    [setActionError]
   );
 
   // Update conversation avatar
   const updateConversationAvatar = useCallback(
     ({ conversationId, newAvatar }) => {
-      return new Promise((resolve, reject) => {
-        if (!socketRef.current || !isConnectedRef.current) {
-          reject(new Error('Socket is not connected. Please try again.'));
-          return;
-        }
-
-        socketRef.current.emit(
-          'updateConversationAvatar',
-          { conversationId, newAvatar },
-          (response) => {
-            if (response.success) {
-              resolve(response.data);
-            } else {
-              reject(new Error(response.error));
-            }
-          }
-        );
-      });
+      if (!socketRef.current || !isConnectedRef.current) {
+        setActionError('Socket is not connected. Please try again.');
+        return false;
+      }
+      const actionId = `updateConversationAvatar-${conversationId}-${Date.now()}`;
+      pendingActionsRef.current[actionId] = { type: 'updateConversationAvatar', conversationId };
+      socketRef.current.emit('updateConversationAvatar', { conversationId, newAvatar });
+      return true;
     },
-    []
+    [setActionError]
   );
 
   useEffect(() => {
@@ -360,9 +295,98 @@ export const useSocket = ({
       console.log('Received connected event from server');
     });
 
-    // Xử lý tin nhắn mới
+    // Handle unauthorized
+    socketRef.current.on('unauthorized', () => {
+      console.error('Unauthorized socket connection');
+      setActionError('Unauthorized connection. Please log in again.');
+      isConnectedRef.current = false;
+    });
+
+    // Handle errors from server
+    socketRef.current.on('error', (error) => {
+      console.error('Socket.IO error:', error);
+      const errorMessage = error.message || 'An error occurred';
+      setActionError(errorMessage);
+
+      // Revert optimistic updates for pending actions
+      Object.keys(pendingActionsRef.current).forEach((actionId) => {
+        const action = pendingActionsRef.current[actionId];
+        if (action.type === 'addNewMember') {
+          setConversations((prevConvs) =>
+            prevConvs.map((conv) =>
+              conv.id === action.conversationId
+                ? {
+                    ...conv,
+                    detailedMembers: conv.detailedMembers.filter(
+                      (m) => m.id !== action.newMemberId
+                    ),
+                  }
+                : conv
+            )
+          );
+          setActiveChat((prev) =>
+            prev && prev.id === action.conversationId
+              ? {
+                  ...prev,
+                  detailedMembers: prev.detailedMembers.filter(
+                    (m) => m.id !== action.newMemberId
+                  ),
+                }
+              : prev
+          );
+          setAddUserSearchResults([]);
+        } else if (action.type === 'updateConversationName') {
+          setConversations((prevConvs) =>
+            prevConvs.map((conv) =>
+              conv.id === action.conversationId
+                ? { ...conv, name: conv.name || '' }
+                : conv
+            )
+          );
+          setActiveChat((prev) =>
+            prev && prev.id === action.conversationId
+              ? { ...prev, name: prev.name || '' }
+              : prev
+          );
+          setIsEditingName(false);
+          setEditingGroupName('');
+        } else if (action.type === 'removeMember') {
+          setConversations((prevConvs) =>
+            prevConvs.map((conv) =>
+              conv.id === action.conversationId
+                ? {
+                    ...conv,
+                    detailedMembers: conv.detailedMembers.map((m) =>
+                      m.id === action.memberId ? { ...m, leftAt: null } : m
+                    ),
+                  }
+                : conv
+            )
+          );
+          setActiveChat((prev) =>
+            prev && prev.id === action.conversationId
+              ? {
+                  ...prev,
+                  detailedMembers: prev.detailedMembers.map((m) =>
+                    m.id === action.memberId ? { ...m, leftAt: null } : m
+                  ),
+                }
+              : prev
+          );
+        } else if (action.type === 'leaveConversation' || action.type === 'deleteConversationByLeader') {
+          setConversations((prevConvs) => [
+            ...prevConvs,
+            ...(conversations.filter((conv) => conv.id === action.conversationId)),
+          ]);
+          setActiveChat((prev) => prev); // Restore activeChat if needed
+        }
+        delete pendingActionsRef.current[actionId];
+      });
+    });
+
+    // Xử lý tin nhắn mới (non-sender clients)
     socketRef.current.on('receiveMessage', (receivedMessage) => {
-      console.log('receivedMessage: ', receivedMessage);
+      console.log('receiveMessage:', receivedMessage);
       if (receivedMessage.conversationId && receivedMessage.conversationId === activeChatId) {
         setMessages((prevMessages) => {
           const isDuplicate = prevMessages.some(
@@ -384,9 +408,9 @@ export const useSocket = ({
       );
     });
 
-    // Xử lý tin nhắn được chỉnh sửa
+    // Xử lý tin nhắn được chỉnh sửa (non-sender clients)
     socketRef.current.on('editedMessage', (updatedMessage) => {
-      console.log('updated: ', updatedMessage);
+      console.log('editedMessage:', updatedMessage);
       if (updatedMessage.conversationId && updatedMessage.conversationId === activeChatId) {
         setMessages((prevMessages) =>
           prevMessages.map((msg) =>
@@ -406,17 +430,14 @@ export const useSocket = ({
       );
     });
 
-    // Xử lý tin nhắn bị xóa
+    // Xử lý tin nhắn bị xóa (non-sender clients)
     socketRef.current.on('deletedMessage', (deletedMessage) => {
-      console.log('deletedMessage: ', deletedMessage);
+      console.log('deletedMessage:', deletedMessage);
       if (deletedMessage.conversationId && deletedMessage.conversationId === activeChatId) {
         setMessages((prevMessages) =>
           prevMessages.map((msg) =>
-            msg.id == deletedMessage._id
-              ? {
-                  ...msg,
-                  isDeleted: true,
-                }
+            msg.id === deletedMessage._id
+              ? { ...msg, isDeleted: true }
               : msg
           )
         );
@@ -426,88 +447,143 @@ export const useSocket = ({
       );
     });
 
-    // Xử lý sự kiện typing
+    // Xử lý sự kiện typing (non-sender clients)
     socketRef.current.on('typing', (memberId) => {
       console.log(`User ${memberId} is typing in room ${activeChatId}`);
     });
 
-    // Xử lý sự kiện stopTyping
+    // Xử lý sự kiện stopTyping (non-sender clients)
     socketRef.current.on('stopTyping', (memberId) => {
       console.log(`User ${memberId} stopped typing in room ${activeChatId}`);
     });
 
-    // Xử lý tạo cuộc trò chuyện mới
-    socketRef.current.on('conversationCreated', (newConversation) => {
+    // Xử lý tạo cuộc trò chuyện mới (caller only)
+    socketRef.current.on('createdConversation', (newConversation) => {
+      console.log('createdConversation:', newConversation);
+      setRawConversations((prevRaw) => {
+        if (prevRaw.some((conv) => conv._id === newConversation._id)) {
+          return prevRaw;
+        }
+        return [...prevRaw, newConversation];
+      });
       setConversations((prevConvs) => {
         if (prevConvs.some((conv) => conv.id === newConversation._id)) {
           return prevConvs;
         }
-        const formattedConversation = { ...newConversation, id: newConversation._id };
+        const formattedConversation = processRawRooms([newConversation], userId)[0];
         return [...prevConvs, formattedConversation];
       });
+      socketRef.current.emit('joinRoom', newConversation._id.toString());
+      joinedRoomsRef.current.add(newConversation._id.toString());
     });
 
-    // Xử lý thêm thành viên mới
     socketRef.current.on('addedNewMember', (updatedConversation) => {
-      setConversations((prevConvs) => {
-        return prevConvs.map((conv) =>
+      console.log('addedNewMember:', updatedConversation);
+      setRawConversations((prevRaw) =>
+        prevRaw.map((conv) =>
+          conv._id === updatedConversation._id ? updatedConversation : conv
+        )
+      );
+      setConversations((prevConvs) =>
+        prevConvs.map((conv) =>
           conv.id === updatedConversation._id
-            ? { ...updatedConversation, id: updatedConversation._id }
+            ? processRawRooms([updatedConversation], userId)[0]
             : conv
-        );
-      });
+        )
+      );
+      setActiveChat((prev) =>
+        prev && prev.id === updatedConversation._id
+          ? processRawRooms([updatedConversation], userId)[0]
+          : prev
+      );
+      setAddUserSearchResults([]);
     });
 
-    // Xử lý xóa thành viên
     socketRef.current.on('removedMember', (updatedConversation) => {
-      setConversations((prevConvs) => {
-        return prevConvs.map((conv) =>
+      console.log('removedMember:', updatedConversation);
+      setRawConversations((prevRaw) =>
+        prevRaw.map((conv) =>
+          conv._id === updatedConversation._id ? updatedConversation : conv
+        )
+      );
+      setConversations((prevConvs) =>
+        prevConvs.map((conv) =>
           conv.id === updatedConversation._id
-            ? { ...updatedConversation, id: updatedConversation._id }
+            ? processRawRooms([updatedConversation], userId)[0]
             : conv
-        );
-      });
+        )
+      );
+      setActiveChat((prev) =>
+        prev && prev.id === updatedConversation._id
+          ? processRawRooms([updatedConversation], userId)[0]
+          : prev
+      );
     });
 
-    // Xử lý rời cuộc trò chuyện
-    socketRef.current.on('leftConversation', (message) => {
-      setConversations((prevConvs) => {
-        return prevConvs.filter((conv) => !conv.isDeleted);
-      });
+    socketRef.current.on('leftConversation', (conversation) => {
+      console.log('leftConversation:', conversation);
+      setRawConversations((prevRaw) =>
+        prevRaw.filter((conv) => conv._id !== conversation._id)
+      );
+      setConversations((prevConvs) =>
+        prevConvs.filter((conv) => conv.id !== conversation._id)
+      );
+      setActiveChat((prev) => (prev && prev.id === conversation._id ? null : prev));
     });
 
-    // Xử lý xóa cuộc trò chuyện bởi leader
-    socketRef.current.on('deletedConversationByLeader', (message) => {
-      setConversations((prevConvs) => {
-        return prevConvs.filter((conv) => !conv.isDeleted);
-      });
+    socketRef.current.on('deletedConversationByLeader', (conversation) => {
+      console.log('deletedConversationByLeader:', conversation);
+      setRawConversations((prevRaw) =>
+        prevRaw.filter((conv) => conv._id !== conversation._id)
+      );
+      setConversations((prevConvs) =>
+        prevConvs.filter((conv) => conv.id !== conversation._id)
+      );
+      setActiveChat((prev) => (prev && prev.id === conversation._id ? null : prev));
     });
 
-    // Xử lý cập nhật tên cuộc trò chuyện
     socketRef.current.on('updatedConversationName', (updatedConversation) => {
-      setConversations((prevConvs) => {
-        return prevConvs.map((conv) =>
+      console.log('updatedConversationName:', updatedConversation);
+      setRawConversations((prevRaw) =>
+        prevRaw.map((conv) =>
+          conv._id === updatedConversation._id ? updatedConversation : conv
+        )
+      );
+      setConversations((prevConvs) =>
+        prevConvs.map((conv) =>
           conv.id === updatedConversation._id
-            ? { ...updatedConversation, id: updatedConversation._id }
+            ? processRawRooms([updatedConversation], userId)[0]
             : conv
-        );
-      });
+        )
+      );
+      setActiveChat((prev) =>
+        prev && prev.id === updatedConversation._id
+          ? processRawRooms([updatedConversation], userId)[0]
+          : prev
+      );
+      setIsEditingName(false);
+      setEditingGroupName('');
     });
 
-    // Xử lý cập nhật avatar cuộc trò chuyện
     socketRef.current.on('updatedConversationAvatar', (updatedConversation) => {
-      setConversations((prevConvs) => {
-        return prevConvs.map((conv) =>
+      console.log('updatedConversationAvatar:', updatedConversation);
+      setRawConversations((prevRaw) =>
+        prevRaw.map((conv) =>
+          conv._id === updatedConversation._id ? updatedConversation : conv
+        )
+      );
+      setConversations((prevConvs) =>
+        prevConvs.map((conv) =>
           conv.id === updatedConversation._id
-            ? { ...updatedConversation, id: updatedConversation._id }
+            ? processRawRooms([updatedConversation], userId)[0]
             : conv
-        );
-      });
-    });
-
-    socketRef.current.on('error', (error) => {
-      console.error('Socket.IO error:', error);
-      setActionError(error.message || 'Real-time connection error');
+        )
+      );
+      setActiveChat((prev) =>
+        prev && prev.id === updatedConversation._id
+          ? processRawRooms([updatedConversation], userId)[0]
+          : prev
+      );
     });
 
     socketRef.current.on('connect_error', (err) => {
@@ -520,28 +596,33 @@ export const useSocket = ({
       console.log('Socket.IO disconnected');
       isConnectedRef.current = false;
       joinedRoomsRef.current.clear();
+      pendingActionsRef.current = {};
     });
 
     return () => {
       if (socketRef.current) {
+        socketRef.current.off('connect');
+        socketRef.current.off('connected');
+        socketRef.current.off('unauthorized');
+        socketRef.current.off('error');
         socketRef.current.off('receiveMessage');
         socketRef.current.off('editedMessage');
         socketRef.current.off('deletedMessage');
         socketRef.current.off('typing');
         socketRef.current.off('stopTyping');
-        socketRef.current.off('conversationCreated');
+        socketRef.current.off('createdConversation');
         socketRef.current.off('addedNewMember');
         socketRef.current.off('removedMember');
         socketRef.current.off('leftConversation');
         socketRef.current.off('deletedConversationByLeader');
         socketRef.current.off('updatedConversationName');
         socketRef.current.off('updatedConversationAvatar');
-        socketRef.current.off('error');
         socketRef.current.off('connect_error');
         socketRef.current.off('disconnect');
         socketRef.current.disconnect();
         isConnectedRef.current = false;
         joinedRoomsRef.current.clear();
+        pendingActionsRef.current = {};
       }
     };
   }, [
@@ -553,6 +634,10 @@ export const useSocket = ({
     setConversations,
     setActionError,
     conversations,
+    setActiveChat,
+    setIsEditingName,
+    setEditingGroupName,
+    setAddUserSearchResults,
   ]);
 
   useEffect(() => {
