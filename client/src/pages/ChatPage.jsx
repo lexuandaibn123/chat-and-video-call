@@ -45,7 +45,23 @@ const ChatPage = () => {
     });
   }, [user, isAuthenticated, isAuthLoading]);
 
-  const { socket, sendMessage, editMessage, deleteMessage, sendTyping, sendStopTyping, isConnected } = useSocket({
+  const {
+    socket,
+    isConnected,
+    sendMessage,
+    editMessage,
+    deleteMessage,
+    sendTyping,
+    sendStopTyping,
+    fetchConversations,
+    createConversation,
+    addNewMember,
+    removeMember,
+    leaveConversation,
+    deleteConversationByLeader,
+    updateConversationName,
+    updateConversationAvatar,
+  } = useSocket({
     isAuthenticated,
     userId: user?._id,
     userInfo: user,
@@ -54,7 +70,7 @@ const ChatPage = () => {
     setConversations,
     setActionError,
     conversations,
-    setCallInvite, // Thêm setCallInvite vào đây
+    setCallInvite,
   });
 
   const handlers = useHandlers({
@@ -75,6 +91,14 @@ const ChatPage = () => {
     sendMessage,
     editMessage,
     deleteMessage,
+    fetchConversations,
+    createConversation,
+    addNewMember,
+    removeMember,
+    leaveConversation,
+    deleteConversationByLeader,
+    updateConversationName,
+    updateConversationAvatar,
     isConnected,
     setConversations,
     setActiveChat,

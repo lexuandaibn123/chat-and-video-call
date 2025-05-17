@@ -11,9 +11,7 @@ const Navigation = (userInfo) => {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const currentUser = {
     avatar: userInfo.userInfo.avatar || avatarPlaceholder
-  };
-
-  console.log("userInfo: ", userInfo);
+  };  
 
   const handleLogout = async () => {
     const confirmLogout = window.confirm("Do you really want to log out?");

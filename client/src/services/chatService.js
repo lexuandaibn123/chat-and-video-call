@@ -415,31 +415,23 @@ export const formatReceivedMessage = (rawMessage, currentUserId) => {
 // --- Các hàm xử lý State Update sau khi gọi API Settings thành công ---
 
 // Cập nhật danh sách conversations sau khi remove member thành công
-export const updateConversationsAfterMemberRemoved = (prevConvs, conversationId, userIdToRemove, apiResponse) => {
-     return prevConvs.map(conv => {
-         if (conv.id === conversationId) {
-             // Sử dụng detailedMembers đã được xử lý ID
-             const updatedDetailedMembers = conv.detailedMembers.map(member => {
-                 if (member.id === userIdToRemove) {
-                      // Cập nhật leftAt và role cho thành viên bị xóa (hoặc bị rời)
-                     return { ...member, leftAt: apiResponse?.leftAt || new Date().toISOString(), role: 'member' }; // Giả định API trả về thời gian leftAt hoặc dùng thời gian hiện tại
-                 }
-                 return member;
-             }).filter(member => !member.leftAt); // Lọc ra khỏi danh sách members hoạt động
+export const updateConversationsAfterMemberRemoved = (prevConvs, conversationId, userIdToRemove) => {
+  return prevConvs.map((conv) => {
+    if (conv.id === conversationId) {
+      // Lọc bỏ thành viên có id khớp với userIdToRemove
+      const updatedDetailedMembers = conv.detailedMembers.filter(
+        (member) => member.id !== userIdToRemove
+      );
 
-             // Lấy leader mới từ API response nếu có, ngược lại giữ nguyên
-             const newLeaderId = apiResponse?.conversation?.leader !== undefined ? getProcessedUserId(apiResponse.conversation.leader) : conv.leader;
-
-             // Cập nhật conversation object
-             return {
-                 ...conv,
-                 leader: newLeaderId,
-                 detailedMembers: updatedDetailedMembers, // Cập nhật danh sách chi tiết
-                 statusText: `${updatedDetailedMembers.length} members`, // Cập nhật số lượng thành viên hoạt động
-             };
-         }
-         return conv; // Giữ nguyên các conversation khác
-     });
+      // Cập nhật conversation object
+      return {
+        ...conv,
+        detailedMembers: updatedDetailedMembers, // Cập nhật danh sách chi tiết
+        statusText: `${updatedDetailedMembers.length} members`, // Cập nhật số lượng thành viên hoạt động
+      };
+    }
+    return conv; // Giữ nguyên các conversation khác
+  });
 };
 
 // Cập nhật activeChat sau khi remove member thành công

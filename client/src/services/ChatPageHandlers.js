@@ -57,6 +57,14 @@ export const useHandlers = ({
   sendMessage, // Thêm sendMessage
   editMessage, // Truyền editMessage
   deleteMessage,
+  fetchConversations,
+  createConversation,
+  addNewMember,
+  removeMember,
+  leaveConversation,
+  deleteConversationByLeader,
+  updateConversationName,
+  updateConversationAvatar,
   isConnected, // Thêm isConnected
   setConversations,
   setActiveChat,
@@ -246,28 +254,23 @@ export const useHandlers = ({
           } from the group?`
         )
       ) {
-        await performSettingsAction(
-          () => removeMemberApi({ conversationId, memberId: userIdToRemove }),
-          "Remove member",
-          (apiResponse) => {
-            setConversations((prevConvs) =>
-              updateConversationsAfterMemberRemoved(
-                prevConvs,
-                conversationId,
-                userIdToRemove,
-                apiResponse
-              )
-            );
-            setActiveChat((prevActive) =>
-              updateActiveChatAfterMemberRemoved(
-                prevActive,
-                conversationId,
-                userIdToRemove,
-                apiResponse
-              )
-            );
-          }
-        );
+        const sent = removeMember({ conversationId, memberId: userIdToRemove });
+        (sent) => {
+          setConversations((prevConvs) =>
+            updateConversationsAfterMemberRemoved(
+              prevConvs,
+              conversationId,
+              userIdToRemove
+            )
+          );
+          setActiveChat((prevActive) =>
+            updateActiveChatAfterMemberRemoved(
+              prevActive,
+              conversationId,
+              userIdToRemove
+            )
+          );
+        }
       } else {
         setActionError(null);
       }
@@ -356,42 +359,30 @@ export const useHandlers = ({
         return;
       }
 
-      await performSettingsAction(
-        () =>
-          updateConversationNameApi({ conversationId, newName: trimmedName }),
-        "Update group name",
-        (apiResponse) => {
-          setConversations((prevConvs) =>
-            updateConversationsAfterGroupNameChanged(
-              prevConvs,
-              conversationId,
-              trimmedName
-            )
-          );
-          setActiveChat((prevActive) =>
-            updateActiveChatAfterGroupNameChanged(
-              prevActive,
-              conversationId,
-              trimmedName
-            )
-          );
-          setIsEditingName(false);
-          setEditingGroupName("");
-        }
-      );
+      const sent = updateConversationName({ conversationId, newName: trimmedName });
+      if (sent) {
+        setActiveChat((prevActive) =>
+          updateActiveChatAfterGroupNameChanged(
+            prevActive,
+            conversationId,
+            trimmedName
+          )
+        );
+        setIsEditingName(false);
+        setEditingGroupName("");
+      }
     },
     [
       activeChat,
       currentUserIdRef,
       performSettingsAction,
-      setConversations,
+      updateConversationName,
       setActiveChat,
       setIsEditingName,
       setEditingGroupName,
       setActionError,
     ]
   );
-
   // --- Handler for changing leader ---
   const handleChangeLeader = useCallback(
     async (conversationId, newLeaderId) => {
