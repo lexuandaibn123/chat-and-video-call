@@ -435,25 +435,20 @@ export const updateConversationsAfterMemberRemoved = (prevConvs, conversationId,
 };
 
 // Cập nhật activeChat sau khi remove member thành công
-export const updateActiveChatAfterMemberRemoved = (prevActiveChat, conversationId, userIdToRemove, apiResponse) => {
-     if (!prevActiveChat || prevActiveChat.id !== conversationId) return prevActiveChat;
+export const updateActiveChatAfterMemberRemoved = (prevActiveChat, conversationId, userIdToRemove) => {
+  if (!prevActiveChat || prevActiveChat.id !== conversationId) return prevActiveChat;
 
-     const updatedDetailedMembers = prevActiveChat.detailedMembers.map(member => {
-         if (member.id === userIdToRemove) {
-              return { ...member, leftAt: apiResponse?.leftAt || new Date().toISOString(), role: 'member' };
-         }
-         return member;
-     }).filter(member => !member.leftAt);
+  // Lọc bỏ thành viên có id khớp với userIdToRemove
+  const updatedDetailedMembers = prevActiveChat.detailedMembers.filter(
+    (member) => member.id !== userIdToRemove
+  );
 
-     const newLeaderId = apiResponse?.conversation?.leader !== undefined ? getProcessedUserId(apiResponse.conversation.leader) : prevActiveChat.leader;
-
-
-     return {
-         ...prevActiveChat,
-         leader: newLeaderId,
-         detailedMembers: updatedDetailedMembers,
-         statusText: `${updatedDetailedMembers.length} members`,
-     };
+  // Cập nhật activeChat object
+  return {
+    ...prevActiveChat,
+    detailedMembers: updatedDetailedMembers, // Cập nhật danh sách chi tiết
+    statusText: `${updatedDetailedMembers.length} members`, // Cập nhật số lượng thành viên hoạt động
+  };
 };
 
 // Cập nhật danh sách conversations sau khi thay đổi tên nhóm thành công

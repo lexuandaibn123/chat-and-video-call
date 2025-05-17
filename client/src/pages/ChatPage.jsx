@@ -1,17 +1,18 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
-import { useSocket } from "../services/ChatPageSocket";
-import { useHandlers } from "../services/ChatPageHandlers";
-import ChatPageLayout from "../components/Chat/ChatPageLayout";
-import { getMyRoomsApi, getMessagesByRoomIdApi } from "../api/conversations";
-import { infoApi } from "../api/auth";
-import { processRawRooms, processRawMessages } from "../services/chatService";
-import "../components/Chat/Chat.scss";
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useSocket } from '../services/ChatPageSocket';
+import { useHandlers } from '../services/ChatHandlers';
+import { useConversationHandlers } from '../services/ConversationHandlers'; // Add new hook
+import ChatPageLayout from '../components/Chat/ChatPageLayout';
+import { getMyRoomsApi, getMessagesByRoomIdApi } from '../api/conversations';
+import { infoApi } from '../api/auth';
+import { processRawRooms, processRawMessages } from '../services/chatService';
+import '../components/Chat/Chat.scss';
 
 const ChatPage = () => {
   const [conversations, setConversations] = useState([]);
   const [activeChat, setActiveChat] = useState(null);
   const [messages, setMessages] = useState([]);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState('');
   const [isLoadingConversations, setIsLoadingConversations] = useState(true);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
@@ -21,11 +22,11 @@ const ChatPage = () => {
   const [isPerformingAction, setIsPerformingAction] = useState(false);
   const [actionError, setActionError] = useState(null);
   const [addUserSearchResults, setAddUserSearchResults] = useState([]);
-  const [messageInput, setMessageInput] = useState("");
+  const [messageInput, setMessageInput] = useState('');
   const [editingMessageId, setEditingMessageId] = useState(null);
   const [isEditingName, setIsEditingName] = useState(false);
-  const [editingGroupName, setEditingGroupName] = useState("");
-  const [callInvite, setCallInvite] = useState(null); // Thêm state cho call invite
+  const [editingGroupName, setEditingGroupName] = useState('');
+  const [callInvite, setCallInvite] = useState(null);
   const currentUserIdRef = useRef(null);
   const optimisticMessagesRef = useRef({});
 
@@ -37,7 +38,7 @@ const ChatPage = () => {
   const { user, isAuthenticated, isLoading: isAuthLoading } = mockAuth;
 
   useEffect(() => {
-    console.log("mockAuth state updated:", {
+    console.log('mockAuth state updated:', {
       user,
       isAuthenticated,
       isAuthLoading,
@@ -73,7 +74,37 @@ const ChatPage = () => {
     setCallInvite,
   });
 
-  const handlers = useHandlers({
+  // Get handlers from useConversationHandlers
+  const conversationHandlers = useConversationHandlers({
+    user,
+    isAuthenticated,
+    currentUserIdRef,
+    activeChat,
+    conversations,
+    addUserSearchResults,
+    isEditingName,
+    editingGroupName,
+    isConnected,
+    setConversations,
+    setActiveChat,
+    setActionError,
+    setIsSettingsOpen,
+    setIsMobileChatActive,
+    setIsPerformingAction,
+    setAddUserSearchResults,
+    setIsEditingName,
+    setEditingGroupName,
+    createConversation,
+    addNewMember,
+    removeMember,
+    leaveConversation,
+    deleteConversationByLeader,
+    updateConversationName,
+    updateConversationAvatar,
+  });
+
+  // Get handlers from useHandlers
+  const messageHandlers = useHandlers({
     user,
     isAuthenticated,
     currentUserIdRef,
@@ -83,22 +114,10 @@ const ChatPage = () => {
     messageInput,
     editingMessageId,
     sendingMessage,
-    isPerformingAction,
-    addUserSearchResults,
-    isEditingName,
-    editingGroupName,
     socket,
     sendMessage,
     editMessage,
     deleteMessage,
-    fetchConversations,
-    createConversation,
-    addNewMember,
-    removeMember,
-    leaveConversation,
-    deleteConversationByLeader,
-    updateConversationName,
-    updateConversationAvatar,
     isConnected,
     setConversations,
     setActiveChat,
@@ -110,12 +129,15 @@ const ChatPage = () => {
     setIsSettingsOpen,
     setIsMobileChatActive,
     setIsPerformingAction,
-    setAddUserSearchResults,
-    setIsEditingName,
-    setEditingGroupName,
     setSearchTerm,
     optimisticMessagesRef,
   });
+
+  // Merge handlers
+  const handlers = {
+    ...conversationHandlers,
+    ...messageHandlers,
+  };
 
   useEffect(() => {
     const checkAuthStatus = async () => {
@@ -130,7 +152,7 @@ const ChatPage = () => {
             ? String(userInfoResponse.userInfo.id).trim()
             : null;
           if (!userId) {
-            throw new Error("User ID is missing or invalid from API.");
+            throw new Error('User ID is missing or invalid from API.');
           }
           const authenticatedUser = {
             id: userId,
@@ -145,17 +167,17 @@ const ChatPage = () => {
             isLoading: false,
           });
           currentUserIdRef.current = userId;
-          console.log("Mock Auth check: User authenticated.", authenticatedUser);
+          console.log('Mock Auth check: User authenticated.', authenticatedUser);
         } else {
           setMockAuth({ user: null, isAuthenticated: false, isLoading: false });
           currentUserIdRef.current = null;
-          console.log("Mock Auth check: User not authenticated.");
+          console.log('Mock Auth check: User not authenticated.');
         }
       } catch (err) {
-        console.error("Mock Auth check Error:", err);
+        console.error('Mock Auth check Error:', err);
         setMockAuth({ user: null, isAuthenticated: false, isLoading: false });
         currentUserIdRef.current = null;
-        setError("Authentication failed. Please login again.");
+        setError('Authentication failed. Please login again.');
       }
     };
     checkAuthStatus();
@@ -163,32 +185,29 @@ const ChatPage = () => {
 
   const fetchInitialData = useCallback(async () => {
     const currentUserId = user?._id;
-
     if (!currentUserId) {
-      console.warn("fetchInitialData: User ID is not set.");
+      console.warn('fetchInitialData: User ID is not set.');
       setIsLoadingConversations(false);
       setConversations([]);
       return;
     }
-
-    console.log("Fetching initial rooms for user:", currentUserId);
+    console.log('Fetching initial rooms for user:', currentUserId);
     setIsLoadingConversations(true);
     setError(null);
-
     try {
       const rooms = await getMyRoomsApi();
       const conversationsData = processRawRooms(rooms, currentUserId);
       setConversations(conversationsData);
-      console.log("Processed conversations:", conversationsData);
+      console.log('Processed conversations:', conversationsData);
     } catch (err) {
-      console.error("Error fetching initial chat data:", err);
+      console.error('Error fetching initial chat data:', err);
       if (
-        err.message.includes("HTTP error! status: 401") ||
-        err.message.includes("not authenticated")
+        err.message.includes('HTTP error! status: 401') ||
+        err.message.includes('not authenticated')
       ) {
-        setError("Authentication failed. Please login again.");
+        setError('Authentication failed. Please login again.');
       } else {
-        setError(err.message || "Failed to load conversations.");
+        setError(err.message || 'Failed to load conversations.');
       }
       setConversations([]);
     } finally {
@@ -197,63 +216,60 @@ const ChatPage = () => {
   }, [user]);
 
   useEffect(() => {
-    console.log("Auth state check for initial fetch:", {
+    console.log('Auth state check for initial fetch:', {
       isAuthLoading,
       isAuthenticated,
       userId: user?._id,
     });
     if (!isAuthLoading && isAuthenticated && user?._id) {
-      console.log("Auth complete and user ID available. Triggering fetchInitialData...");
+      console.log('Auth complete and user ID available. Triggering fetchInitialData...');
       fetchInitialData();
       setError(null);
     } else if (!isAuthLoading && !isAuthenticated) {
-      console.warn("Auth complete but user not authenticated. Cannot fetch chat data.");
-      setError("User not authenticated. Please login.");
+      console.warn('Auth complete but user not authenticated. Cannot fetch chat data.');
+      setError('User not authenticated. Please login.');
       setIsLoadingConversations(false);
       setConversations([]);
       setActiveChat(null);
       setMessages([]);
       setIsMobileChatActive(false);
-      setMessageInput("");
+      setMessageInput('');
       setEditingMessageId(null);
       setSendingMessage(false);
     }
   }, [isAuthLoading, isAuthenticated, user, fetchInitialData]);
 
-  // Ẩn/hiện mobile nav
+  // Hide/show mobile nav
   useEffect(() => {
     const toggleMobileNavVisibility = (hide) => {
       window.dispatchEvent(
-        new CustomEvent("toggleMobileNav", { detail: { hideNav: hide } })
+        new CustomEvent('toggleMobileNav', { detail: { hideNav: hide } })
       );
     };
     toggleMobileNavVisibility(true);
     return () => toggleMobileNavVisibility(false);
   }, []);
 
-  // Fetch messages khi activeChat thay đổi
+  // Fetch messages when activeChat changes
   const fetchMessages = useCallback(async (userId) => {
     if (!activeChat?.id || !userId) {
-      console.warn("fetchMessages: No active chat or user ID.", { activeChat, userId });
+      console.warn('fetchMessages: No active chat or user ID.', { activeChat, userId });
       setMessages([]);
       setIsLoadingMessages(false);
       setIsMobileChatActive(false);
-      setMessageInput("");
+      setMessageInput('');
       setEditingMessageId(null);
       setSendingMessage(false);
       return;
     }
-
-    console.log("Fetching messages for room:", activeChat.id, "for user:", userId);
+    console.log('Fetching messages for room:', activeChat.id, 'for user:', userId);
     setIsLoadingMessages(true);
     setActionError(null);
-    setMessageInput("");
+    setMessageInput('');
     setEditingMessageId(null);
     setSendingMessage(false);
-
     const isMobileView = window.innerWidth <= 768;
     if (isMobileView) setIsMobileChatActive(true);
-
     try {
       const messages = await getMessagesByRoomIdApi({
         conversationId: activeChat.id,
@@ -262,16 +278,16 @@ const ChatPage = () => {
       });
       const formattedMessages = await processRawMessages(messages, userId);
       setMessages(formattedMessages);
-      console.log("Formatted messages (oldest first):", formattedMessages);
+      console.log('Formatted messages (oldest first):', formattedMessages);
     } catch (err) {
       console.error(`Error fetching messages for ${activeChat.id}:`, err);
-      if (err.message.includes("HTTP error! status: 401")) {
-        setError("Session expired. Please login again.");
+      if (err.message.includes('HTTP error! status: 401')) {
+        setError('Session expired. Please login again.');
       } else {
         setError(err.message || `Failed to load messages.`);
       }
       setMessages([]);
-      setMessageInput("");
+      setMessageInput('');
       setEditingMessageId(null);
       setSendingMessage(false);
     } finally {
@@ -322,8 +338,8 @@ const ChatPage = () => {
       onUploadProgress={handlers.handleUploadProgress}
       userInfo={user}
       socket={socket}
-      callInvite={callInvite} // Truyền callInvite xuống ChatPageLayout
-      sendTyping={sendTyping} 
+      callInvite={callInvite}
+      sendTyping={sendTyping}
       sendStopTyping={sendStopTyping}
     />
   );
