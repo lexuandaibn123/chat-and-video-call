@@ -3,6 +3,7 @@ import defaultUserAvatar from '../../assets/images/avatar_male.jpg';
 import defaultGroupAvatar from '../../assets/images/group-chat.png';
 import { updateConversationAvatar } from "../../api/conversations";
 import { UploadButton } from '../../utils/uploadthing';
+import { getUserDetailsApi } from "../../api/users";
 
 const ChatSettingsOverlay = ({
     group,
@@ -22,7 +23,7 @@ const ChatSettingsOverlay = ({
     onUpdateGroupName
 }) => {
     if (!group || !group.isGroup || !group.members) {
-         if (group?.isGroup) console.warn("ChatSettingsOverlay received group data with missing members.");
+        if (group?.isGroup) console.warn("ChatSettingsOverlay received group data with missing members.");
         return null;
     }
 
@@ -33,6 +34,88 @@ const ChatSettingsOverlay = ({
     const [avatarUrl, setAvatarUrl] = useState(group.avatar || defaultGroupAvatar);
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState("");
+    const [processedMembers, setProcessedMembers] = useState([]);
+
+    // Hàm trợ giúp xử lý ID
+    const getProcessedUserId = (userData) => {
+        if (!userData) return null;
+        if (typeof userData === 'object' && userData._id) {
+            return String(userData._id).trim();
+        }
+        if (typeof userData === 'string') {
+            return String(userData).trim();
+        }
+        return null;
+    };
+
+    // Xử lý group.members để chuyển id thành object
+    useEffect(() => {
+        const processMembers = async () => {
+            const userCache = {};
+            const uniqueIdsToFetch = new Set();
+
+            group.members.forEach(member => {
+                const userId = getProcessedUserId(member.id);
+                if (userId && typeof member.id === 'string') {
+                    uniqueIdsToFetch.add(userId);
+                }
+            });
+
+            await Promise.all(
+                Array.from(uniqueIdsToFetch).map(async userId => {
+                    try {
+                        const user = await getUserDetailsApi(userId);
+                        userCache[userId] = {
+                            _id: userId,
+                            fullName: user.fullName || 'Unknown User',
+                            email: user.email || '',
+                            avatar: user.avatar || null,
+                        };
+                    } catch (err) {
+                        console.error(`Error fetching details for ${userId}:`, err);
+                        userCache[userId] = {
+                            _id: userId,
+                            fullName: 'Unknown User',
+                            email: '',
+                            avatar: null,
+                        };
+                    }
+                })
+            );
+
+            const updatedMembers = group.members.map(member => {
+                const userId = getProcessedUserId(member.id);
+                if (!userId) {
+                    console.warn('Invalid member.id:', member);
+                    return null;
+                }
+
+                let idData;
+                if (typeof member.id === 'string') {
+                    idData = userCache[userId];
+                } else if (typeof member.id === 'object' && member.id._id) {
+                    idData = {
+                        _id: userId,
+                        fullName: member.id.fullName || 'Unknown User',
+                        email: member.id.email || '',
+                        avatar: member.id.avatar || null,
+                    };
+                } else {
+                    console.warn('Invalid member.id format:', member);
+                    return null;
+                }
+
+                return {
+                    ...member,
+                    id: idData,
+                };
+            }).filter(m => m !== null);
+
+            setProcessedMembers(updatedMembers);
+        };
+
+        processMembers();
+    }, [group.members]);
 
     useEffect(() => {
         setNewGroupName(group.name);
@@ -42,10 +125,9 @@ const ChatSettingsOverlay = ({
         setAvatarUrl(group.avatar || defaultGroupAvatar);
     }, [group.name, group.id, group.avatar]);
 
-    const members = group.members;
     const leaderId = group.leader;
     const isCurrentUserLeader = currentUserId === leaderId;
-    const numberOfLeaders = members.filter(m => m.role === 'leader' && m.leftAt === null).length;
+    const numberOfLeaders = processedMembers.filter(m => m.role === 'leader' && m.leftAt === null).length;
 
     const handleSearchInputChange = (e) => {
         setAddUserInput(e.target.value);
@@ -102,6 +184,9 @@ const ChatSettingsOverlay = ({
         }
     };
 
+    // Lọc thành viên hoạt động để hiển thị
+    const activeMembers = processedMembers.filter(m => m.leftAt === null);
+
     return (
         <div className="chat-settings-overlay">
             <div className="settings-content">
@@ -126,7 +211,7 @@ const ChatSettingsOverlay = ({
                         ) : (
                             <>
                                 <h2>{group.name || 'Group Settings'}</h2>
-                                {members.some(m => m.id?._id === currentUserId && m.leftAt === null) && (
+                                {processedMembers.some(m => m.id?._id === currentUserId && m.leftAt === null) && (
                                     <button className="icon-button edit-name-button" onClick={() => setIsEditingName(true)} title="Edit Group Name" disabled={isPerformingAction}>
                                         <i className="fas fa-edit"></i>
                                     </button>
@@ -199,22 +284,21 @@ const ChatSettingsOverlay = ({
                     </div>
 
                     <div className="member-list-section">
-                        <h4>Members ({members.length})</h4>
+                        <h4>Members ({activeMembers.length})</h4>
                         <ul className="member-list">
-                            {members.map(member => (
+                            {activeMembers.map(member => (
                                 <li
                                     key={member.id?._id || `member-${Math.random()}`}
-                                    className={`member-item ${member.leftAt ? 'left-member' : ''}`}
+                                    className="member-item"
                                 >
                                     <img src={member.id?.avatar || defaultUserAvatar} alt={member.id?.fullName || 'User Avatar'} className="avatar small" />
                                     <span className="member-name">
                                         {member.id?.fullName || member.id?.email || 'Unknown User'}
-                                        {member.role === 'leader' && member.leftAt === null && " (Leader)"}
+                                        {member.role === 'leader' && " (Leader)"}
                                         {member.id?._id === currentUserId && " (You)"}
-                                        {member.leftAt && " (Left)"}
                                     </span>
                                     <div className="member-actions">
-                                        {isCurrentUserLeader && member.id?._id !== currentUserId && member.role !== 'leader' && member.leftAt === null && (
+                                        {isCurrentUserLeader && member.id?._id !== currentUserId && member.role !== 'leader' && (
                                             <button
                                                 className="icon-button small warning"
                                                 title="Remove User"
@@ -224,7 +308,7 @@ const ChatSettingsOverlay = ({
                                                 {isPerformingAction ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-user-times"></i>}
                                             </button>
                                         )}
-                                        {isCurrentUserLeader && member.id?._id !== currentUserId && member.role !== 'leader' && member.leftAt === null && (
+                                        {isCurrentUserLeader && member.id?._id !== currentUserId && member.role !== 'leader' && (
                                             <button
                                                 className="icon-button small primary"
                                                 title="Make Leader"
@@ -274,8 +358,8 @@ const ChatSettingsOverlay = ({
                     {actionError && <div className="action-error">Error: {actionError}</div>}
 
                     <div className="group-actions-footer">
-                        {members.some(m => m.id?._id === currentUserId && m.leftAt === null) && 
-                         !(isCurrentUserLeader && numberOfLeaders <= 1 && members.filter(m => m.leftAt === null).length > 1) && (
+                        {processedMembers.some(m => m.id?._id === currentUserId && m.leftAt === null) && 
+                         !(isCurrentUserLeader && numberOfLeaders <= 1 && processedMembers.filter(m => m.leftAt === null).length > 1) && (
                             <button
                                 className="button secondary warning"
                                 onClick={() => onLeaveGroup(group.id)}

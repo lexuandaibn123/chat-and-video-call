@@ -10,7 +10,9 @@ import {
   filterAddUserSearchResults,
   updateConversationsAfterMemberAdded,
   updateActiveChatAfterMemberAdded,
+  filterConversationFromList,
 } from './chatService';
+import { deleteConversationMemberApi } from '../api/conversations';
 
 export const useConversationHandlers = ({
   user,
@@ -599,44 +601,32 @@ export const useConversationHandlers = ({
 
   // --- Handler for deleting a conversation member ---
   const handleDeleteConversationMember = useCallback(
-    (conversationId) => {
-      const currentUserId = currentUserIdRef.current;
+    async (conversationId) => {
       if (
-        !activeChat ||
-        activeChat.id !== conversationId ||
-        activeChat.isGroup ||
-        !currentUserId
-      ) {
-        console.warn('Delete conversation action only for 1-on-1 chats.');
-        setActionError('Invalid request to delete conversation.');
-        return;
-      }
-      if (
-        !window.confirm(
-          'Are you sure you want to delete this conversation? (This will only delete it for you)'
+        window.confirm(
+          "Are you sure you want to delete this conversation? (This will only delete it for you)"
         )
       ) {
+        await performSettingsAction(
+          () => deleteConversationMemberApi({ conversationId }),
+          "Delete conversation",
+          (response) => {
+            setConversations((prevConvs) =>
+              filterConversationFromList(prevConvs, conversationId)
+            );
+            setActiveChat(null);
+            setIsSettingsOpen(false);
+            setIsMobileChatActive(false);
+          }
+        );
+      } else {
         setActionError(null);
-        return;
       }
-      performSettingsAction(
-        () => leaveConversation({ conversationId }),
-        'Delete conversation',
-        () => {
-          setConversations((prevConvs) =>
-            prevConvs.filter((conv) => conv.id !== conversationId)
-          );
-          setActiveChat(null);
-          setIsSettingsOpen(false);
-          setIsMobileChatActive(false);
-        }
-      );
     },
     [
       activeChat,
       currentUserIdRef,
       performSettingsAction,
-      leaveConversation,
       setConversations,
       setActiveChat,
       setIsSettingsOpen,
