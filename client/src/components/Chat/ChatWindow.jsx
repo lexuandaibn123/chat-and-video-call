@@ -405,7 +405,7 @@ const ChatWindow = ({
         )}
         {!isUserInGroup && isGroupChat && (
           <div className="group-access-denied-message">
-            You are not a member of this group and cannot send messages or participate in this conversation. Please contact the group administrator to request access.
+            You are not a member of this group and cannot send messages or participate in this conversation.
           </div>
         )}
         <div ref={messageListEndRef} />

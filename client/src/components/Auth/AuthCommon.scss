@@ -193,7 +193,6 @@
       .form-container {
         width: 100%;
         position: static;
-        padding: $spacing-xl;
 
         &.hide {
           display: none; // Ensure only one form is shown at a time
