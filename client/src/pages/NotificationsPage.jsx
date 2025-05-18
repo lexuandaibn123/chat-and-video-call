@@ -25,6 +25,7 @@ const NotificationsPage = () => {
           name: post.poster?.fullName || 'Unknown User',
           image: post.poster?.avatar || '/default-avatar.jpg',
           mutualFriends: Math.floor(Math.random() * 10) + 1,
+          contentPreview: post.content?.[0]?.data || 'No content',
         }));
         setDiscoverItems(discoverData);
 
@@ -33,25 +34,30 @@ const NotificationsPage = () => {
           const posterAvatar = post.poster?.avatar || '/default-avatar.jpg';
           const reactCount = post.reacts?.length || 0;
           const commentCount = post.comments?.length || 0;
+          const contentPreview = post.content?.[0]?.data || 'No content';
           return [
             ...(reactCount > 0
               ? [{
                   id: `${post._id}-react`,
-                  user: posterName, // Using poster.fullName as user
+                  user: posterName,
                   action: 'liked your post',
                   details: `${posterName} and ${reactCount - 1} others have liked your post`,
                   time: post.datetime_created,
                   image: posterAvatar,
+                  contentPreview,
+                  icon: '❤️',
                 }]
               : []),
             ...(commentCount > 0
               ? [{
                   id: `${post._id}-comment`,
-                  user: posterName, // Using poster.fullName as user
+                  user: posterName,
                   action: 'commented on your post',
                   details: `Your post has ${commentCount} comments`,
                   time: post.datetime_created,
                   image: posterAvatar,
+                  contentPreview,
+                  icon: '💬',
                 }]
               : []),
           ];
@@ -66,16 +72,18 @@ const NotificationsPage = () => {
         console.log('Comments Response:', commentsResponse.data);
 
         const commentNotifications = commentsResponse.data.map(comment => {
-          const posterName = comment.poster?.fullName || 'Anonymous'; // Use poster instead of userId
+          const posterName = comment.poster?.fullName || 'Anonymous';
           const posterAvatar = comment.poster?.avatar || '/default-avatar.jpg';
-          const contentText = comment.content?.[0]?.data || 'No content'; // Access first content item
+          const contentText = comment.content?.[0]?.data || 'No content';
           return {
             id: comment._id,
-            user: posterName, // Using poster.fullName as user
+            user: posterName,
             action: 'commented on your post',
             details: contentText,
-            time: comment.datetime_created,
+            time: formatTimeAgo(comment.datetime_created),
             image: posterAvatar,
+            contentPreview: contentText.length > 50 ? `${contentText.slice(0, 50)}...` : contentText,
+            icon: '💬',
           };
         });
 
@@ -89,6 +97,19 @@ const NotificationsPage = () => {
       } finally {
         setLoading(false);
       }
+    };
+
+    const formatTimeAgo = (dateString) => {
+      const now = new Date();
+      const date = new Date(dateString);
+      const diffMs = now - date;
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+
+      if (diffDays > 0) return `${diffDays} day(s) ago`;
+      if (diffHours > 0) return `${diffHours} hour(s) ago`;
+      return `${diffMins} minute(s) ago`;
     };
 
     fetchData();
@@ -116,11 +137,15 @@ const NotificationsPage = () => {
         </div>
         <div className={`discover-section ${activeTab === 'discover' ? 'active' : ''}`}>
           <h2>Discover</h2>
-          <NotificationList type="discover" items={discoverItems} />
+          <div className="scrollable-content">
+            <NotificationList type="discover" items={discoverItems} />
+          </div>
         </div>
         <div className={`notifications-section ${activeTab === 'notifications' ? 'active' : ''}`}>
           <h2>Notifications</h2>
-          <NotificationList type="notifications" items={notifications} />
+          <div className="scrollable-content">
+            <NotificationList type="notifications" items={notifications} />
+          </div>
         </div>
       </div>
     </div>

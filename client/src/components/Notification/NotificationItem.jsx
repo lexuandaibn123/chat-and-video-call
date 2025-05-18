@@ -6,10 +6,10 @@ const NotificationItem = ({ item }) => {
       <img src={item.image} alt={item.user} className="profile-image" />
       <div className="item-info">
         <p className="item-action">
-          {item.user || 'Unknown User'} {item.action}
+          <span>{item.icon}</span> {item.user || 'Unknown User'} {item.action}
         </p>
-        <p className="item-details">{item.details}</p>
-        <p className="item-time">{new Date(item.time).toLocaleString()}</p>
+        <p className="item-details">{item.contentPreview}</p>
+        <p className="item-time">{item.time}</p>
       </div>
     </li>
   );
