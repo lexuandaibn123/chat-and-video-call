@@ -515,12 +515,12 @@ export const useConversationHandlers = ({
         setActionError('You are not an active member of this group.');
         return;
       }
-      if (isCurrentUserLeaderAndOnlyLeader && totalActiveMembers > 1) {
-        setActionError(
-          'You cannot leave this group as the only leader. Please assign a new leader first.'
-        );
-        return;
-      }
+      // if (isCurrentUserLeaderAndOnlyLeader && totalActiveMembers > 1) {
+      //   setActionError(
+      //     'You cannot leave this group as the only leader. Please assign a new leader first.'
+      //   );
+      //   return;
+      // }
       if (!window.confirm('Are you sure you want to leave this group?')) {
         setActionError(null);
         return;

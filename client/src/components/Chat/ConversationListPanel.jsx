@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import GroupList from './GroupList';
 import FriendList from './FriendList';
+import defaultAvatarPlaceholder from '../../assets/images/avatar_male.jpg';
 import "./Modal.scss";
 
 const ConversationListPanel = ({ userInfo, groups, friends, onSearchChange, onItemClick, activeChat, onAddClick, onCreateConversation, addUserSearchResults, onAddUserSearch }) => {
@@ -8,12 +9,14 @@ const ConversationListPanel = ({ userInfo, groups, friends, onSearchChange, onIt
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [conversationName, setConversationName] = useState('');
+  const [hasSearched, setHasSearched] = useState(false);
 
   const handleOpenModal = () => {
     setIsModalOpen(true);
     setSearchTerm('');
     setSelectedUsers([]);
     setConversationName('');
+    setHasSearched(false);
     onAddClick();
   };
 
@@ -22,16 +25,21 @@ const ConversationListPanel = ({ userInfo, groups, friends, onSearchChange, onIt
     setSearchTerm('');
     setSelectedUsers([]);
     setConversationName('');
+    setHasSearched(false);
   };
 
   const handleSearchChange = (e) => {
     const term = e.target.value;
     setSearchTerm(term);
+    setHasSearched(false);
   };
 
   const handleSearch = () => {
     if (searchTerm.trim()) {
       onAddUserSearch(searchTerm);
+      setHasSearched(true);
+    } else {
+      setHasSearched(false);
     }
   };
 
@@ -44,7 +52,7 @@ const ConversationListPanel = ({ userInfo, groups, friends, onSearchChange, onIt
   const handleSelectUser = (user) => {
     setSelectedUsers((prev) =>
       prev.some((u) => u._id === user._id)
-        ? prev.filter((u) => u._id !== user._id)
+        ? prev.filter((u) => u._id !== u._id)
         : [...prev, user]
     );
   };
@@ -61,8 +69,7 @@ const ConversationListPanel = ({ userInfo, groups, friends, onSearchChange, onIt
         processedConversationName = selectedUsers.map(user => user.fullName || user._id || 'Unknown').join(', ');
       } else {
         const firstTwoUsers = selectedUsers.slice(0, 2).map(user => user.fullName || user._id || 'Unknown');
-        const remainingCount = selectedUsers.length > 2 ? filteredUsers.length - 2 : 0 ;
-        console.log(userInfo);
+        const remainingCount = selectedUsers.length - 2;
         processedConversationName = `${userInfo.fullName}, ` + firstTwoUsers.join(', ') + `, ... (+${remainingCount})`;
       }
     }
@@ -100,7 +107,7 @@ const ConversationListPanel = ({ userInfo, groups, friends, onSearchChange, onIt
               <i className="fas fa-times"></i>
             </button>
 
-            <hr></hr>
+            <hr />
 
             {/* Input for group name (optional) */}
             <div className="modal-input-group">
@@ -152,26 +159,33 @@ const ConversationListPanel = ({ userInfo, groups, friends, onSearchChange, onIt
             </div>
 
             {/* Search results */}
-            {addUserSearchResults.length > 0 ? (
-              <ul className="search-results">
+            {hasSearched && addUserSearchResults.length === 0 ? (
+              <div className="no-results">User not found</div>
+            ) : addUserSearchResults.length > 0 ? (
+              <div className="search-results">
                 {addUserSearchResults.map((user) => (
-                  <li
+                  <div
                     key={user._id}
                     className={`search-result-item ${
                       selectedUsers.some((u) => u._id === user._id) ? 'selected' : ''
                     }`}
                     onClick={() => handleSelectUser(user)}
                   >
-                    <span>{user.fullName || user.email || user._id}</span>
+                    <div className = "name-avatar">
+                      <img
+                        src={user.avatar || defaultAvatarPlaceholder}
+                        alt={user.fullName || user.email || user._id}
+                        className="avatar tiny"
+                      />
+                      <span>{user.fullName || user.email || user._id}</span>
+                    </div>
                     {selectedUsers.some((u) => u._id === user._id) && (
                       <span className="selected-icon">✔</span>
                     )}
-                  </li>
+                  </div>
                 ))}
-              </ul>
-            ) : (
-              <div className="no-results">User not found</div>
-            )}
+              </div>
+            ) : null}
 
             {/* Action buttons */}
             <div className="modal-actions">

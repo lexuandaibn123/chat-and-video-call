@@ -358,8 +358,9 @@ const ChatSettingsOverlay = ({
                     {actionError && <div className="action-error">Error: {actionError}</div>}
 
                     <div className="group-actions-footer">
-                        {processedMembers.some(m => m.id?._id === currentUserId && m.leftAt === null) && 
-                         !(isCurrentUserLeader && numberOfLeaders <= 1 && processedMembers.filter(m => m.leftAt === null).length > 1) && (
+                        {processedMembers.some(m => m.id?._id === currentUserId && m.leftAt === null && processedMembers.filter(m => m.leftAt === null).length > 1) && 
+                        //  !(isCurrentUserLeader && numberOfLeaders <= 1) && 
+                        (
                             <button
                                 className="button secondary warning"
                                 onClick={() => onLeaveGroup(group.id)}

@@ -1,6 +1,12 @@
 import { useEffect, useRef, useCallback } from 'react';
 import io from 'socket.io-client';
-import { formatReceivedMessage, updateConversationsListLatestMessage, processRawRooms } from './chatService';
+import { 
+  formatReceivedMessage, 
+  updateConversationsListLatestMessage, 
+  processRawRooms,
+  updateConversationsAfterMemberRemoved,
+  updateActiveChatAfterMemberRemoved 
+} from './chatService';
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL;
 
@@ -305,7 +311,7 @@ export const useSocket = ({
     // Handle errors from server
     socketRef.current.on('error', (error) => {
       console.error('Socket.IO error:', error);
-      const errorMessage = error.message || 'An error occurred';
+      let errorMessage = typeof error === 'string' ? error : error.message || 'An error occurred';
       setActionError(errorMessage);
 
       // Revert optimistic updates for pending actions
@@ -379,6 +385,8 @@ export const useSocket = ({
             ...(conversations.filter((conv) => conv.id === action.conversationId)),
           ]);
           setActiveChat((prev) => prev); // Restore activeChat if needed
+        } else if (action.type === 'createConversation') {
+          alert('Conversation already exists between these two users');
         }
         delete pendingActionsRef.current[actionId];
       });

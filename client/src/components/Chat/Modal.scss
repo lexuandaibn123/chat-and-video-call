@@ -153,7 +153,7 @@ $selected-bg-color: #e0e0e0;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 8px;
+    padding: 8px 15px;
     cursor: pointer;
 
     &:hover {
@@ -167,6 +167,23 @@ $selected-bg-color: #e0e0e0;
     .selected-icon {
       color: $success-color;
       font-weight: $font-weight-bold;
+    }
+
+    .name-avatar {
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+      text-align: center;
+
+      span {
+        font-size: $font-size-large;
+      }
+
+      .avatar.tiny {
+        width: 24px; // Even smaller avatar in search results
+        height: 24px;
+        margin-right: $spacing-sm; // Space between avatar and name
+      }
     }
   }
 }
