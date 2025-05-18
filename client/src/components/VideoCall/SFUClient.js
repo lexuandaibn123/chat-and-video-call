@@ -13,7 +13,7 @@ export default function SFUClient(url, userId, onStreamAdded, onStreamRemoved) {
       { urls: "stun:stun.stunprotocol.org:3478" },
       { urls: "stun:stun.l.google.com:19302" },
       {
-        urls: "turn:54.251.71.205:3478", 
+        urls: "turn:54.251.71.205:3478",
         username: "seedlabs",
         credential: "seedlabsturn",
       },
@@ -68,21 +68,43 @@ SFUClient.prototype = {
   toggleMic() {
     if (this.localStream) {
       const audioTrack = this.localStream.getAudioTracks()[0];
-      this.socket.emit("updateStatus", {
-        userId: this.userId,
-        micEnabled: audioTrack.enabled,
-      });
+      if (audioTrack) {
+        if (audioTrack.enabled) {
+          // Tắt mic: Loại bỏ track khỏi RTCPeerConnection
+          this.localPeer.getSenders().forEach((sender) => {
+            if (sender.track === audioTrack) {
+              this.localPeer.removeTrack(sender);
+            }
+          });
+          audioTrack.enabled = false;
+        } else {
+          // Bật mic: Thêm lại track vào RTCPeerConnection
+          this.localPeer.addTrack(audioTrack, this.localStream);
+          audioTrack.enabled = true;
+        }
+        // Thông báo trạng thái mới
+        this.notifyStatusUpdate({ audioEnabled: audioTrack.enabled });
+      } else {
+        console.warn("No audio track found to toggle.");
+      }
     }
   },
 
   toggleCamera() {
     if (this.localStream) {
       const videoTrack = this.localStream.getVideoTracks()[0];
-      this.socket.emit("updateStatus", {
-        userId: this.userId,
-        cameraEnabled: videoTrack.enabled,
-      });
+      if (videoTrack) {
+        videoTrack.enabled = !videoTrack.enabled;
+        this.notifyStatusUpdate({ videoEnabled: videoTrack.enabled });
+        console.log(`Camera toggled: ${videoTrack.enabled}`);
+      } else {
+        console.warn("No video track found to toggle.");
+      }
     }
+  },
+
+  notifyStatusUpdate(status) {
+    this.socket.emit("updateStatus", status);
   },
 
   async shareScreen() {
@@ -272,16 +294,17 @@ SFUClient.prototype = {
     this.socket.on("newProducer", (data) => this.handleNewProducer(data));
     this.socket.on("consumerReady", (data) => this.handleConsume(data));
     this.socket.on("userLeft", (data) => this.removeUser(data));
-    this.socket.on("statusUpdate", ({ userId, micEnabled, cameraEnabled }) => {
+    this.socket.on("statusUpdated", ({ userId, audioEnabled, videoEnabled }) => {
       const streamInfo = Array.from(this.remoteStreams.values()).find(
         (info) => info.id === userId
       );
       if (streamInfo) {
         const updatedStreamInfo = {
           ...streamInfo,
-          micEnabled,
-          cameraEnabled,
+          micEnabled: audioEnabled !== undefined ? audioEnabled : streamInfo.micEnabled || true,
+          cameraEnabled: videoEnabled !== undefined ? videoEnabled : streamInfo.cameraEnabled || true,
         };
+        this.remoteStreams.set(streamInfo.consumerId, updatedStreamInfo);
         this.onStreamAdded(updatedStreamInfo);
       }
     });
@@ -289,13 +312,6 @@ SFUClient.prototype = {
       console.error("Socket error:", error);
       alert("Đã xảy ra lỗi kết nối. Vui lòng thử lại.");
     });
-    // this.socket.on("disconnect", () => {
-    //   console.warn("Socket disconnected, attempting to reconnect...");
-    //   setTimeout(() => {
-    //     this.socket.connect();
-    //     if (this.roomId) this.connect(this.roomId);
-    //   }, 3000);
-    // });
   },
 
   close() {

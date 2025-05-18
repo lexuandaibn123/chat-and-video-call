@@ -42,7 +42,6 @@ export default function VideoCall({ userId, roomId, onClose }) {
             (s) => s.consumerId === streamInfo.consumerId
           );
           if (existingStream) {
-            // Cập nhật trạng thái cho stream đã tồn tại
             return prev.map((s) =>
               s.consumerId === streamInfo.consumerId
                 ? {
@@ -59,7 +58,6 @@ export default function VideoCall({ userId, roomId, onClose }) {
                 : s
             );
           }
-          // Thêm stream mới
           return [
             ...prev,
             {
@@ -149,12 +147,11 @@ export default function VideoCall({ userId, roomId, onClose }) {
         "Stream available:",
         !!localStream
       );
-      // Reset nếu stream bị hủy
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = null;
       }
     }
-  }, [localStream]); // Phụ thuộc vào localStream
+  }, [localStream]);
 
   useEffect(() => {
     const draggable = document.getElementById("draggable-video");
@@ -181,12 +178,12 @@ export default function VideoCall({ userId, roomId, onClose }) {
         currentY = e.clientY - initialY;
         draggable.style.left = `${currentX}px`;
         draggable.style.top = `${currentY}px`;
-        draggable.style.right = "auto"; // Reset right để kéo thả tự do
+        draggable.style.right = "auto";
       }
     };
 
     if (draggable) {
-      currentX = 20; // Khởi tạo vị trí ban đầu
+      currentX = 20;
       currentY = 40;
       draggable.style.left = `${currentX}px`;
       draggable.style.top = `${currentY}px`;
@@ -195,7 +192,6 @@ export default function VideoCall({ userId, roomId, onClose }) {
       document.addEventListener("mouseup", stopDragging);
       document.addEventListener("mousemove", drag);
 
-      // Hỗ trợ touch cho mobile
       draggable.addEventListener("touchstart", (e) => {
         const touch = e.touches[0];
         initialX = touch.clientX - currentX;
@@ -233,11 +229,13 @@ export default function VideoCall({ userId, roomId, onClose }) {
       if (audioTrack) {
         audioTrack.enabled = !audioTrack.enabled;
         setMicEnabled(audioTrack.enabled);
-        sfuClientRef.current.toggleMic();
+        sfuClientRef.current.notifyStatusUpdate({ audioEnabled: audioTrack.enabled });
         toast(audioTrack.enabled ? "Micro đã bật" : "Micro đã tắt", {
           type: audioTrack.enabled ? "success" : "warning",
           autoClose: 2000,
         });
+      } else {
+        console.warn("No audio track found to toggle.");
       }
     }
   };
@@ -248,11 +246,13 @@ export default function VideoCall({ userId, roomId, onClose }) {
       if (videoTrack) {
         videoTrack.enabled = !videoTrack.enabled;
         setCameraEnabled(videoTrack.enabled);
-        sfuClientRef.current.toggleCamera();
+        sfuClientRef.current.notifyStatusUpdate({ videoEnabled: videoTrack.enabled });
         toast(videoTrack.enabled ? "Camera đã bật" : "Camera đã tắt", {
           type: videoTrack.enabled ? "success" : "warning",
           autoClose: 2000,
         });
+      } else {
+        console.warn("No video track found to toggle.");
       }
     }
   };

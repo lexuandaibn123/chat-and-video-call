@@ -30,8 +30,8 @@
 }
 
 .video-layout {
-  width: 100vw;
-  height: 100vh; /* Occupy full viewport height */
+  width: 100svw;
+  height: 100svh; /* Occupy full viewport height */
   display: flex;
   justify-content: center;
   align-items: center;
