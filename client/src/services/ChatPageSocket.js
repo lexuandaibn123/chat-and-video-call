@@ -4,8 +4,6 @@ import {
   formatReceivedMessage, 
   updateConversationsListLatestMessage, 
   processRawRooms,
-  updateConversationsAfterMemberRemoved,
-  updateActiveChatAfterMemberRemoved 
 } from './chatService';
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL;
@@ -253,6 +251,13 @@ export const useSocket = ({
         setActionError('Socket is not connected. Please try again.');
         return false;
       }
+
+      // Kiểm tra newAvatar trước khi gửi
+      if (!newAvatar || newAvatar.length < 1) {
+        setActionError('Invalid avatar URL. Please upload a valid image.');
+        return false;
+      }
+
       const actionId = `updateConversationAvatar-${conversationId}-${Date.now()}`;
       pendingActionsRef.current[actionId] = { type: 'updateConversationAvatar', conversationId };
       socketRef.current.emit('updateConversationAvatar', { conversationId, newAvatar });

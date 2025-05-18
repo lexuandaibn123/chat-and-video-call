@@ -204,6 +204,7 @@ const ChatPage = () => {
     try {
       const rooms = await getMyRoomsApi();
       setRawConversations(rooms); // Lưu dữ liệu thô
+      console.log("rooms: ", rooms);
       const conversationsData = processRawRooms(rooms, currentUserId);
       setConversations(conversationsData); // Cập nhật conversations
       console.log('Processed conversations:', conversationsData);
@@ -338,6 +339,7 @@ const ChatPage = () => {
       editingMessageId={editingMessageId}
       isEditingName={isEditingName}
       editingGroupName={editingGroupName}
+      updateConversationAvatar={updateConversationAvatar}
       currentUserId={currentUserIdRef.current}
       handlers={handlers}
       setMessageInput={setMessageInput}

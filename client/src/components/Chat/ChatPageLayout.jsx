@@ -25,6 +25,7 @@ const ChatPageLayout = ({
   editingMessageId,
   isEditingName,
   editingGroupName,
+  updateConversationAvatar, 
   currentUserId,
   handlers,
   setMessageInput, // Added to fix ChatWindow prop
@@ -174,6 +175,7 @@ const ChatPageLayout = ({
           onCancelEditGroupName={handlers.handleCancelEditGroupName}
           onSaveEditGroupName={handlers.handleSaveEditGroupName}
           onAddClick={() => setAddUserSearchResults([])}
+          updateConversationAvatar={updateConversationAvatar}
         />
       )}
     </div>
