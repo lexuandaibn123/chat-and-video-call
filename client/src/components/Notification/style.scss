@@ -1,26 +1,50 @@
-@use '../../styles/_variables' as *;
+@use '../../styles/_variables' as v;
 @use 'sass:color';
 @use 'sass:math';
 
 /* Notifications Page Styles */
 .notifications-page {
   display: flex;
-  gap: $spacing-lg;
-  font-family: $font-family-base;
+  gap: v.$spacing-lg;
+  font-family: v.$font-family-base;
+  background-color: v.$container-bg-color;
 
   .discover-section,
   .notifications-section {
     flex: 1;
-    background-color: $secondary-color;
-    border-radius: $border-radius-md;
-    padding: $spacing-lg;
+    background-color: v.$secondary-color;
+    border-radius: v.$border-radius-md;
+    padding: v.$spacing-lg;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    max-height: 95svh; /* Giới hạn chiều cao để kích hoạt cuộn */
+    overflow-y: auto; /* Kích hoạt thanh cuộn dọc */
+    scrollbar-width: none; /* Tùy chỉnh thanh cuộn cho Firefox */
+    scrollbar-color: v.$primary-color v.$secondary-color; /* Màu thanh cuộn */
+
+    /* Tùy chỉnh thanh cuộn cho Chrome/Safari */
+    &::-webkit-scrollbar {
+      width: 8px;
+    }
+    &::-webkit-scrollbar-track {
+      background: v.$secondary-color;
+      border-radius: v.$border-radius-md;
+    }
+    &::-webkit-scrollbar-thumb {
+      background: v.$primary-color;
+      border-radius: v.$border-radius-md;
+    }
 
     h2 {
-      font-size: $font-size-h2;
-      font-weight: $font-weight-bold;
-      margin-bottom: $spacing-md;
-      color: $primary-color;
+      font-size: v.$font-size-h2;
+      font-weight: v.$font-weight-bold;
+      margin-bottom: v.$spacing-md;
+      color: v.$primary-color;
+      position: sticky; /* Giữ tiêu đề cố định ở trên cùng */
+      top: 0;
+      background-color: v.$container-bg-color; /* Đảm bảo nền phù hợp */
+      z-index: 1;
+      padding: 0;
+      margin: 0 0 v.$spacing-md 0;
     }
   }
 
@@ -29,31 +53,31 @@
   }
 }
 
-@media (max-width: $breakpoint-medium) {
+@media (max-width: v.$breakpoint-medium) {
   .notifications-page {
     display: block;
 
     .tabs-mobile {
       display: flex;
       justify-content: space-around;
-      margin-bottom: $spacing-lg;
-      background-color: $secondary-color;
-      border-radius: $border-radius-md;
+      margin-bottom: v.$spacing-lg;
+      background-color: v.$secondary-color;
+      border-radius: v.$border-radius-md;
       box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 
       button {
         flex: 1;
-        padding: $spacing-md;
+        padding: v.$spacing-md;
         background-color: transparent;
         border: none;
-        color: $text-color;
-        font-weight: $font-weight-medium;
-        transition: background-color $transition-default;
+        color: v.$text-color;
+        font-weight: v.$font-weight-medium;
+        transition: background-color v.$transition-default;
 
         &.active {
-          background-color: $primary-color;
-          color: $secondary-color;
-          border-radius: $border-radius-md;
+          background-color: v.$primary-color;
+          color: v.$secondary-color;
+          border-radius: v.$border-radius-md;
         }
       }
     }
@@ -61,7 +85,9 @@
     .discover-section,
     .notifications-section {
       display: none;
-      padding: $spacing-md;
+      padding: v.$spacing-md;
+      max-height: 400px; /* Chiều cao nhỏ hơn trên mobile */
+      overflow-y: auto;
 
       &.active {
         display: block;
@@ -79,11 +105,11 @@
   li {
     display: flex;
     align-items: center;
-    padding: $spacing-md 0;
-    transition: background-color $transition-default;
+    padding: v.$spacing-md 0;
+    transition: background-color v.$transition-default;
 
     &:hover {
-      background-color: color.adjust($container-bg-color, $lightness: -5%);
+      background-color: color.adjust(v.$container-bg-color, $lightness: -5%);
     }
 
     &:last-child {
@@ -97,21 +123,21 @@
   .profile-image {
     width: 60px;
     height: 60px;
-    border-radius: $border-radius-social;
-    margin-right: $spacing-md;
+    border-radius: v.$border-radius-social;
+    margin-right: v.$spacing-md;
     object-fit: cover;
   }
 
   .item-info {
     .item-name {
-      font-weight: $font-weight-bold;
-      color: $text-color;
-      font-size: $font-size-large;
+      font-weight: v.$font-weight-bold;
+      color: v.$text-color;
+      font-size: v.$font-size-large;
     }
 
     .mutual-friends {
-      color: $text-muted-color;
-      font-size: $font-size-small;
+      color: v.$text-muted-color;
+      font-size: v.$font-size-small;
     }
   }
 }
@@ -121,26 +147,26 @@
   .profile-image {
     width: 60px;
     height: 60px;
-    border-radius: $border-radius-social;
-    margin-right: $spacing-md;
+    border-radius: v.$border-radius-social;
+    margin-right: v.$spacing-md;
     object-fit: cover;
   }
 
   .item-info {
     .item-action {
-      font-weight: $font-weight-bold;
-      color: $text-color;
-      font-size: $font-size-large;
+      font-weight: v.$font-weight-bold;
+      color: v.$text-color;
+      font-size: v.$font-size-large;
     }
 
     .item-details {
-      color: $text-muted-color;
-      margin: $spacing-xs 0;
+      color: v.$text-muted-color;
+      margin: v.$spacing-xs 0;
     }
 
     .item-time {
-      color: $text-muted-color;
-      font-size: $font-size-small;
+      color: v.$text-muted-color;
+      font-size: v.$font-size-small;
     }
   }
 }
