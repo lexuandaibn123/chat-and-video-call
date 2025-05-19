@@ -283,6 +283,7 @@ class ConversationService {
                 );
 
                 if (
+                  conversationHandle.latestMessage &&
                   typeof conversationHandle.latestMessage === "object" &&
                   conversationHandle.latestMessage.datetime_created > leftAt
                 ) {
