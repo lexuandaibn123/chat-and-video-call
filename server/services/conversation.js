@@ -468,19 +468,32 @@ class ConversationService {
       if (!member) {
         throw new Error("User not found");
       }
-
-      const memberObj = {
-        id: newMemberId,
-        role,
-        joinedAt: new Date(),
-        leftAt: null,
-        latestDeletedAt: null,
-      };
-
-      const updatedConversation = await ConversationRepository.addMember(
-        conversationId,
-        memberObj
+      const isFormerMember = this._isFormerMemberOfConversation(
+        conversation,
+        newMemberId
       );
+
+      let updatedConversation;
+
+      if (isFormerMember) {
+        updatedConversation = await ConversationRepository.reAddFormerMember(
+          conversationId,
+          newMemberId
+        );
+      } else {
+        const memberObj = {
+          id: newMemberId,
+          role,
+          joinedAt: new Date(),
+          leftAt: null,
+          latestDeletedAt: null,
+        };
+
+        updatedConversation = await ConversationRepository.addMember(
+          conversationId,
+          memberObj
+        );
+      }
 
       if (!updatedConversation) {
         throw new Error("Failed to add new member");
