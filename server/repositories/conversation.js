@@ -80,6 +80,21 @@ class ConversationRepository {
     );
   }
 
+  async reAddFormerMember(conversationId, userId) {
+    return await Conversation.findByIdAndUpdate(
+      conversationId,
+      {
+        $set: {
+          "members.$[elem].leftAt": null,
+        },
+      },
+      {
+        arrayFilters: [{ "elem.id": userId }],
+        new: true,
+      }
+    );
+  }
+
   async updateRole(conversationId, userId, newRole) {
     const conversation = await Conversation.findById(conversationId);
     if (!conversation) {
