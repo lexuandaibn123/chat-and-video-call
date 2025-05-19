@@ -1,0 +1,364 @@
+@use "sass:color";
+@use "../../styles/variables" as *;
+// HomePage.scss
+
+/* Base Styles */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  color: $text-color;
+  background-color: $container-bg-color;
+  font-family: $font-family-base;
+  font-size: $font-size-base;
+  line-height: $line-height-base;
+}
+
+/* Layout */
+.app-container {
+  display: flex;
+  height: 90vh;
+  background-color: $container-bg-color;
+  position: relative;
+  overflow-y: auto; /* Move scrollbar to container level */
+}
+
+/* Sidebar */
+.sidebar {
+  width: $sidebar-width-desktop;
+  background-color: $primary-color;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: $spacing-md;
+  padding-bottom: $spacing-md;
+  height: 100vh;
+  flex-shrink: 0; /* Prevent sidebar from shrinking */
+  position: sticky;
+  top: 0;
+}
+
+.sidebar-profile {
+  margin-bottom: $spacing-lg;
+}
+
+.sidebar-profile-image {
+  border-radius: $border-radius-social;
+  border: 2px solid $secondary-color;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-xl;
+  margin-top: $spacing-md;
+}
+
+.sidebar-nav-item {
+  color: $secondary-color;
+  padding: $spacing-xs;
+  display: block;
+  transition: $transition-default;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  color: $secondary-color;
+  padding: $spacing-xs;
+  display: block;
+}
+
+/* Main Content */
+.main-content- {
+  flex: 1;
+  padding: $spacing-md;
+  height: auto;
+  min-height: 100vh;
+  overflow-y: visible; /* Remove scrollbar from main content */
+}
+
+// .main-content {
+//   padding-right: 0;
+// }
+
+/* Scrollbar styling for Webkit browsers (Chrome, Safari, Edge) */
+.app-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.app-container::-webkit-scrollbar-track {
+  background: $container-bg-color;
+}
+
+.app-container::-webkit-scrollbar-thumb {
+  background-color: $primary-color;
+  border-radius: $border-radius-lg;
+  border: 2px solid $container-bg-color;
+}
+
+/* Search Bar */
+.search-form {
+  margin-bottom: $spacing-md;
+  max-width: 48rem; /* Increased from 36rem to 48rem to match feed width */
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.search-fieldset {
+  position: relative;
+}
+
+.search-icon {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: $spacing-sm;
+  display: flex;
+  align-items: center;
+  color: $text-muted-color;
+}
+
+.search-input {
+  width: 100%;
+  padding-top: $spacing-sm;
+  padding-bottom: $spacing-sm;
+  padding-left: $spacing-xl;
+  padding-right: $spacing-md;
+  background-color: $secondary-color;
+  border-radius: $border-radius-button-main;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba($primary-color, 0.5);
+  }
+}
+
+/* Feed */
+.feed {
+  max-width: 48rem;
+  margin-left: auto;
+  margin-right: auto;
+  padding-bottom: $spacing-lg;
+}
+
+/* Create Post */
+.create-post {
+  background-color: $secondary-color;
+  border-radius: $border-radius-md;
+  padding: $spacing-md;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  margin-bottom: $spacing-md;
+}
+
+.create-post-header {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
+.profile-image {
+  border-radius: $border-radius-social;
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+}
+
+.create-post-input {
+  flex: 1;
+  background-color: $input-bg-color;
+  border-radius: $border-radius-button-main;
+  padding-top: $spacing-xs;
+  padding-bottom: $spacing-xs;
+  padding-left: $spacing-md;
+  padding-right: $spacing-md;
+  
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba($primary-color, 0.5);
+  }
+}
+
+.create-post-footer {
+  display: flex;
+  justify-content: space-between;
+  margin-top: $spacing-sm;
+  border-top: 1px solid $social-border-color;
+  padding-top: $spacing-sm;
+}
+
+.photo-video-button {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  color: $text-muted-color;
+  
+  &:hover {
+    color: $primary-color;
+    transition: color $transition-fast;
+  }
+}
+
+.post-button {
+  padding-left: $spacing-md;
+  padding-right: $spacing-md;
+  padding-top: $spacing-xs;
+  padding-bottom: $spacing-xs;
+  background-color: $primary-color;
+  color: $secondary-color;
+  border-radius: $border-radius-button-main;
+  
+  &:hover {
+    background-color: color.adjust($primary-color, $lightness: -10%);
+    transition: background-color $transition-fast;
+  }
+}
+
+/* Post Item */
+.post {
+  background-color: $secondary-color;
+  border-radius: $border-radius-md;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  margin-bottom: $spacing-md;
+  overflow: hidden;
+  width: 100%; /* Ensure post takes full width of container */
+}
+
+.post-header {
+  padding: $spacing-md;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.post-author {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
+.post-author-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.post-author-name {
+  font-weight: $font-weight-medium;
+  color: $text-color;
+  margin: 0;
+}
+
+.post-meta {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+}
+
+.post-role {
+  font-size: $font-size-small;
+  color: $text-muted-color;
+}
+
+.post-time {
+  font-size: $font-size-small;
+  color: $text-muted-color;
+}
+
+.post-menu-button {
+  color: $text-muted-color;
+  
+  &:hover {
+    color: $text-color;
+  }
+}
+
+.post-content {
+  padding-left: $spacing-md;
+  padding-right: $spacing-md;
+  padding-bottom: 0; /* Remove bottom padding */
+}
+
+.post-text {
+  color: $text-color;
+  margin-bottom: $spacing-md;
+}
+
+/* Post images - adjust for better display at wider width */
+.post-images {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $spacing-md; /* Increased for better spacing */
+  margin-bottom: $spacing-sm;
+}
+
+.post-image {
+  border-radius: $border-radius-sm;
+  width: 100%;
+  height: auto;
+}
+
+.post-stats {
+  display: flex;
+  align-items: center;
+  gap: calc($spacing-xs / 2);
+  font-size: $font-size-small;
+  color: $text-muted-color;
+  margin-bottom: $spacing-xs;
+  padding: 0 $spacing-md;
+}
+
+.like-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  background-color: $error-color;
+  border-radius: $border-radius-social;
+  color: $secondary-color;
+  font-size: $font-size-small;
+}
+
+.post-comments-count {
+  margin-left: auto;
+}
+
+.post-footer {
+  border-top: 1px solid $social-border-color;
+  display: flex;
+  margin-top: $spacing-xs; /* Add small margin to reduce space */
+}
+
+.post-action-button {
+  flex: 1;
+  padding-top: $spacing-xs;
+  padding-bottom: $spacing-xs;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-xs;
+  color: $text-muted-color;
+  
+  &:hover {
+    background-color: $input-bg-color;
+    transition: background-color $transition-fast;
+  }
+}
+
+/* Utility Classes */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
