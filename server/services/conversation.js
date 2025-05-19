@@ -50,6 +50,15 @@ class ConversationService {
     });
   }
 
+  _isFormerMemberOfConversation(conversation, userId) {
+    return conversation.members.find((member) => {
+      if (member.id == null || !member.leftAt) return false;
+      return typeof member.id == "object"
+        ? member.id._id.toString() == userId
+        : member.id.toString() == userId;
+    });
+  }
+
   _mustBeMemberOfConversation(
     conversation,
     userId,
@@ -274,6 +283,7 @@ class ConversationService {
                 );
 
                 if (
+                  conversationHandle.latestMessage &&
                   typeof conversationHandle.latestMessage === "object" &&
                   conversationHandle.latestMessage.datetime_created > leftAt
                 ) {
@@ -379,23 +389,38 @@ class ConversationService {
             error: "User is already a member of the conversation",
           });
         }
+
         const member = await UserRepository.findById(newMemberId);
         if (!member) {
           return res.status(404).json({ error: "User not found" });
         }
 
-        const memberObj = {
-          id: newMemberId,
-          role,
-          joinedAt: new Date(),
-          leftAt: null,
-          latestDeletedAt: null,
-        };
-
-        const updatedConversation = await ConversationRepository.addMember(
-          conversationId,
-          memberObj
+        const isFormerMember = this._isFormerMemberOfConversation(
+          conversation,
+          newMemberId
         );
+
+        let updatedConversation;
+
+        if (isFormerMember) {
+          updatedConversation = await ConversationRepository.reAddFormerMember(
+            conversationId,
+            newMemberId
+          );
+        } else {
+          const memberObj = {
+            id: newMemberId,
+            role,
+            joinedAt: new Date(),
+            leftAt: null,
+            latestDeletedAt: null,
+          };
+
+          updatedConversation = await ConversationRepository.addMember(
+            conversationId,
+            memberObj
+          );
+        }
 
         if (!updatedConversation) {
           return res.status(400).json({ error: "Failed to add new member" });
@@ -797,6 +822,43 @@ class ConversationService {
       return res.status(500).json({ error: "Internal server error" });
     }
   }
+
+  async updateMemberRoleByWs({ userId, conversationId, memberId, newRole }) {
+    try {
+      const conversation = await this._mustBeValidConversation(
+        conversationId,
+        true
+      );
+      this._mustBeLeaderOfConversation(
+        conversation,
+        userId,
+        "You are not a leader of the conversation"
+      );
+      const memberObj = this._mustBeMemberOfConversation(
+        conversation,
+        memberId,
+        "User is not a member of the conversation"
+      );
+
+      const memberRole = memberObj.role;
+
+      if (memberRole == "leader") {
+        throw new Error("You can't change the role of the leader");
+      }
+
+      const updatedConversation = await ConversationRepository.updateRole(
+        conversationId,
+        memberId,
+        newRole
+      );
+
+      return updatedConversation;
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  }
+
   async updateConversationName(req, res) {
     try {
       const { conversationId, newName } = req.body;
