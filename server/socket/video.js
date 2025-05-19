@@ -61,7 +61,7 @@ const initVideoCallNamespace = (videoCallNamespace, defaultNamespace) => {
                   );
                 }
               }
-              client.in(roomId).emit("userLeft", { id: userId });
+              client.to(roomId).emit("userLeft", { id: userId });
             }
           }
         }
@@ -72,7 +72,6 @@ const initVideoCallNamespace = (videoCallNamespace, defaultNamespace) => {
       clearInterval(sessionTracker);
     });
 
-    // Connect to a room
     client.on("joinRoom", async ({ conversationId, sdp }) => {
       try {
         const conversation =
