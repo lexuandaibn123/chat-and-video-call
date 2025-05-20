@@ -31,7 +31,7 @@ export const useSocket = ({
 
   // Hàm gửi tin nhắn
   const sendMessage = useCallback(
-    ({ conversationId, data, type, replyToMessageId = null }) => {
+    ({ conversationId, data, type, replyToMessageId = null, tempId }) => {
       if (!socketRef.current || !isConnectedRef.current) {
         setActionError('Socket is not connected. Please try again.');
         return false;
@@ -48,7 +48,7 @@ export const useSocket = ({
         return false;
       }
 
-      const payload = { conversationId, type, data: finalData, replyToMessageId };
+      const payload = { conversationId, type, data: finalData, replyToMessageId, tempId };
       socketRef.current.emit('newMessage', payload);
       return true;
     },
@@ -299,6 +299,7 @@ export const useSocket = ({
             socketRef.current.emit('joinRoom', {roomId});
             joinedRoomsRef.current.add(roomId);
           }
+          console.log('Joined:', roomId);
         });
       }
     });
@@ -401,24 +402,24 @@ export const useSocket = ({
     // Xử lý tin nhắn mới (non-sender clients)
     socketRef.current.on('receiveMessage', (receivedMessage) => {
       console.log('receiveMessage:', receivedMessage);
-      if (receivedMessage.conversationId && receivedMessage.conversationId === activeChatId) {
+      if (receivedMessage.message.conversationId && receivedMessage.message.conversationId === activeChatId) {
         setMessages((prevMessages) => {
           const isDuplicate = prevMessages.some(
-            (msg) => msg.id === receivedMessage._id || msg.id === receivedMessage.tempId
+            (msg) => msg.id === receivedMessage.message._id || msg.id === receivedMessage.tempId
           );
           if (isDuplicate) {
             return prevMessages.map((msg) =>
               msg.id === receivedMessage.tempId
-                ? { ...formatReceivedMessage(receivedMessage, userId), sender: msg.sender }
+                ? { ...formatReceivedMessage(receivedMessage.message, userId), sender: msg.sender }
                 : msg
             );
           }
-          const formattedMessage = formatReceivedMessage(receivedMessage, userId);
+          const formattedMessage = formatReceivedMessage(receivedMessage.message, userId);
           return [...prevMessages, formattedMessage];
         });
       }
       setConversations((prevConvs) =>
-        updateConversationsListLatestMessage(prevConvs, receivedMessage.conversationId, receivedMessage)
+        updateConversationsListLatestMessage(prevConvs, receivedMessage.message.conversationId, receivedMessage.message)
       );
     });
 

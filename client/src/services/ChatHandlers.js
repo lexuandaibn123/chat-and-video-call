@@ -188,6 +188,7 @@ export const useHandlers = ({
         data: newMessageText,
         type: 'text',
         replyToMessageId: null,
+        tempId: tempId
       };
       const sent = sendMessage(messagePayload);
       if (!sent) {
