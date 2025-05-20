@@ -156,7 +156,7 @@ const initDefaultNameSpace = (defaultNamespace) => {
           userId: userInfo.id,
           conversationId,
         });
-        client
+        defaultNamespace
           .in(conversationId)
           .emit("leftConversation", { conversationId, userId: userInfo.id });
       } catch (error) {
@@ -269,7 +269,13 @@ const initDefaultNameSpace = (defaultNamespace) => {
 
     client.on(
       "newMessage",
-      async ({ conversationId, data, type, replyToMessageId = null }) => {
+      async ({
+        conversationId,
+        data,
+        type,
+        replyToMessageId = null,
+        tempId,
+      }) => {
         try {
           if (typeof conversationId !== "string" || conversationId.length < 1)
             throw new Error("Invalid conversationId type");
@@ -298,7 +304,10 @@ const initDefaultNameSpace = (defaultNamespace) => {
             type,
             replyToMessageId,
           });
-          defaultNamespace.in(conversationId).emit("receiveMessage", message);
+          defaultNamespace.in(conversationId).emit("receiveMessage", {
+            message,
+            tempId,
+          });
         } catch (error) {
           console.error(error);
           client.emit("error", error);
