@@ -29,6 +29,8 @@ export const useSocket = ({
   const joinedRoomsRef = useRef(new Set());
   const pendingActionsRef = useRef({}); // Track pending actions for error handling
 
+  console.log("conversations:", conversations);
+
   // Hàm gửi tin nhắn
   const sendMessage = useCallback(
     ({ conversationId, data, type, replyToMessageId = null, tempId }) => {
@@ -473,20 +475,20 @@ export const useSocket = ({
     });
 
     // Xử lý tạo cuộc trò chuyện mới (caller only)
-    socketRef.current.on('createdConversation', (newConversation) => {
-      console.log('createdConversation:', newConversation);
+    socketRef.current.on('newConversation', (newConversation) => {
+      console.log('newConversation:', newConversation);
       setRawConversations((prevRaw) => {
         if (prevRaw.some((conv) => conv._id === newConversation._id)) {
           return prevRaw;
         }
-        return [...prevRaw, newConversation];
+        return [newConversation, ...prevRaw];
       });
       setConversations((prevConvs) => {
         if (prevConvs.some((conv) => conv.id === newConversation._id)) {
-          return prevConvs;
+          return prevConvs; 
         }
         const formattedConversation = processRawRooms([newConversation], userId)[0];
-        return [...prevConvs, formattedConversation];
+        return [formattedConversation, ...prevConvs];
       });
       socketRef.current.emit('joinRoom', { roomId: newConversation._id.toString() });
       joinedRoomsRef.current.add(newConversation._id.toString());
@@ -535,15 +537,57 @@ export const useSocket = ({
       );
     });
 
-    socketRef.current.on('leftConversation', (conversation) => {
-      console.log('leftConversation:', conversation);
-      setRawConversations((prevRaw) =>
-        prevRaw.filter((conv) => conv._id !== conversation._id)
-      );
-      setConversations((prevConvs) =>
-        prevConvs.filter((conv) => conv.id !== conversation._id)
-      );
-      setActiveChat((prev) => (prev && prev.id === conversation._id ? null : prev));
+    socketRef.current.on('leftConversation', (data) => {
+      const { conversationId, userId: leavingUserId } = data;
+      console.log('leftConversation:', data);
+
+      // Kiểm tra nếu user nhận sự kiện là user rời nhóm
+      if (leavingUserId === userId) {
+        // Loại bỏ cuộc hội thoại khỏi danh sách của user rời nhóm
+        setRawConversations((prevRaw) =>
+          prevRaw.filter((conv) => conv._id !== conversationId)
+        );
+        setConversations((prevConvs) =>
+          prevConvs.filter((conv) => conv.id !== conversationId)
+        );
+        setActiveChat((prev) => (prev && prev.id === conversationId ? null : prev));
+      } else {
+        // Cập nhật danh sách thành viên cho các user khác trong nhóm
+        setRawConversations((prevRaw) =>
+          prevRaw.map((conv) =>
+            conv._id === conversationId
+              ? {
+                  ...conv,
+                  members: conv.members.filter(
+                    (member) => member.userId._id !== leavingUserId
+                  ),
+                }
+              : conv
+          )
+        );
+        setConversations((prevConvs) =>
+          prevConvs.map((conv) =>
+            conv.id === conversationId
+              ? {
+                  ...conv,
+                  detailedMembers: conv.detailedMembers.filter(
+                    (member) => member.id !== leavingUserId
+                  ),
+                }
+              : conv
+          )
+        );
+        setActiveChat((prev) =>
+          prev && prev.id === conversationId
+            ? {
+                ...prev,
+                detailedMembers: prev.detailedMembers.filter(
+                  (member) => member.id !== leavingUserId
+                ),
+              }
+            : prev
+        );
+      }
     });
 
     socketRef.current.on('deletedConversationByLeader', (conversation) => {
