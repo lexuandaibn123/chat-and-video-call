@@ -56,7 +56,7 @@ const initDefaultNameSpace = (defaultNamespace) => {
         if (!roomId || roomId.length < 1) throw new Error("Invalid roomId");
         const conversation =
           await ConversationService.verifyConversationAndUserByWs({
-            conversationId: roomId,
+            roomId,
             userId: userInfo.id,
           });
 

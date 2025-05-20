@@ -35,6 +35,8 @@ const ChatSettingsOverlay = ({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const [processedMembers, setProcessedMembers] = useState([]);
+  const [friendSuggestions, setFriendSuggestions] = useState([]);
+  const [highlightIndex, setHighlightIndex] = useState(-1);
 
   // Hàm trợ giúp xử lý ID
   const getProcessedUserId = (userData) => {
@@ -64,7 +66,7 @@ const ChatSettingsOverlay = ({
       await Promise.all(
         Array.from(uniqueIdsToFetch).map(async userId => {
           try {
-            const user = await getUserDetailsApi(userId); // Giả sử có API này
+            const user = await getUserDetailsApi(userId);
             userCache[userId] = {
               _id: userId,
               fullName: user.fullName || 'Unknown User',
@@ -129,13 +131,49 @@ const ChatSettingsOverlay = ({
   const isCurrentUserLeader = currentUserId === leaderId;
   const numberOfLeaders = processedMembers.filter(m => m.role === 'leader' && m.leftAt === null).length;
 
-  const handleSearchInputChange = (e) => {
-    setAddUserInput(e.target.value);
+  const handleSearchInputChange = async (e) => {
+    const term = e.target.value;
+    setAddUserInput(term);
+    setHighlightIndex(-1);
+
+    if (term.trim()) {
+      try {
+        const friends = await getFriendsApi(term);
+        setFriendSuggestions(friends);
+      } catch (error) {
+        console.error("Failed to fetch friend suggestions:", error);
+        setFriendSuggestions([]);
+      }
+    } else {
+      setFriendSuggestions([]);
+    }
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      handleSaveGroupName();
+    if (friendSuggestions.length === 0) {
+      if (e.key === 'Enter') handleSearchSubmit(e);
+      return;
+    }
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setHighlightIndex(idx => idx < friendSuggestions.length - 1 ? idx + 1 : idx);
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setHighlightIndex(idx => idx > 0 ? idx - 1 : idx);
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (highlightIndex >= 0) {
+          handleSelectSuggestion(friendSuggestions[highlightIndex]);
+        } else {
+          handleSearchSubmit(e);
+        }
+        break;
+      default:
+        break;
     }
   };
 
@@ -146,7 +184,16 @@ const ChatSettingsOverlay = ({
     if (trimmedInput) {
       onAddUserSearch(trimmedInput);
       setSelectedUserToAdd(null);
+      setFriendSuggestions([]);
+      setHighlightIndex(-1);
     }
+  };
+
+  const handleSelectSuggestion = (user) => {
+    setSelectedUserToAdd(user);
+    setAddUserInput('');
+    setFriendSuggestions([]);
+    setHighlightIndex(-1);
   };
 
   const handleAddUserClick = () => {
@@ -169,26 +216,25 @@ const ChatSettingsOverlay = ({
 
   const handleAvatarUpdate = async (url) => {
     if (!url || url.length < 1) {
-        setError("Vui lòng tải lên một ảnh hợp lệ.");
-        setUploading(false);
-        return;
+      setError("Vui lòng tải lên một ảnh hợp lệ.");
+      setUploading(false);
+      return;
     }
     setError("");
     try {
-        setAvatarUrl(url);
-        const success = await updateConversationAvatar({ conversationId: group.id, newAvatar: url });
-        if (!success) {
+      setAvatarUrl(url);
+      const success = await updateConversationAvatar({ conversationId: group.id, newAvatar: url });
+      if (!success) {
         throw new Error("Failed to update avatar via WebSocket.");
-        }
-        alert("Cập nhật ảnh đại diện nhóm thành công!");
+      }
+      alert("Cập nhật ảnh đại diện nhóm thành công!");
     } catch (err) {
-        setError(`Có lỗi xảy ra: ${err.message}`);
-        // Hoàn nguyên nếu có lỗi
-        setAvatarUrl(group.avatar || defaultGroupAvatar);
+      setError(`Có lỗi xảy ra: ${err.message}`);
+      setAvatarUrl(group.avatar || defaultGroupAvatar);
     } finally {
-        setUploading(false);
+      setUploading(false);
     }
-    };
+  };
 
   // Lọc thành viên hoạt động để hiển thị
   const activeMembers = processedMembers.filter(m => m.leftAt === null);
@@ -353,11 +399,38 @@ const ChatSettingsOverlay = ({
           <div className="add-user-section">
             <h4>Add Member</h4>
             <form className="add-user-search-form" onSubmit={handleSearchSubmit}>
-              <input type="text" placeholder="Search user to add..." value={addUserInput} onChange={handleSearchInputChange} disabled={isPerformingAction} />
+              <input
+                type="text"
+                placeholder="Search user to add..."
+                value={addUserInput}
+                onChange={handleSearchInputChange}
+                onKeyDown={handleKeyDown}
+                disabled={isPerformingAction}
+              />
               <button type="submit" disabled={isPerformingAction || !addUserInput.trim()}>
                 {isPerformingAction && !actionError ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-search"></i>}
               </button>
             </form>
+            {friendSuggestions.length > 0 && (
+              <div className="suggestions-dropdown">
+                {friendSuggestions.map((friend, idx) => (
+                  <div
+                    key={friend._id}
+                    className={`suggestion-item ${idx === highlightIndex ? 'highlighted' : ''}`}
+                    onClick={() => handleSelectSuggestion(friend)}
+                  >
+                    <div className="name-avatar">
+                      <img
+                        src={friend.avatar || defaultUserAvatar}
+                        alt={friend.fullName || friend.email || friend._id}
+                        className="avatar tiny"
+                      />
+                      <span>{friend.fullName || friend.email || friend._id}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
             {searchResults && searchResults.length > 0 && (
               <div className="search-results-list">
                 {searchResults.map(user => (
