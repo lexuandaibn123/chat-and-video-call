@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import defaultUserAvatar from '../../assets/images/avatar_male.jpg';
 import defaultGroupAvatar from '../../assets/images/group-chat.png';
 import { UploadButton } from '../../utils/uploadthing';
-import { getUserDetailsApi } from "../../api/users";
+import { getUserDetailsApi, getFriendsApi } from "../../api/users";
 
 const ChatSettingsOverlay = ({
   group,

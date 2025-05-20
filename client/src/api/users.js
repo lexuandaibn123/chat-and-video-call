@@ -110,3 +110,39 @@ export const getUserDetailsApi = async (userId) => {
         throw error;
     }
 };
+
+// Lấy danh sách bạn bè của người dùng hiện tại
+export const getFriendsApi = async (name = '') => {
+    const url = `${API_BASE_URL}/user/friends${name ? `?name=${encodeURIComponent(name)}` : ''}`;
+    console.log("Calling getFriendsApi with URL:", url);
+    try {
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+        });
+        const result = await handleApiResponse(response);
+        return Array.isArray(result.data) ? result.data : [];
+    } catch (error) {
+        console.error(`Error fetching friends with name "${name}":`, error);
+        throw error;
+    }
+};
+
+// Lấy danh sách bạn bè tiềm năng của người dùng hiện tại
+export const getPotentialFriendsApi = async (name = '') => {
+    const url = `${API_BASE_URL}/user/potential-friends${name ? `?name=${encodeURIComponent(name)}` : ''}`;
+    console.log("Calling getPotentialFriendsApi with URL:", url);
+    try {
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+        });
+        const result = await handleApiResponse(response);
+        return Array.isArray(result.data) ? result.data : [];
+    } catch (error) {
+        console.error(`Error fetching potential friends with name "${name}":`, error);
+        throw error;
+    }
+};

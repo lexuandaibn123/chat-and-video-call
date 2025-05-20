@@ -70,6 +70,7 @@ $selected-bg-color: #e0e0e0;
   display: flex;
   align-items: center;
   gap: 8px;
+  position: relative; // cần cho dropdown
 
   input {
     flex: 1;
@@ -92,6 +93,56 @@ $selected-bg-color: #e0e0e0;
 
     &:hover {
       background: color.adjust($primary-color, $lightness: -10%);
+    }
+  }
+
+  // ——— BỔ SUNG cho friend suggestions dropdown ———
+  .suggestions-dropdown {
+    position: absolute;
+    top: calc(100% + #{$spacing-xs});
+    left: 0;
+    right: 0;
+    background: $secondary-color;
+    border: 1px solid $input-border-color;
+    border-radius: $border-radius-sm;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    max-height: 180px;       // giảm chiều cao
+    overflow-y: auto;
+    z-index: $zindex-popup + 1;
+
+    .suggestion-item {
+      padding: 4px 8px;      // thu gọn padding
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+
+      &:hover {
+        background: $hover-bg-color;
+      }
+
+      .name-avatar {
+        display: flex;
+        align-items: center;
+        gap: $spacing-xs;
+
+        .avatar.tiny {
+          width: 18px !important;  // avatar nhỏ hơn
+          height: 18px !important;
+          border-radius: 50%;
+          object-fit: cover;
+          margin-right: $spacing-xs;
+          border: 1px solid $input-border-color;
+        }
+
+        span {
+          font-size: 0.85rem;     // font nhỏ hơn
+          color: $text-color;
+        }
+      }
+
+      &.highlighted {
+        background: $hover-bg-color;
+      }
     }
   }
 }
@@ -180,9 +231,9 @@ $selected-bg-color: #e0e0e0;
       }
 
       .avatar.tiny {
-        width: 24px; // Even smaller avatar in search results
+        width: 24px; // giữ lại kích thước cũ bạn muốn cho search-results
         height: 24px;
-        margin-right: $spacing-sm; // Space between avatar and name
+        margin-right: $spacing-sm;
       }
     }
   }
