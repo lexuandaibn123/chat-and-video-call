@@ -107,7 +107,7 @@ const ChatWindow = ({
       socket.off('typing', handleTyping);
       socket.off('stopTyping', handleStopTyping);
       socket.emit('leaveConversationRoom', { conversationId: activeContact.id });
-      setTypingUsers([]);
+      // setTypingUsers([]);
     };
   }, [socket, activeContact?.id, userInfo?.id, isVideoCallOpen, callInvite, isUserInGroup]);
 

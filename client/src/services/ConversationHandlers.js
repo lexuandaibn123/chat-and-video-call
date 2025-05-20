@@ -91,7 +91,7 @@ export const useConversationHandlers = ({
       }
       performSettingsAction(
         () => createConversation({ members, name }),
-        'Create conversation'
+        'Create conversation',
         // No optimistic update; handled by 'conversationCreated' event
       );
     },

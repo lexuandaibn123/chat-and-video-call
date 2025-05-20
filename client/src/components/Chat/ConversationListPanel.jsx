@@ -52,7 +52,7 @@ const ConversationListPanel = ({ userInfo, groups, friends, onSearchChange, onIt
   const handleSelectUser = (user) => {
     setSelectedUsers((prev) =>
       prev.some((u) => u._id === user._id)
-        ? prev.filter((u) => u._id !== u._id)
+        ? prev.filter((u) => u._id !== user._id)
         : [...prev, user]
     );
   };

@@ -294,8 +294,9 @@ export const useSocket = ({
       if (conversations?.length) {
         conversations.forEach((conv) => {
           const roomId = conv.id;
+          console.log('Joining room:', roomId);
           if (!joinedRoomsRef.current.has(roomId)) {
-            socketRef.current.emit('joinRoom', roomId);
+            socketRef.current.emit('joinRoom', {roomId});
             joinedRoomsRef.current.add(roomId);
           }
         });
@@ -486,7 +487,7 @@ export const useSocket = ({
         const formattedConversation = processRawRooms([newConversation], userId)[0];
         return [...prevConvs, formattedConversation];
       });
-      socketRef.current.emit('joinRoom', newConversation._id.toString());
+      socketRef.current.emit('joinRoom', { roomId: newConversation._id.toString() });
       joinedRoomsRef.current.add(newConversation._id.toString());
     });
 
@@ -657,8 +658,9 @@ export const useSocket = ({
     if (socketRef.current && isConnectedRef.current && conversations?.length) {
       conversations.forEach((conv) => {
         const roomId = conv.id;
+        console.log('Joining room:', roomId);
         if (!joinedRoomsRef.current.has(roomId)) {
-          socketRef.current.emit('joinRoom', roomId);
+          socketRef.current.emit('joinRoom', {roomId});
           joinedRoomsRef.current.add(roomId);
         }
       });
