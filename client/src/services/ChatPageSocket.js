@@ -294,17 +294,16 @@ export const useSocket = ({
       console.log('Socket.IO connected:', socketRef.current.id);
       isConnectedRef.current = true;
       socketRef.current.emit('setup', { page: 1, limit: 30 });
-      // if (conversations?.length) {
-      //   conversations.forEach((conv) => {
-      //     const roomId = conv.id;
-      //     console.log('Joining room:', roomId);
-      //     if (!joinedRoomsRef.current.has(roomId)) {
-      //       socketRef.current.emit('joinRoom', {roomId});
-      //       joinedRoomsRef.current.add(roomId);
-      //     }
-      //     console.log('Joined:', roomId);
-      //   });
-      // }
+      if (conversations?.length) {
+        conversations.forEach((conv) => {
+          const roomId = conv.id;
+          if (!joinedRoomsRef.current.has(roomId)) {
+            socketRef.current.emit('joinRoom', {roomId});
+            joinedRoomsRef.current.add(roomId);
+          }
+          // console.log('Joined:', roomId);
+        });
+      }
     });
 
     socketRef.current.on('connected', () => {
@@ -594,27 +593,27 @@ export const useSocket = ({
               : conv
           )
         );
-        setConversations((prevConvs) =>
-          prevConvs.map((conv) =>
+        setConversations((prevConvs) => [
+          ...prevConvs.map((conv) =>
             conv.id === conversationId
               ? {
                   ...conv,
                   members: conv.members && Array.isArray(conv.members)
-                    ? conv.members.filter((member) => !isSameUser(member, leavingUserId))
+                    ? [...conv.members.filter((member) => !isSameUser(member, leavingUserId))]
                     : conv.members,
                   detailedMembers: conv.detailedMembers && Array.isArray(conv.detailedMembers)
-                    ? conv.detailedMembers.filter((member) => member.id !== leavingUserId)
+                    ? [...conv.detailedMembers.filter((member) => !isSameUser(member, leavingUserId))]
                     : conv.detailedMembers,
                 }
               : conv
-          )
-        );
+          ),
+        ]);
         setActiveChat((prev) =>
           prev && prev.id === conversationId
             ? {
                 ...prev,
                 detailedMembers: prev.detailedMembers && Array.isArray(prev.detailedMembers)
-                  ? prev.detailedMembers.filter((member) => member.id !== leavingUserId)
+                  ? [...prev.detailedMembers.filter((member) => !isSameUser(member, leavingUserId))]
                   : prev.detailedMembers,
               }
             : prev
