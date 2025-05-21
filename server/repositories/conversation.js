@@ -102,7 +102,8 @@ class ConversationRepository {
     }
 
     const member = conversation.members.find(
-      (member) => member.id.toString() === userId.toString() && !member.leftAt
+      (member) =>
+        member.id._id.toString() === userId.toString() && !member.leftAt
     );
     if (!member) {
       throw new Error("Member not found or has been deleted");
