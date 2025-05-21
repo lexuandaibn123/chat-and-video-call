@@ -5,6 +5,7 @@ import {
   updateConversationsListLatestMessage, 
   processRawRooms,
 } from './chatService';
+import { getUserDetailsApi } from "../api/users";
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL;
 
@@ -402,26 +403,46 @@ export const useSocket = ({
     });
 
     // Xử lý tin nhắn mới (non-sender clients)
-    socketRef.current.on('receiveMessage', (receivedMessage) => {
+    socketRef.current.on('receiveMessage', async (receivedMessage) => {
       console.log('receiveMessage:', receivedMessage);
-      if (receivedMessage.message.conversationId && receivedMessage.message.conversationId === activeChatId) {
+      const msg = receivedMessage.message;
+      if (msg.conversationId && msg.conversationId === activeChatId) {
+        let formattedMessage = formatReceivedMessage(msg, userId);
+
+        // Nếu thiếu thông tin sender, fetch thêm bằng getUserDetailsApi
+        if (
+          (!formattedMessage.senderName || !formattedMessage.senderAvatar) &&
+          msg.senderId && typeof msg.senderId === 'string'
+        ) {
+          try {
+            const user = await getUserDetailsApi(msg.senderId);
+            formattedMessage = {
+              ...formattedMessage,
+              senderName: user.fullName || user.email || 'Unknown User',
+              senderAvatar: user.avatar || null,
+              sender: user,
+            };
+          } catch (err) {
+            // fallback giữ nguyên
+          }
+        }
+
         setMessages((prevMessages) => {
           const isDuplicate = prevMessages.some(
-            (msg) => msg.id === receivedMessage.message._id || msg.id === receivedMessage.tempId
+            (msgItem) => msgItem.id === msg._id || msgItem.id === receivedMessage.tempId
           );
           if (isDuplicate) {
-            return prevMessages.map((msg) =>
-              msg.id === receivedMessage.tempId
-                ? { ...formatReceivedMessage(receivedMessage.message, userId), sender: msg.sender }
-                : msg
+            return prevMessages.map((msgItem) =>
+              msgItem.id === receivedMessage.tempId
+                ? { ...formattedMessage, sender: msgItem.sender }
+                : msgItem
             );
           }
-          const formattedMessage = formatReceivedMessage(receivedMessage.message, userId);
           return [...prevMessages, formattedMessage];
         });
       }
       setConversations((prevConvs) =>
-        updateConversationsListLatestMessage(prevConvs, receivedMessage.message.conversationId, receivedMessage.message)
+        updateConversationsListLatestMessage(prevConvs, msg.conversationId, msg)
       );
     });
 
