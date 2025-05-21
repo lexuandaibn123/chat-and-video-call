@@ -21,10 +21,10 @@ const ChatSettingsOverlay = ({
   onDeleteConversationMember,
   onUpdateGroupName,
   updateConversationAvatar
-}) => {
-  if (!group || !group.isGroup || !group.members) {
-    if (group?.isGroup) console.warn("ChatSettingsOverlay received group data with missing members.");
-    return null;
+  }) => {
+    if (!group || !group.isGroup || !group.members) {
+      if (group?.isGroup) console.warn("ChatSettingsOverlay received group data with missing members.");
+      return null;
   }
 
   const [addUserInput, setAddUserInput] = useState('');
@@ -202,7 +202,7 @@ const ChatSettingsOverlay = ({
       const conversationId = group.id;
       setAddUserInput('');
       setSelectedUserToAdd(null);
-      onAddUserConfirm(conversationId, userIdToAdd);
+      onAddUserConfirm(conversationId, userIdToAdd, selectedUserToAdd);
     }
   };
 

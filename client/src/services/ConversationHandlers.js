@@ -426,7 +426,7 @@ export const useConversationHandlers = ({
 
   // --- Handler for confirming adding a user ---
   const handleAddUserConfirm = useCallback(
-    (conversationId, userIdToAdd) => {
+    (conversationId, userIdToAdd, selectedUserObj = null) => {
       const currentUserId = currentUserIdRef.current;
       if (
         !activeChat ||
@@ -437,9 +437,12 @@ export const useConversationHandlers = ({
         setActionError('Invalid request to add user.');
         return;
       }
-      const userToAdd = addUserSearchResults.find(
+      let userToAdd = addUserSearchResults.find(
         (user) => String(user._id).trim() === userIdToAdd
       );
+      if (!userToAdd && selectedUserObj && String(selectedUserObj._id) === userIdToAdd) {
+        userToAdd = selectedUserObj;
+      }
       if (!userToAdd) {
         setActionError('User not found in search results.');
         return;
