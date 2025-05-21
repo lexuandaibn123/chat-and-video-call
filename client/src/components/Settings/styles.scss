@@ -589,8 +589,8 @@
     .account-avatar {
       margin-right: 0;
       margin-bottom: $spacing-md;
-      width: 80px;
-      height: 80px;
+      width: 150px;
+      height: 150px;
       margin-left: auto;
       margin-right: auto;
     }
@@ -600,9 +600,40 @@
     flex-direction: column;
     align-items: center;
 
-    .avatar-preview {
+    .avatar-wrapper {
+      position: relative;
       width: 150px;
       height: 150px;
+      margin-bottom: $spacing-md;
+
+      .avatar-preview {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+      }
+
+      .avatar-loading-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        z-index: 1;
+
+        .fa-spinner {
+          font-size: 24px;
+          color: #fff;
+          animation: spin 1s linear infinite;
+        }
+      }
     }
 
     .avatar-controls {

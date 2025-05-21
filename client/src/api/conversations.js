@@ -356,6 +356,29 @@ export const deleteMessageApi = async ({ messageId }) => { // Tên hàm giữ ng
   }
 };
 
+export const updateConversationAvatar = async (conversationId, newAvatar) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/conversation/update-conversation-avatar`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        conversationId,
+        newAvatar,
+      }),
+      credentials: 'include',
+    });
+
+    const data = await handleApiResponse(response);
+    return data;
+  } catch (error) {
+    console.error('Failed to update conversation avatar:', error);
+    throw error;
+  }
+};
+
+
 // NOTE: getLastMessagesApi KHÔNG CÓ trong screenshot API mới.
 // Chúng ta đã comment/loại bỏ chức năng này tạm thời trong ChatPage.jsx ở các bước trước.
 // Nếu bạn cần lại, bạn sẽ phải thêm endpoint mới vào server hoặc tìm endpoint tương đương.

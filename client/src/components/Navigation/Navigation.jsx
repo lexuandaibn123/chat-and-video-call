@@ -10,7 +10,7 @@ const Navigation = (userInfo) => {
   const [activeLink, setActiveLink] = useState('');
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const currentUser = {
-    avatar: avatarPlaceholder
+    avatar: userInfo.userInfo.avatar || avatarPlaceholder
   };
 
   console.log("userInfo: ", userInfo);

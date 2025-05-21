@@ -50,6 +50,15 @@ class ConversationService {
     });
   }
 
+  _isFormerMemberOfConversation(conversation, userId) {
+    return conversation.members.find((member) => {
+      if (member.id == null || !member.leftAt) return false;
+      return typeof member.id == "object"
+        ? member.id._id.toString() == userId
+        : member.id.toString() == userId;
+    });
+  }
+
   _mustBeMemberOfConversation(
     conversation,
     userId,
@@ -184,6 +193,64 @@ class ConversationService {
     }
   }
 
+  async createConversationByWs({ userId, members, name }) {
+    try {
+      const creatorId = userId;
+
+      const memberIds = [...members];
+
+      if (!members.includes(creatorId)) {
+        memberIds.push(creatorId);
+      }
+
+      const users = await UserRepository.findByIds(memberIds);
+      if (users.length !== memberIds.length) {
+        throw new Error("One or more users do not exist");
+      }
+
+      if (memberIds.length < 2) {
+        throw new Error("Conversation must have at least 2 members.");
+      }
+
+      if (memberIds.length == 2) {
+        const existingConversation =
+          await ConversationRepository.findConversationBetweenUsers(
+            memberIds[0],
+            memberIds[1]
+          );
+
+        if (existingConversation) {
+          throw new Error(
+            "Conversation already exists between these two users."
+          );
+        }
+      }
+
+      const isGroup = memberIds.length > 2;
+
+      const membersInfo = memberIds.map((userId) => {
+        const role = isGroup && userId == creatorId ? "leader" : "member";
+        return {
+          id: userId,
+          role,
+          joinedAt: new Date(),
+          leftAt: null,
+          latestDeletedAt: null,
+        };
+      });
+
+      const conversation = await ConversationRepository.create({
+        isGroup,
+        members: membersInfo,
+        name: name ?? "",
+      });
+      return conversation;
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  }
+
   async fetchConversations(req, res) {
     try {
       const { page = 1, limit = 10 } = req.query;
@@ -216,6 +283,7 @@ class ConversationService {
                 );
 
                 if (
+                  conversationHandle.latestMessage &&
                   typeof conversationHandle.latestMessage === "object" &&
                   conversationHandle.latestMessage.datetime_created > leftAt
                 ) {
@@ -302,11 +370,15 @@ class ConversationService {
     try {
       const { conversationId, newMemberId, role = "member" } = req.body;
 
+      const userInfo = req.session.userInfo;
+
       try {
         const conversation = await this._mustBeValidConversation(
           conversationId,
           true
         );
+
+        this._mustBeMemberOfConversation(conversation, userInfo.id);
 
         const isAlreadyMember = this._isMemberOfConversation(
           conversation,
@@ -317,23 +389,38 @@ class ConversationService {
             error: "User is already a member of the conversation",
           });
         }
+
         const member = await UserRepository.findById(newMemberId);
         if (!member) {
           return res.status(404).json({ error: "User not found" });
         }
 
-        const memberObj = {
-          id: newMemberId,
-          role,
-          joinedAt: new Date(),
-          leftAt: null,
-          latestDeletedAt: null,
-        };
-
-        const updatedConversation = await ConversationRepository.addMember(
-          conversationId,
-          memberObj
+        const isFormerMember = this._isFormerMemberOfConversation(
+          conversation,
+          newMemberId
         );
+
+        let updatedConversation;
+
+        if (isFormerMember) {
+          updatedConversation = await ConversationRepository.reAddFormerMember(
+            conversationId,
+            newMemberId
+          );
+        } else {
+          const memberObj = {
+            id: newMemberId,
+            role,
+            joinedAt: new Date(),
+            leftAt: null,
+            latestDeletedAt: null,
+          };
+
+          updatedConversation = await ConversationRepository.addMember(
+            conversationId,
+            memberObj
+          );
+        }
 
         if (!updatedConversation) {
           return res.status(400).json({ error: "Failed to add new member" });
@@ -353,6 +440,71 @@ class ConversationService {
     } catch (error) {
       console.error(error);
       return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+
+  async addNewMemberByWs({
+    userId,
+    conversationId,
+    newMemberId,
+    role = "member",
+  }) {
+    try {
+      const conversation = await this._mustBeValidConversation(
+        conversationId,
+        true
+      );
+
+      this._mustBeMemberOfConversation(conversation, userId);
+
+      const isAlreadyMember = this._isMemberOfConversation(
+        conversation,
+        newMemberId
+      );
+      if (isAlreadyMember) {
+        throw new Error("User is already a member of the conversation");
+      }
+      const member = await UserRepository.findById(newMemberId);
+      if (!member) {
+        throw new Error("User not found");
+      }
+      const isFormerMember = this._isFormerMemberOfConversation(
+        conversation,
+        newMemberId
+      );
+
+      let updatedConversation;
+
+      if (isFormerMember) {
+        updatedConversation = await ConversationRepository.reAddFormerMember(
+          conversationId,
+          newMemberId
+        );
+      } else {
+        const memberObj = {
+          id: newMemberId,
+          role,
+          joinedAt: new Date(),
+          leftAt: null,
+          latestDeletedAt: null,
+        };
+
+        updatedConversation = await ConversationRepository.addMember(
+          conversationId,
+          memberObj
+        );
+      }
+
+      if (!updatedConversation) {
+        throw new Error("Failed to add new member");
+      }
+
+      this._filterMembersLeft(updatedConversation);
+
+      return updatedConversation;
+    } catch (error) {
+      console.error(error);
+      throw error;
     }
   }
 
@@ -398,6 +550,38 @@ class ConversationService {
     } catch (error) {
       console.error(error);
       return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+
+  async removeMemberByWs({ userId, conversationId, memberId }) {
+    try {
+      const conversation = await this._mustBeValidConversation(
+        conversationId,
+        true
+      );
+
+      this._mustBeMemberOfConversation(
+        conversation,
+        memberId,
+        "User is not a member of the conversation"
+      );
+
+      this._mustBeLeaderOfConversation(
+        conversation,
+        userId,
+        "You must be a leader of the conversation to remove a member"
+      );
+
+      const updatedConversation =
+        await ConversationRepository.leaveConversation(
+          conversationId,
+          memberId
+        );
+
+      return updatedConversation;
+    } catch (error) {
+      console.error(error);
+      throw error;
     }
   }
 
@@ -458,6 +642,49 @@ class ConversationService {
     } catch (error) {
       console.error(error);
       return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+
+  async leaveConversationByWs({ userId, conversationId }) {
+    try {
+      const conversation = await this._mustBeValidConversation(
+        conversationId,
+        true
+      );
+
+      const userObj = this._mustBeMemberOfConversation(
+        conversation,
+        userId,
+        "You are not a member of the conversation"
+      );
+
+      const numberOfLeader = conversation.members.filter(
+        (member) => member.role == "leader" && member.leftAt == null
+      ).length;
+
+      const userRole = userObj.role;
+
+      if (userRole == "leader" && numberOfLeader <= 1) {
+        const firstMember = conversation.members.find(
+          (member) => member.id.toString() != userId && member.leftAt == null
+        );
+        if (!firstMember) {
+          throw new Error(
+            "You are the last member, you can't leave the conversation"
+          );
+        }
+        await ConversationRepository.updateRole(
+          conversationId,
+          firstMember.id,
+          "leader"
+        );
+      }
+      await ConversationRepository.leaveConversation(conversationId, userId);
+
+      return "Left conversation successfully";
+    } catch (error) {
+      console.error(error);
+      throw error;
     }
   }
 
@@ -533,6 +760,31 @@ class ConversationService {
       return res.status(500).json({ error: "Internal server error" });
     }
   }
+
+  async deleteConversationByLeaderAndWs({ userId, conversationId }) {
+    try {
+      const conversation = await this._mustBeValidConversation(
+        conversationId,
+        true
+      );
+
+      this._mustBeLeaderOfConversation(
+        conversation,
+        userId,
+        "You are not a leader of the conversation"
+      );
+
+      await ConversationRepository.updateById(conversationId, {
+        isDeleted: true,
+      });
+
+      return "Deleted conversation successfully";
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  }
+
   async updateMemberRole(req, res) {
     try {
       const { conversationId, memberId, newRole } = req.body;
@@ -583,6 +835,43 @@ class ConversationService {
       return res.status(500).json({ error: "Internal server error" });
     }
   }
+
+  async updateMemberRoleByWs({ userId, conversationId, memberId, newRole }) {
+    try {
+      const conversation = await this._mustBeValidConversation(
+        conversationId,
+        true
+      );
+      this._mustBeLeaderOfConversation(
+        conversation,
+        userId,
+        "You are not a leader of the conversation"
+      );
+      const memberObj = this._mustBeMemberOfConversation(
+        conversation,
+        memberId,
+        "User is not a member of the conversation"
+      );
+
+      const memberRole = memberObj.role;
+
+      if (memberRole == "leader") {
+        throw new Error("You can't change the role of the leader");
+      }
+
+      const updatedConversation = await ConversationRepository.updateRole(
+        conversationId,
+        memberId,
+        newRole
+      );
+
+      return updatedConversation;
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  }
+
   async updateConversationName(req, res) {
     try {
       const { conversationId, newName } = req.body;
@@ -619,6 +908,91 @@ class ConversationService {
     } catch (error) {
       console.error(error);
       return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+
+  async updateConversationNameByWs({ userId, conversationId, newName }) {
+    try {
+      const conversation = await this._mustBeValidConversation(
+        conversationId,
+        true
+      );
+
+      this._mustBeMemberOfConversation(
+        conversation,
+        userId,
+        "You are not a member of the conversation"
+      );
+      const updatedConversation = await ConversationRepository.updateById(
+        conversationId,
+        {
+          name: newName,
+        }
+      );
+
+      return updatedConversation;
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  }
+
+  async updateConversationAvatar(req, res) {
+    try {
+      const { conversationId, newAvatar } = req.body;
+      const userInfo = req.session.userInfo;
+      try {
+        const conversation = await this._mustBeValidConversation(
+          conversationId,
+          true
+        );
+        this._mustBeMemberOfConversation(
+          conversation,
+          userInfo.id,
+          "You are not a member of the conversation"
+        );
+        const updatedConversation = await ConversationRepository.updateById(
+          conversationId,
+          {
+            avatar: newAvatar,
+          }
+        );
+        return res.status(200).json({
+          success: true,
+          message: "Updated conversation avatar successfully",
+          conversation: updatedConversation,
+        });
+      } catch (error) {
+        console.error(error);
+        return res.status(400).json({ error: error.message });
+      }
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+
+  async updateConversationAvatarByWs({ userId, conversationId, newAvatar }) {
+    try {
+      const conversation = await this._mustBeValidConversation(
+        conversationId,
+        true
+      );
+      this._mustBeMemberOfConversation(
+        conversation,
+        userId,
+        "You are not a member of the conversation"
+      );
+      const updatedConversation = await ConversationRepository.updateById(
+        conversationId,
+        {
+          avatar: newAvatar,
+        }
+      );
+      return updatedConversation;
+    } catch (error) {
+      console.error(error);
+      throw error;
     }
   }
 
@@ -748,7 +1122,11 @@ class ConversationService {
 
       if (Array.isArray(data)) {
         const isValid = data.every((item) => {
-          return typeof item === "object" && item.type == "image" && item.data.length > 0;
+          return (
+            typeof item === "object" &&
+            item.type == "image" &&
+            item.data.length > 0
+          );
         });
         if (!isValid || data.length < 1) {
           console.error("Invalid data type");

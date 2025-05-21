@@ -1,14 +1,20 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { avtUpdate } from "../../api/setting";
 import { UploadButton } from '../../utils/uploadthing';
+import { toast } from 'react-toastify';
 
 const AvatarForm = () => {
-  const [avatarUrl, setAvatarUrl] = useState("/placeholder.svg?height=80&width=80");
+  const [avatarUrl, setAvatarUrl] = useState("");
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const [uploadedUrl, setUploadedUrl] = useState(null);
-  const [fileName, setFileName] = useState(""); // State for file name
-  const [fileSize, setFileSize] = useState(""); // State for file size
+  const [fileName, setFileName] = useState("");
+  const [fileSize, setFileSize] = useState("");
+
+  useEffect(() => {
+    // Simulate fetching initial avatar (replace with actual API call if needed)
+    // For now, it starts with defaultUserAvatar
+  }, []);
 
   const handleSave = async () => {
     if (!uploadedUrl) {
@@ -16,15 +22,15 @@ const AvatarForm = () => {
       return;
     }
 
-    setUploading(true);
     setError("");
     console.log("avatarUrl: ", avatarUrl);
 
     try {
       await avtUpdate(uploadedUrl);
-      alert("Cập nhật ảnh đại diện thành công!");
+      toast.success("Cập nhật ảnh đại diện thành công!");
     } catch (err) {
       setError(`Có lỗi xảy ra: ${err.message}`);
+      toast.error(`Có lỗi xảy ra: ${err.message}`);
     } finally {
       setUploading(false);
     }
@@ -35,10 +41,17 @@ const AvatarForm = () => {
       <h4>Đổi ảnh đại diện</h4>
 
       <div className="avatar-upload">
-        <div
-          className="avatar-preview"
-          style={{ backgroundImage: `url(${avatarUrl})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}
-        ></div>
+        <div className="avatar-wrapper">
+          <div
+            className="avatar-preview"
+            style={{ backgroundImage: `url(${avatarUrl})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}
+          ></div>
+          {uploading && (
+            <div className="avatar-loading-overlay">
+              <i className="fas fa-spinner fa-spin" style={{ fontSize: '24px', color: '#fff' }}></i>
+            </div>
+          )}
+        </div>
 
         <div className="avatar-controls">
           <p className="upload-instruction">Tải lên ảnh đại diện mới của bạn</p>
@@ -46,55 +59,67 @@ const AvatarForm = () => {
           <UploadButton
             endpoint="avatarUploader"
             accept="image/*"
-            content={{ button: "Chọn ảnh" }}
+            content={{ button: <i className="fas fa-camera" title="Update Avatar"></i> }}
             appearance={{
               button: {
-                padding: "8px 16px",
+                padding: "8px",
                 background: "#0056b3",
                 color: "white",
-                borderRadius: "4px",
+                borderRadius: "50%",
                 cursor: "pointer",
-                margin: "10px"
-              },
-              container: {
-                display: "flex",
+                margin: "0 0 2px 0",
+                fontSize: "16px", 
+                width: "36px",
+                height: "36px",
+                display: "inline-flex",
                 alignItems: "center",
                 justifyContent: "center",
               },
+              container: {
+                display: "inline-block",
+                textAlign: "center",
+                marginBottom: "5px"
+              },
+            }}
+            onBeforeUploadBegin={(files) => {
+              setUploading(true);
+              const previewUrl = URL.createObjectURL(files[0]);
+              setAvatarUrl(previewUrl);
+              return files;
             }}
             onClientUploadComplete={(res) => {
               if (res && res[0]) {
                 const fileUrl = res[0].ufsUrl;
                 const sizeInBytes = res[0].size;
-                let fileSize, sizeUnit;
+                let fileSizeValue, sizeUnit;
 
                 if (sizeInBytes / (1024 * 1024) < 0.1) {
-                  fileSize = Math.round(sizeInBytes / 1024); // Size in kB
+                  fileSizeValue = Math.round(sizeInBytes / 1024);
                   sizeUnit = "kB";
                 } else {
-                  fileSize = (sizeInBytes / (1024 * 1024)).toFixed(2); // Size in MB with 2 decimals
+                  fileSizeValue = (sizeInBytes / (1024 * 1024)).toFixed(2);
                   sizeUnit = "MB";
                 }
 
-                const name = res[0].name || "Uploaded Image"; // Fallback if name is not provided
+                const name = res[0].name || "Uploaded Image";
                 setUploadedUrl(fileUrl);
                 setAvatarUrl(fileUrl);
-                setFileName(name); // Store file name
-                setFileSize(`${fileSize} ${sizeUnit}`); // Store file size with unit
-                alert(`Image (${fileSize} ${sizeUnit}) uploaded successfully!`);
+                setFileName(name);
+                setFileSize(`${fileSizeValue} ${sizeUnit}`);
+                toast.success(`Image (${name}, ${fileSizeValue} ${sizeUnit}) uploaded successfully!`);
               }
+
+              setUploading(false);
             }}
             onUploadError={(error) => {
               setError(`Lỗi tải lên: ${error.message}`);
+              toast.error(`Lỗi tải lên: ${error.message}`);
+              setUploading(false);
             }}
             onUploadProgress={(progress) => {
               console.log(`Upload progress: ${progress}%`);
             }}
-            onBeforeUploadBegin={(files) => {
-              const previewUrl = URL.createObjectURL(files[0]);
-              setAvatarUrl(previewUrl);
-              return files;
-            }}
+            disabled={uploading}
           />
 
           <div className="file-requirements">

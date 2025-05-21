@@ -46,6 +46,7 @@ const initVideoCallNamespace = (videoCallNamespace, defaultNamespace) => {
                 roomId,
                 username: session.userInfo.fullName,
                 email: session.userInfo.email,
+                avatar: session.userInfo.avatar,
               });
             } else {
               for (const [consumerId, consumerPeer] of consumers) {
@@ -60,7 +61,7 @@ const initVideoCallNamespace = (videoCallNamespace, defaultNamespace) => {
                   );
                 }
               }
-              client.in(roomId).emit("userLeft", { id: userId });
+              client.to(roomId).emit("userLeft", { id: userId });
             }
           }
         }
@@ -71,7 +72,6 @@ const initVideoCallNamespace = (videoCallNamespace, defaultNamespace) => {
       clearInterval(sessionTracker);
     });
 
-    // Connect to a room
     client.on("joinRoom", async ({ conversationId, sdp }) => {
       try {
         const conversation =
@@ -96,6 +96,9 @@ const initVideoCallNamespace = (videoCallNamespace, defaultNamespace) => {
           roomId,
           username: session.userInfo.fullName,
           email: session.userInfo.email,
+          avatar: session.userInfo.avatar,
+          audioEnabled: true,
+          videoEnabled: true,
         });
 
         const peer = createPeer();
@@ -113,6 +116,7 @@ const initVideoCallNamespace = (videoCallNamespace, defaultNamespace) => {
             const stream = event.streams[0];
             peers.get(userId).stream = stream;
             const videoTracks = stream.getVideoTracks();
+            const audioTracks = stream.getAudioTracks();
             console.log(
               `[Server] Received stream from user ${userId}:`,
               stream.id
@@ -126,10 +130,36 @@ const initVideoCallNamespace = (videoCallNamespace, defaultNamespace) => {
                 videoTracks[0].enabled
               );
             }
+            videoTracks.forEach((track) => {
+              track.onmute = () => {
+                console.log(`[Server] Video track muted for user ${userId}`);
+                client.to(roomId).emit("trackMuted", { userId, kind: "video" });
+              };
+              track.onunmute = () => {
+                console.log(`[Server] Video track unmuted for user ${userId}`);
+                client
+                  .to(roomId)
+                  .emit("trackUnmuted", { userId, kind: "video" });
+              };
+            });
+
+            audioTracks.forEach((track) => {
+              track.onmute = () => {
+                console.log(`[Server] Audio track muted for user ${userId}`);
+                client.to(roomId).emit("trackMuted", { userId, kind: "audio" });
+              };
+              track.onunmute = () => {
+                console.log(`[Server] Audio track unmuted for user ${userId}`);
+                client
+                  .to(roomId)
+                  .emit("trackUnmuted", { userId, kind: "audio" });
+              };
+            });
             const payload = {
               id: userId,
               username: session.userInfo.fullName,
               email: session.userInfo.email,
+              avatar: session.userInfo.avatar,
             };
             client.to(roomId).emit("newProducer", payload);
           }
@@ -147,6 +177,7 @@ const initVideoCallNamespace = (videoCallNamespace, defaultNamespace) => {
             roomId,
             username: session.userInfo.fullName,
             email: session.userInfo.email,
+            avatar: session.userInfo.avatar,
           });
         }
         rooms.set(roomId, room);
@@ -155,6 +186,35 @@ const initVideoCallNamespace = (videoCallNamespace, defaultNamespace) => {
       } catch (error) {
         console.error(error);
         client.emit("error", error.message || "Failed to join room");
+      }
+    });
+
+    client.on("updateStatus", ({ audioEnabled, videoEnabled }) => {
+      console.log(
+        `[Server] User ${userId} updated status: mic=${
+          audioEnabled || "unchanged"
+        }, camera=${videoEnabled || "unchanged"}`
+      );
+
+      const peerInfo = peers.get(userId);
+      if (peerInfo && peerInfo.roomId) {
+        const roomId = peerInfo.roomId;
+
+        client.to(roomId).emit("statusUpdated", {
+          userId,
+          audioEnabled:
+            audioEnabled !== undefined ? audioEnabled : peerInfo.audioEnabled,
+          videoEnabled:
+            videoEnabled !== undefined ? videoEnabled : peerInfo.videoEnabled,
+        });
+
+        peers.set(userId, {
+          ...peerInfo,
+          audioEnabled:
+            audioEnabled !== undefined ? audioEnabled : peerInfo.audioEnabled,
+          videoEnabled:
+            videoEnabled !== undefined ? videoEnabled : peerInfo.videoEnabled,
+        });
       }
     });
 

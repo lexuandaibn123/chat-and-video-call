@@ -14,6 +14,10 @@
   padding: $spacing-lg;
 }
 
+.tab-container {
+  display: none;
+}
+
 // Style cho form đơn giản hơn (forgot/reset/verify)
 .auth-form-simple {
   background: $secondary-color;
@@ -161,6 +165,234 @@
     background-color: color.adjust($success-color, $lightness: 45%);
     p { color: color.adjust($success-color, $lightness: -10%); }
   }
+  &.error {
+    border-color: color.adjust($error-color, $lightness: 20%);
+    background-color: color.adjust($error-color, $lightness: 35%);
+    p { color: color.adjust($error-color, $lightness: -10%); }
+  }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+// Mobile styles
+@media (max-width: 768px) {
+  .auth-container {
+    flex-direction: column;
+    max-width: 100%;
+    border-radius: 0;
+    box-shadow: none;
+
+    .tab-container {
+      display: flex;
+    }
+
+    .form-wrapper {
+      .form-container {
+        width: 100%;
+        position: static;
+        padding: $spacing-xl;
+
+        &.hide {
+          display: none; // Ensure only one form is shown at a time
+        }
+      }
+    }
+
+    .overlay-container {
+      display: none;
+    }
+
+    &.right-panel-active {
+      .sign-in-container {
+        display: none;
+      }
+      .sign-up-container {
+        display: block;
+      }
+    }
+  }
+
+  .tab-container {
+    display: flex;
+    width: 100%;
+    background: $secondary-color;
+    border-bottom: 1px solid $input-border-color;
+
+    .tab {
+      flex: 1;
+      padding: $spacing-md;
+      font-size: $font-size-base;
+      font-weight: $font-weight-bold;
+      text-align: center;
+      background: transparent;
+      border: none;
+      color: $text-muted-color;
+      cursor: pointer;
+      transition: color 0.3s ease, background-color 0.3s ease;
+
+      &.active {
+        color: $primary-color;
+        background: color.adjust($secondary-color, $lightness: -5%);
+        border-bottom: 2px solid $primary-color;
+      }
+
+      &:hover:not(.active) {
+        color: color.adjust($primary-color, $lightness: -10%);
+      }
+    }
+  }
+}
+
+// Style cho form đơn giản hơn (forgot/reset/verify)
+.auth-form-simple {
+  background: $secondary-color;
+  padding: $spacing-xxl;
+  border-radius: $border-radius-form * 1.5;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  max-width: 450px;
+  width: 100%;
+  text-align: center;
+
+  h2 {
+    font-weight: $font-weight-bold;
+    margin-top: 0;
+    margin-bottom: $spacing-lg;
+    color: $text-color;
+    font-size: $font-size-h2;
+  }
+
+  p {
+    margin-bottom: $spacing-xl;
+    font-size: $font-size-common;
+    color: $text-muted-color;
+    line-height: $line-height-base;
+  }
+
+  form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  button[type="submit"] {
+    border-radius: $border-radius-button-main;
+    background-color: $primary-color;
+    color: $secondary-color;
+    font-size: $font-size-base;
+    font-weight: $font-weight-bold;
+    padding: 12px 45px;
+    margin-top: $spacing-sm;
+    margin-bottom: $spacing-lg;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border: none;
+
+    &:hover:not(:disabled) {
+      background-color: color.adjust($primary-color, $lightness: -10%);
+    }
+  }
+
+  .close-button {
+    background-color: #ccc;
+    color: $text-color;
+
+    &:hover:not(:disabled) {
+      background-color: color.adjust(#ccc, $lightness: -10%);
+    }
+  }
+
+  .auth-message {
+    width: 100%;
+    margin-bottom: $spacing-lg;
+    padding: $spacing-sm $spacing-md;
+    border-radius: $border-radius-input;
+    font-size: $font-size-base;
+    text-align: center;
+
+    &.success {
+      color: color.adjust($success-color, $lightness: -10%);
+      background-color: color.adjust($success-color, $lightness: 45%);
+      border: 1px solid color.adjust($success-color, $lightness: 30%);
+    }
+
+    &.error {
+      color: color.adjust($error-color, $lightness: -10%);
+      background-color: color.adjust($error-color, $lightness: 35%);
+      border: 1px solid color.adjust($error-color, $lightness: 20%);
+    }
+  }
+
+  .auth-link {
+    margin-top: $spacing-md;
+    font-size: $font-size-base;
+
+    a {
+      color: $primary-color;
+      font-weight: $font-weight-bold;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
+
+  .resend-button-page {
+    background-color: $warning-color;
+    color: $warning-text-color;
+    border-color: $warning-color;
+    border-radius: $border-radius-button-main;
+    font-size: $font-size-small;
+    font-weight: $font-weight-bold;
+    padding: 10px 20px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border: 1px solid $warning-color;
+    margin-top: 0;
+    margin-bottom: $spacing-lg;
+
+    &:hover:not(:disabled) {
+      background-color: color.adjust($warning-color, $lightness: -10%);
+      border-color: color.adjust($warning-color, $lightness: -10%);
+    }
+  }
+}
+
+// Styles cho trang Verify Email
+.verification-status {
+  margin: $spacing-xl 0;
+  padding: $spacing-lg;
+  border-radius: $border-radius-input;
+  border: 1px solid $input-border-color;
+
+  p {
+    margin: 0;
+    font-size: $font-size-large;
+    font-weight: 500;
+  }
+
+  &.verifying {
+    border-color: #ddd;
+    p { color: $text-muted-color; }
+    .spinner {
+      border: 4px solid rgba(0, 0, 0, 0.1);
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border-left-color: $primary-color;
+      animation: spin 1s ease infinite;
+      margin: 0 auto $spacing-md auto;
+    }
+  }
+
+  &.success {
+    border-color: color.adjust($success-color, $lightness: 30%);
+    background-color: color.adjust($success-color, $lightness: 45%);
+    p { color: color.adjust($success-color, $lightness: -10%); }
+  }
+
   &.error {
     border-color: color.adjust($error-color, $lightness: 20%);
     background-color: color.adjust($error-color, $lightness: 35%);

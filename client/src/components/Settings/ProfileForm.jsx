@@ -5,7 +5,8 @@ const ProfileForm = () => {
   const [userInfo, setUserInfo] = useState({
     id: "",
     fullName: "",
-    email: ""
+    email: "",
+    avatar: ""
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);

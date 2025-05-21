@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { infoApi } from "../../api/auth";
+import defaultUserAvatar from "../../assets/images/avatar_male.jpg";
 
 const AccountProfile = () => {
   const [userInfo, setUserInfo] = useState({
     fullName: "",
     email: "",
+    avatar: ""
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -16,10 +18,10 @@ const AccountProfile = () => {
         const response = await infoApi();
 
         if (response.success && response.userInfo) {
-          console.log("Information about user: ", response.userInfo);
           setUserInfo({
             fullName: response.userInfo.fullName || "",
             email: response.userInfo.email || "",
+            avatar: response.userInfo.avatar || "" // Ensure avatar is set
           });
         } else {
           setError("Không thể lấy thông tin người dùng");
@@ -45,7 +47,7 @@ const AccountProfile = () => {
   return (
     <div className="account-header">
       <div className="account-avatar">
-        <img src="client\src\assets\images\avatar_male.jpg" alt="Profile" />
+        <img src={userInfo.avatar || defaultUserAvatar} alt="Profile" />
         {/* <button className="change-avatar-btn">
           <i className="fas fa-camera icon"></i>
         </button> */}
