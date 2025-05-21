@@ -288,7 +288,7 @@ export const createOptimisticFileMessage = (tempId, file, currentUserId, user, l
     };
 };
 
-export const buildFileMessagePayload = (conversationId, fileType, uploadedFileDetails, replyToMessageId = null) => {
+export const buildFileMessagePayload = (conversationId, fileType, uploadedFileDetails, replyToMessageId = null, tempId) => {
 
     // Lấy dữ liệu chính xác đã được xử lý và trả về từ backend Uploadthing
     const serverFileDetails = uploadedFileDetails.serverData;
@@ -337,6 +337,7 @@ export const buildFileMessagePayload = (conversationId, fileType, uploadedFileDe
         type: fileType, // 'image' or 'file' (outer type)
         data: dataForBackend, // <--- dataForBackend là mảng hoặc object TRỰC TIẾP
         replyToMessageId: replyToMessageId, // null theo mặc định nếu không truyền
+        tempId: tempId,
     };
 };
 
