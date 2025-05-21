@@ -612,7 +612,7 @@ class ConversationService {
         if (userRole == "leader" && numberOfLeader <= 1) {
           const firstMember = conversation.members.find(
             (member) =>
-              member.id.toString() != userInfo.id && member.leftAt == null
+              member.id._id.toString() != userInfo.id && member.leftAt == null
           );
           if (!firstMember) {
             return res.status(400).json({
@@ -622,7 +622,7 @@ class ConversationService {
           }
           await ConversationRepository.updateRole(
             conversationId,
-            firstMember.id,
+            firstMember.id._id.toString(),
             "leader"
           );
         }
@@ -666,7 +666,8 @@ class ConversationService {
 
       if (userRole == "leader" && numberOfLeader <= 1) {
         const firstMember = conversation.members.find(
-          (member) => member.id.toString() != userId && member.leftAt == null
+          (member) =>
+            member.id._id.toString() != userId && member.leftAt == null
         );
         if (!firstMember) {
           throw new Error(
@@ -675,7 +676,7 @@ class ConversationService {
         }
         await ConversationRepository.updateRole(
           conversationId,
-          firstMember.id,
+          firstMember.id._id.toString(),
           "leader"
         );
       }
