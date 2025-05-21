@@ -1,6 +1,22 @@
 import { useState } from "react";
+import { lovePost } from "../../api/feeds";
 
 const PostItem = ({ id, avatar, name, content, react, comment, time }) => {
+  const [isReacted, setIsReacted] = useState(false);
+
+  const handleReactToPost = async () => {
+    try {
+      const response = await lovePost(id, "love");
+      if (response.success) {
+        setLove(true);
+        console.log("Love to post successfully!");
+      } else {
+        console.log("Error: ", response.message || response.error);
+      }
+    } catch (error) {
+      console.error("Failed: ", error);
+    }
+  }
   // Function to check if post has images
   const hasImages = () => {
     if (!content || !Array.isArray(content)) return false;
@@ -78,19 +94,19 @@ const PostItem = ({ id, avatar, name, content, react, comment, time }) => {
 
         <div className="post-stats flex items-center mt-4 text-sm text-gray-500">
           <span className="like-icon mr-1">❤</span>
-          <span className="mr-4">{react?.length || 0} {react.length > 0 ? `reacts` : `react`}</span>
+          <span className="mr-4">{react?.length || 0} {react.length > 1 ? `reacts` : `react`}</span>
           <span className="post-comments-count">{comment?.length || 0} {comment.length > 0 ? `comments` : `comment`}</span>
         </div>
       </section>
 
       <footer className="post-footer flex border-t pt-3">
-        <button className="post-action-button flex items-center mr-6 text-gray-600 hover:text-blue-600">
+        <button className="post-action-button flex items-center mr-6 text-gray-600 hover:text-blue-600" onClick={handleReactToPost}>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="20"
             height="20"
             viewBox="0 0 24 24"
-            fill="none"
+            fill={love ? "pink" : "none"}
             stroke="currentColor"
             strokeWidth="2"
             strokeLinecap="round"

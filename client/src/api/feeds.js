@@ -87,3 +87,24 @@ export const getPosts = async () => {
         throw error;
     }
 }
+
+export const lovePost = async(id, type) => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/post/react-to-post`, {
+            method: 'POST', 
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                id,
+                type,
+            }),
+            credentials: 'include',
+        })
+        return handleApiResponse(response)
+    } catch (error) {
+        console.error("API lovePost Error:", error);
+        if (error instanceof TypeError) {
+            throw new Error('Connection error. Please check your network and CORS settings.');
+        }
+        throw error;
+    }
+}

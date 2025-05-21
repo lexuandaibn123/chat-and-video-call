@@ -1,10 +1,28 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createPost } from "../../api/feeds";
+import { infoApi } from "../../api/auth";
 
-const CreatePost = ({ avt }) => {
+const CreatePost = () => {
   const [content, setContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [avt, setAvt] = useState(null);
+
+  useEffect(() => {
+    const getInfo = async () => {
+      try {
+        const response = await infoApi();
+        if (response.success && response.userInfo) {
+          setAvt(response.userInfo.avatar);
+        } else {
+          console.log("Error: ", response.error);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+    getInfo();
+  }, []);
 
   const handlePost = async () => {
     if (!content.trim()) {
@@ -15,10 +33,10 @@ const CreatePost = ({ avt }) => {
     try {
       setIsSubmitting(true);
       setError("");
-      
+
       // Call API to create a post
       const response = await createPost("text", content.trim());
-      
+
       if (response.success) {
         // Create properly formatted post object from API response
         // const newPost = {
@@ -30,7 +48,7 @@ const CreatePost = ({ avt }) => {
         //   comment: response.post.comments || [],
         //   time: formatTimestamp(response.post.datetime_created) || "Just now",
         // };
-        
+
         // Pass the new post to parent component
         // onPostCreate(newPost);
         console.log("Post Successfully!");
@@ -53,15 +71,13 @@ const CreatePost = ({ avt }) => {
   return (
     <article className="create-post">
       <header className="create-post-header">
-        <img
-          src={avt}
-          alt="Profile"
-          className="profile-image"
-        />
+        <img src={avt} alt="Profile" className="profile-image" />
         <input
           type="text"
           placeholder="Share what's on your mind..."
           className="create-post-input"
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
         />
       </header>
       <footer className="create-post-footer">
@@ -83,7 +99,9 @@ const CreatePost = ({ avt }) => {
           </svg>
           <span>Photo/Video</span>
         </button>
-        <button className="post-button">Post</button>
+        <button className="post-button" onClick={handlePost}>
+          Post
+        </button>
       </footer>
     </article>
   );

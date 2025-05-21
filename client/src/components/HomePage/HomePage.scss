@@ -82,9 +82,9 @@ body {
   overflow-y: visible; /* Remove scrollbar from main content */
 }
 
-// .main-content {
-//   padding-right: 0;
-// }
+.main-content {
+  padding-right: 0;
+}
 
 /* Scrollbar styling for Webkit browsers (Chrome, Safari, Edge) */
 .app-container::-webkit-scrollbar {
