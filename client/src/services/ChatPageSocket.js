@@ -542,9 +542,16 @@ export const useSocket = ({
       console.log('leftConversation received:', data);
       console.log('Current userId:', userId);
 
+      // Hàm kiểm tra member.id có phải là user rời nhóm không
+      const isSameUser = (member, leavingUserId) => {
+        if (typeof member.id === 'object' && member.id._id) {
+          return member.id._id === leavingUserId;
+        }
+        return member.id === leavingUserId;
+      };
+
       // Kiểm tra nếu user nhận sự kiện là user rời nhóm
       if (leavingUserId === userId) {
-        console.log('User is leaving the conversation:', conversationId);
         setRawConversations((prevRaw) =>
           prevRaw.filter((conv) => conv._id !== conversationId)
         );
@@ -553,22 +560,14 @@ export const useSocket = ({
         );
         setActiveChat((prev) => (prev && prev.id === conversationId ? null : prev));
       } else {
-        console.log('Another user left the conversation:', { conversationId, leavingUserId });
-        console.log('Current rawConversations:', rawConversations);
-        console.log('Current conversations:', conversations);
-
-        // Cập nhật danh sách thành viên cho các user khác trong nhóm
+        // Thành viên khác rời nhóm, cập nhật lại danh sách thành viên
         setRawConversations((prevRaw) =>
           prevRaw.map((conv) =>
             conv._id === conversationId
               ? {
                   ...conv,
                   members: conv.members && Array.isArray(conv.members)
-                    ? conv.members.filter((member) => {
-                        const matches = member.id._id !== leavingUserId;
-                        console.log('Filtering raw member:', member.id._id, 'vs', leavingUserId, 'Result:', matches);
-                        return matches;
-                      })
+                    ? conv.members.filter((member) => !isSameUser(member, leavingUserId))
                     : conv.members,
                 }
               : conv
@@ -580,18 +579,10 @@ export const useSocket = ({
               ? {
                   ...conv,
                   members: conv.members && Array.isArray(conv.members)
-                    ? conv.members.filter((member) => {
-                        const matches = member.id._id !== leavingUserId;
-                        console.log('Filtering conv member:', member.id._id, 'vs', leavingUserId, 'Result:', matches);
-                        return matches;
-                      })
+                    ? conv.members.filter((member) => !isSameUser(member, leavingUserId))
                     : conv.members,
                   detailedMembers: conv.detailedMembers && Array.isArray(conv.detailedMembers)
-                    ? conv.detailedMembers.filter((member) => {
-                        const matches = member.id !== leavingUserId;
-                        console.log('Filtering detailed member:', member.id, 'vs', leavingUserId, 'Result:', matches);
-                        return matches;
-                      })
+                    ? conv.detailedMembers.filter((member) => member.id !== leavingUserId)
                     : conv.detailedMembers,
                 }
               : conv
@@ -602,11 +593,7 @@ export const useSocket = ({
             ? {
                 ...prev,
                 detailedMembers: prev.detailedMembers && Array.isArray(prev.detailedMembers)
-                  ? prev.detailedMembers.filter((member) => {
-                      const matches = member.id !== leavingUserId;
-                      console.log('Filtering activeChat member:', member.id, 'vs', leavingUserId, 'Result:', matches);
-                      return matches;
-                    })
+                  ? prev.detailedMembers.filter((member) => member.id !== leavingUserId)
                   : prev.detailedMembers,
               }
             : prev
