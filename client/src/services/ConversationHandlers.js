@@ -157,8 +157,20 @@ export const useConversationHandlers = ({
             updateConversationsAfterMemberRemoved(prevConvs, conversationId, userIdToRemove)
           );
           setActiveChat((prevActive) =>
-            updateActiveChatAfterMemberRemoved(prevActive, conversationId, userIdToRemove)
+            prevActive && prevActive.id === conversationId
+              ? {
+                  ...prevActive,
+                  members: prevActive.members.filter(m => {
+                    const id = typeof m.id === 'object' && m.id._id ? m.id._id : m.id;
+                    return id !== userIdToRemove;
+                  }),
+                  detailedMembers: prevActive.detailedMembers
+                    ? prevActive.detailedMembers.filter(m => m.id !== userIdToRemove)
+                    : prevActive.detailedMembers,
+                }
+              : prevActive
           );
+          alert('Member removed successfully!');
         }
       );
     },
@@ -473,8 +485,19 @@ export const useConversationHandlers = ({
             })
           );
           setActiveChat((prevActive) =>
-            updateActiveChatAfterMemberAdded(prevActive, conversationId, null, userToAdd)
+            updateActiveChatAfterMemberAdded(
+              prevActive,
+              conversationId,
+              null,
+              {
+                id: userIdToAdd,
+                ...userToAdd,
+                role: 'member',
+                joinedAt: new Date().toISOString(),
+              }
+            )
           );
+          alert('Member added successfully!');
           setAddUserSearchResults([]);
         }
       );
