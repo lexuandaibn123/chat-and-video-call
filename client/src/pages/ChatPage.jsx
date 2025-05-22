@@ -63,6 +63,7 @@ const ChatPage = () => {
     deleteConversationByLeader,
     updateConversationName,
     updateConversationAvatar,
+    updateMemberRole,
   } = useSocket({
     isAuthenticated,
     userId: user?._id,
@@ -107,6 +108,7 @@ const ChatPage = () => {
     deleteConversationByLeader,
     updateConversationName,
     updateConversationAvatar,
+    updateMemberRole,
   });
 
   // Get handlers from useHandlers
@@ -340,6 +342,7 @@ const ChatPage = () => {
       isEditingName={isEditingName}
       editingGroupName={editingGroupName}
       updateConversationAvatar={updateConversationAvatar}
+      updateMemberRole={updateMemberRole}
       currentUserId={currentUserIdRef.current}
       handlers={handlers}
       setMessageInput={setMessageInput}

@@ -269,6 +269,24 @@ export const useSocket = ({
     [setActionError]
   );
 
+  const updateMemberRole = useCallback(
+    ({ conversationId, memberId, newRole }) => {
+      if (!socketRef.current || !isConnectedRef.current) {
+        setActionError('Socket is not connected. Please try again.');
+        return false;
+      }
+      if (!conversationId || !memberId || !newRole) {
+        setActionError('Missing required parameters for updating member role.');
+        return false;
+      }
+      const actionId = `updateMemberRole-${conversationId}-${memberId}-${Date.now()}`;
+      pendingActionsRef.current[actionId] = { type: 'updateMemberRole', conversationId, memberId, newRole };
+      socketRef.current.emit('updateMemberRole', { conversationId, memberId, newRole });
+      return true;
+    },
+    [setActionError]
+  );
+
   useEffect(() => {
     if (!isAuthenticated || !userId || !userInfo) {
       // console.warn(
@@ -294,16 +312,16 @@ export const useSocket = ({
       console.log('Socket.IO connected:', socketRef.current.id);
       isConnectedRef.current = true;
       socketRef.current.emit('setup', { page: 1, limit: 30 });
-      if (conversations?.length) {
-        conversations.forEach((conv) => {
-          const roomId = conv.id;
-          if (!joinedRoomsRef.current.has(roomId)) {
-            socketRef.current.emit('joinRoom', {roomId});
-            joinedRoomsRef.current.add(roomId);
-          }
-          // console.log('Joined:', roomId);
-        });
-      }
+      // if (conversations?.length) {
+      //   conversations.forEach((conv) => {
+      //     const roomId = conv.id;
+      //     if (!joinedRoomsRef.current.has(roomId)) {
+      //       socketRef.current.emit('joinRoom', {roomId});
+      //       joinedRoomsRef.current.add(roomId);
+      //     }
+      //     // console.log('Joined:', roomId);
+      //   });
+      // }
     });
 
     socketRef.current.on('connected', () => {
@@ -399,6 +417,63 @@ export const useSocket = ({
         }
         delete pendingActionsRef.current[actionId];
       });
+    });
+
+    socketRef.current.on('updatedMemberRole', ({ userId: memberId, conversationId, newRole }) => {
+      setRawConversations((prevRaw) =>
+        prevRaw.map((conv) =>
+          conv._id === conversationId
+            ? {
+                ...conv,
+                members: conv.members.map((m) =>
+                  (typeof m.id === 'object' ? m.id._id : m.id) === memberId
+                    ? { ...m, role: newRole }
+                    : m
+                ),
+              }
+            : conv
+        )
+      );
+      setConversations((prevConvs) =>
+        prevConvs.map((conv) =>
+          conv.id === conversationId
+            ? {
+                ...conv,
+                members: conv.members
+                  ? conv.members.map((m) =>
+                      (typeof m.id === 'object' ? m.id._id : m.id) === memberId
+                        ? { ...m, role: newRole }
+                        : m
+                    )
+                  : conv.members,
+                detailedMembers: conv.detailedMembers
+                  ? conv.detailedMembers.map((m) =>
+                      m.id === memberId ? { ...m, role: newRole } : m
+                    )
+                  : conv.detailedMembers,
+              }
+            : conv
+        )
+      );
+      setActiveChat((prev) =>
+        prev && prev.id === conversationId
+          ? {
+              ...prev,
+              members: prev.members
+                ? prev.members.map((m) =>
+                    (typeof m.id === 'object' ? m.id._id : m.id) === memberId
+                      ? { ...m, role: newRole }
+                      : m
+                  )
+                : prev.members,
+              detailedMembers: prev.detailedMembers
+                ? prev.detailedMembers.map((m) =>
+                    m.id === memberId ? { ...m, role: newRole } : m
+                  )
+                : prev.detailedMembers,
+            }
+          : prev
+      );
     });
 
     // Xử lý tin nhắn mới (non-sender clients)
@@ -771,5 +846,6 @@ export const useSocket = ({
     deleteConversationByLeader,
     updateConversationName,
     updateConversationAvatar,
+    updateMemberRole,
   };
 };

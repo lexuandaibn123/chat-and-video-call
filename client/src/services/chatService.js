@@ -88,8 +88,8 @@ export const processRawRooms = (rawRooms, currentUserId) => {
 
 
         // Logic xác định leader cho group chat (sử dụng processedMembers đã có ID chuẩn)
-        const leaderMember = activeMembers?.find(m => m.role === 'leader' && m.id);
-        const leaderId = leaderMember ? leaderMember.id : null;
+        const leaderMembers = activeMembers?.filter(m => m.role === 'leader' && m.id) || [];
+        const leaderIds = leaderMembers.map(m => m.id);
 
 
         // Format thời gian tin nhắn cuối
@@ -114,7 +114,7 @@ export const processRawRooms = (rawRooms, currentUserId) => {
             status: null, // Status online/offline cần logic thêm vào sau
             statusText: conversationStatusText,
             members: room.members || [], // Giữ lại members thô nếu cần
-            leader: leaderId,
+            leaders: leaderIds,
             isGroup: isGroup,
             detailedMembers: processedMembers, // Sử dụng processedMembers cho các logic khác
         };

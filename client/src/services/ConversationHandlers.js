@@ -40,6 +40,7 @@ export const useConversationHandlers = ({
   deleteConversationByLeader,
   updateConversationName,
   updateConversationAvatar,
+  updateMemberRole,
 }) => {
   // --- Generic handler for socket actions ---
   const performSettingsAction = useCallback(
@@ -236,7 +237,6 @@ export const useConversationHandlers = ({
     ]
   );
 
-  // --- Handler for changing leader ---
   const handleChangeLeader = useCallback(
     (conversationId, newLeaderId) => {
       const currentUserId = currentUserIdRef.current;
@@ -258,16 +258,18 @@ export const useConversationHandlers = ({
         setActionError('New leader must be a current member of the group.');
         return;
       }
-      const isCurrentUserLeader = activeChat.leader === currentUserId;
+      const isCurrentUserLeader = activeChat.detailedMembers?.some(
+        (m) => m.id === currentUserId && m.role === 'leader' && !m.leftAt
+      );
       if (!isCurrentUserLeader) {
-        setActionError('Only the current leader can change leadership.');
+        setActionError('Only a leader can assign another leader.');
         return;
       }
       if (
         !window.confirm(
           `Are you sure you want to make ${
             newLeaderMember.fullName || newLeaderId
-          } the new leader?`
+          } a leader?`
         )
       ) {
         setActionError(null);
@@ -275,29 +277,34 @@ export const useConversationHandlers = ({
       }
       performSettingsAction(
         () =>
-          addNewMember({
+          updateMemberRole({
             conversationId,
-            newMemberId: newLeaderId,
-            role: 'leader',
+            memberId: newLeaderId,
+            newRole: 'leader',
           }),
-        'Change leader',
+        'Add leader',
         () => {
-          const oldLeaderId = activeChat.leader;
           setConversations((prevConvs) =>
-            updateConversationsAfterLeaderChanged(
-              prevConvs,
-              conversationId,
-              newLeaderId,
-              oldLeaderId
+            prevConvs.map(conv =>
+              conv.id === conversationId
+                ? {
+                    ...conv,
+                    detailedMembers: conv.detailedMembers.map(m =>
+                      m.id === newLeaderId ? { ...m, role: 'leader' } : m
+                    ),
+                  }
+                : conv
             )
           );
           setActiveChat((prevActive) =>
-            updateActiveChatAfterLeaderChanged(
-              prevActive,
-              conversationId,
-              newLeaderId,
-              oldLeaderId
-            )
+            prevActive && prevActive.id === conversationId
+              ? {
+                  ...prevActive,
+                  detailedMembers: prevActive.detailedMembers.map(m =>
+                    m.id === newLeaderId ? { ...m, role: 'leader' } : m
+                  ),
+                }
+              : prevActive
           );
         }
       );
@@ -306,7 +313,7 @@ export const useConversationHandlers = ({
       activeChat,
       currentUserIdRef,
       performSettingsAction,
-      addNewMember,
+      updateMemberRole,
       setConversations,
       setActiveChat,
       setActionError,
