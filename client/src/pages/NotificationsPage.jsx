@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { getPosts, getComments } from '../api/notification';
 import { infoApi } from "../api/auth";
-import { getPotentialFriendsApi } from "../api/users";
+import { getPotentialFriendsApi, getUserDetailsApi } from "../api/users";
 import NotificationList from '../components/Notification/NotificationList';
 import '../components/Notification/style.scss';
 
@@ -70,7 +70,8 @@ const NotificationsPage = () => {
         const discoverData = await Promise.all(
           potentialFriends.map(async item => {
             // assuming infoApi can accept an ID parameter to fetch other user
-            const userInfoResp = await infoApi(item.info._id);
+            const userInfoResp = await getUserDetailsApi(item.info._id);
+            console.log('User Info:', userInfoResp);
             const avatar = userInfoResp.success && userInfoResp.userInfo?.avatar
               ? userInfoResp.userInfo.avatar
               : '/default-avatar.jpg';
