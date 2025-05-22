@@ -38,6 +38,40 @@ const processSenderData = (rawSenderData, currentUserId) => {
     };
 };
 
+function formatLastMessageTime(dateString) {
+    if (!dateString) return '';
+    const now = new Date();
+    const msgDate = new Date(dateString);
+
+    if (isNaN(msgDate)) return '';
+
+    const diffMs = now - msgDate;
+    const diffHour = diffMs / (1000 * 60 * 60);
+
+    // Trong vòng 24h qua: hiển thị hh:mm am/pm
+    if (diffHour < 24) {
+        return msgDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase();
+    }
+
+    // Hôm qua
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    if (
+        msgDate.getFullYear() === yesterday.getFullYear() &&
+        msgDate.getMonth() === yesterday.getMonth() &&
+        msgDate.getDate() === yesterday.getDate()
+    ) {
+        return 'Yesterday';
+    }
+
+    // Trong vòng 7 ngày
+    const diffDay = Math.floor(diffHour / 24);
+    if (diffDay < 7) return `${diffDay} day${diffDay > 1 ? 's' : ''} ago`;
+
+    // Còn lại: hiển thị ngày/tháng/năm
+    return msgDate.toLocaleDateString();
+}
+
 // Hàm xử lý danh sách phòng chat thô từ API
 export const processRawRooms = (rawRooms, currentUserId) => {
     if (!rawRooms || !Array.isArray(rawRooms)) {
@@ -94,8 +128,8 @@ export const processRawRooms = (rawRooms, currentUserId) => {
 
         // Format thời gian tin nhắn cuối
         const lastMessageTime = latestMessage?.datetime_created
-            ? new Date(latestMessage.datetime_created).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase()
-            : (room.datetime_created ? new Date(room.datetime_created).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase() : '');
+            ? formatLastMessageTime(latestMessage.datetime_created)
+            : (room.datetime_created ? formatLastMessageTime(room.datetime_created) : '');
 
 
         return {
