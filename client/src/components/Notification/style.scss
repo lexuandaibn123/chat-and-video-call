@@ -1,0 +1,204 @@
+@use '../../styles/_variables' as v;
+@use 'sass:color';
+@use 'sass:math';
+
+/* Notifications Page Styles */
+.notifications-page {
+  display: flex;
+  gap: v.$spacing-lg;
+  font-family: v.$font-family-base;
+
+  .discover-section,
+  .notifications-section {
+    flex: 1;
+    background-color: v.$container-bg-color;
+    border-radius: v.$border-radius-md;
+    padding: v.$spacing-md;
+
+    h2 {
+      font-size: v.$font-size-h2;
+      font-weight: v.$font-weight-bold;
+      margin-bottom: v.$spacing-md;
+      color: v.$primary-color;
+      padding: v.$spacing-sm 0;
+    }
+
+    .scrollable-content {
+      max-height: 85svh;
+      overflow-y: auto;
+      scrollbar-color: v.$primary-color v.$secondary-color;
+
+      &::-webkit-scrollbar {
+        width: none;
+      }
+      &::-webkit-scrollbar-track {
+        background: v.$secondary-color;
+        border-radius: v.$border-radius-md;
+      }
+      &::-webkit-scrollbar-thumb {
+        background: v.$primary-color;
+        border-radius: v.$border-radius-md;
+      }
+    }
+  }
+
+  .tabs-mobile {
+    display: none;
+  }
+}
+
+@media (max-width: v.$breakpoint-medium) {
+  .notifications-page {
+    display: block;
+
+    .tabs-mobile {
+      display: flex;
+      justify-content: space-around;
+      margin-bottom: v.$spacing-lg;
+      background-color: v.$secondary-color;
+      border-radius: v.$border-radius-md;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+
+      button {
+        flex: 1;
+        padding: v.$spacing-md;
+        background-color: transparent;
+        border: none;
+        color: v.$text-color;
+        font-weight: v.$font-weight-medium;
+        transition: background-color v.$transition-default;
+
+        &.active {
+          background-color: v.$primary-color;
+          color: v.$secondary-color;
+        }
+      }
+    }
+
+    .discover-section,
+    .notifications-section {
+      display: none;
+      padding: v.$spacing-sm;
+
+      &.active {
+        display: block;
+      }
+
+      .scrollable-content {
+        max-height: 80svh;
+        overflow-y: auto;
+      }
+
+      h2 {
+        display: none;
+      }
+    }
+  }
+}
+
+/* Notification List Styles */
+.notification-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.notification-item {
+  display: flex;
+  align-items: center;
+  padding: v.$spacing-md;
+  margin-bottom: v.$spacing-sm;
+  background-color: color.adjust(v.$container-bg-color, $lightness: 2%);
+  border-radius: v.$border-radius-md;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: transform v.$transition-default;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  }
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  .profile-image {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    margin-right: v.$spacing-md;
+    object-fit: cover;
+  }
+
+  .item-info {
+    flex: 1;
+
+    .item-action {
+      font-weight: v.$font-weight-bold;
+      color: v.$text-color;
+      font-size: v.$font-size-large;
+      margin: 0;
+
+      span {
+        margin-right: v.$spacing-xs;
+      }
+    }
+
+    .item-details {
+      color: v.$text-muted-color;
+      margin: v.$spacing-xs 0;
+      font-size: v.$font-size-small;
+      max-width: 80%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .item-time {
+      color: v.$text-muted-color;
+      font-size: v.$font-size-tiny;
+    }
+  }
+}
+
+/* Friend Suggestion Item Styles */
+.friend-suggestion-item {
+  display: flex;
+  align-items: center;
+  padding: v.$spacing-md;
+  margin-bottom: v.$spacing-sm;
+  background-color: color.adjust(v.$container-bg-color, $lightness: 2%);
+  border-radius: v.$border-radius-md;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: transform v.$transition-default;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  }
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  .profile-image {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    margin-right: v.$spacing-md;
+    object-fit: cover;
+  }
+
+  .item-info {
+    .item-name {
+      font-weight: v.$font-weight-bold;
+      color: v.$text-color;
+      font-size: v.$font-size-large;
+    }
+
+    .mutual-friends {
+      color: v.$text-muted-color;
+      font-size: v.$font-size-small;
+    }
+  }
+}
