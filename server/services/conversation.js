@@ -626,14 +626,16 @@ class ConversationService {
             "leader"
           );
         }
-        await ConversationRepository.leaveConversation(
-          conversationId,
-          userInfo.id
-        );
+        const updatedConversation =
+          await ConversationRepository.leaveConversation(
+            conversationId,
+            userInfo.id
+          );
 
         return res.status(200).json({
           success: true,
           message: "Left conversation successfully",
+          data: updatedConversation,
         });
       } catch (error) {
         console.error(error);
@@ -680,9 +682,10 @@ class ConversationService {
           "leader"
         );
       }
-      await ConversationRepository.leaveConversation(conversationId, userId);
+      const updatedConversation =
+        await ConversationRepository.leaveConversation(conversationId, userId);
 
-      return "Left conversation successfully";
+      return updatedConversation;
     } catch (error) {
       console.error(error);
       throw error;
@@ -707,14 +710,16 @@ class ConversationService {
           "You are not a member of the conversation"
         );
 
-        await ConversationRepository.deleteConversationByMemberId(
-          conversationId,
-          userInfo.id
-        );
+        const updatedConversation =
+          await ConversationRepository.deleteConversationByMemberId(
+            conversationId,
+            userInfo.id
+          );
 
         return res.status(200).json({
           success: true,
           message: "Deleted conversation successfully",
+          data: updatedConversation,
         });
       } catch (error) {
         console.error(error);
@@ -744,13 +749,17 @@ class ConversationService {
           "You are not a leader of the conversation"
         );
 
-        await ConversationRepository.updateById(conversationId, {
-          isDeleted: true,
-        });
+        const updatedConversation = await ConversationRepository.updateById(
+          conversationId,
+          {
+            isDeleted: true,
+          }
+        );
 
         return res.status(200).json({
           success: true,
           message: "Deleted conversation successfully",
+          data: updatedConversation,
         });
       } catch (error) {
         console.error(error);
@@ -775,11 +784,14 @@ class ConversationService {
         "You are not a leader of the conversation"
       );
 
-      await ConversationRepository.updateById(conversationId, {
-        isDeleted: true,
-      });
+      const updatedConversation = await ConversationRepository.updateById(
+        conversationId,
+        {
+          isDeleted: true,
+        }
+      );
 
-      return "Deleted conversation successfully";
+      return updatedConversation;
     } catch (error) {
       console.error(error);
       throw error;
