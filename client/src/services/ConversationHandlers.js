@@ -40,6 +40,7 @@ export const useConversationHandlers = ({
   deleteConversationByLeader,
   updateConversationName,
   updateConversationAvatar,
+  updateMemberRole,
 }) => {
   // --- Generic handler for socket actions ---
   const performSettingsAction = useCallback(
@@ -126,7 +127,7 @@ export const useConversationHandlers = ({
         setActionError('User not found in group or already left.');
         return;
       }
-      const isCurrentUserLeader = activeChat.leader === currentUserId;
+      const isCurrentUserLeader = activeChat.leaders.includes(currentUserId);
       if (!isCurrentUserLeader) {
         setActionError('Only the leader can remove members.');
         return;
@@ -157,8 +158,20 @@ export const useConversationHandlers = ({
             updateConversationsAfterMemberRemoved(prevConvs, conversationId, userIdToRemove)
           );
           setActiveChat((prevActive) =>
-            updateActiveChatAfterMemberRemoved(prevActive, conversationId, userIdToRemove)
+            prevActive && prevActive.id === conversationId
+              ? {
+                  ...prevActive,
+                  members: prevActive.members.filter(m => {
+                    const id = typeof m.id === 'object' && m.id._id ? m.id._id : m.id;
+                    return id !== userIdToRemove;
+                  }),
+                  detailedMembers: prevActive.detailedMembers
+                    ? prevActive.detailedMembers.filter(m => m.id !== userIdToRemove)
+                    : prevActive.detailedMembers,
+                }
+              : prevActive
           );
+          alert('Member removed successfully!');
         }
       );
     },
@@ -224,7 +237,6 @@ export const useConversationHandlers = ({
     ]
   );
 
-  // --- Handler for changing leader ---
   const handleChangeLeader = useCallback(
     (conversationId, newLeaderId) => {
       const currentUserId = currentUserIdRef.current;
@@ -246,16 +258,18 @@ export const useConversationHandlers = ({
         setActionError('New leader must be a current member of the group.');
         return;
       }
-      const isCurrentUserLeader = activeChat.leader === currentUserId;
+      const isCurrentUserLeader = activeChat.detailedMembers?.some(
+        (m) => m.id === currentUserId && m.role === 'leader' && !m.leftAt
+      );
       if (!isCurrentUserLeader) {
-        setActionError('Only the current leader can change leadership.');
+        setActionError('Only a leader can assign another leader.');
         return;
       }
       if (
         !window.confirm(
           `Are you sure you want to make ${
             newLeaderMember.fullName || newLeaderId
-          } the new leader?`
+          } a leader?`
         )
       ) {
         setActionError(null);
@@ -263,29 +277,34 @@ export const useConversationHandlers = ({
       }
       performSettingsAction(
         () =>
-          addNewMember({
+          updateMemberRole({
             conversationId,
-            newMemberId: newLeaderId,
-            role: 'leader',
+            memberId: newLeaderId,
+            newRole: 'leader',
           }),
-        'Change leader',
+        'Add leader',
         () => {
-          const oldLeaderId = activeChat.leader;
           setConversations((prevConvs) =>
-            updateConversationsAfterLeaderChanged(
-              prevConvs,
-              conversationId,
-              newLeaderId,
-              oldLeaderId
+            prevConvs.map(conv =>
+              conv.id === conversationId
+                ? {
+                    ...conv,
+                    detailedMembers: conv.detailedMembers.map(m =>
+                      m.id === newLeaderId ? { ...m, role: 'leader' } : m
+                    ),
+                  }
+                : conv
             )
           );
           setActiveChat((prevActive) =>
-            updateActiveChatAfterLeaderChanged(
-              prevActive,
-              conversationId,
-              newLeaderId,
-              oldLeaderId
-            )
+            prevActive && prevActive.id === conversationId
+              ? {
+                  ...prevActive,
+                  detailedMembers: prevActive.detailedMembers.map(m =>
+                    m.id === newLeaderId ? { ...m, role: 'leader' } : m
+                  ),
+                }
+              : prevActive
           );
         }
       );
@@ -294,7 +313,7 @@ export const useConversationHandlers = ({
       activeChat,
       currentUserIdRef,
       performSettingsAction,
-      addNewMember,
+      updateMemberRole,
       setConversations,
       setActiveChat,
       setActionError,
@@ -309,7 +328,7 @@ export const useConversationHandlers = ({
         !activeChat ||
         activeChat.id !== conversationId ||
         !activeChat.isGroup ||
-        activeChat.leader !== currentUserId ||
+        !activeChat.leaders.includes(currentUserId) ||
         leaderId !== currentUserId ||
         !currentUserId
       ) {
@@ -426,7 +445,7 @@ export const useConversationHandlers = ({
 
   // --- Handler for confirming adding a user ---
   const handleAddUserConfirm = useCallback(
-    (conversationId, userIdToAdd) => {
+    (conversationId, userIdToAdd, selectedUserObj = null) => {
       const currentUserId = currentUserIdRef.current;
       if (
         !activeChat ||
@@ -437,9 +456,12 @@ export const useConversationHandlers = ({
         setActionError('Invalid request to add user.');
         return;
       }
-      const userToAdd = addUserSearchResults.find(
+      let userToAdd = addUserSearchResults.find(
         (user) => String(user._id).trim() === userIdToAdd
       );
+      if (!userToAdd && selectedUserObj && String(selectedUserObj._id) === userIdToAdd) {
+        userToAdd = selectedUserObj;
+      }
       if (!userToAdd) {
         setActionError('User not found in search results.');
         return;
@@ -470,8 +492,19 @@ export const useConversationHandlers = ({
             })
           );
           setActiveChat((prevActive) =>
-            updateActiveChatAfterMemberAdded(prevActive, conversationId, null, userToAdd)
+            updateActiveChatAfterMemberAdded(
+              prevActive,
+              conversationId,
+              null,
+              {
+                id: userIdToAdd,
+                ...userToAdd,
+                role: 'member',
+                joinedAt: new Date().toISOString(),
+              }
+            )
           );
+          alert('Member added successfully!');
           setAddUserSearchResults([]);
         }
       );
@@ -510,7 +543,7 @@ export const useConversationHandlers = ({
       ).length || 0;
       const totalActiveMembers = activeChat.detailedMembers?.filter((m) => !m.leftAt).length || 0;
       const isCurrentUserLeaderAndOnlyLeader =
-        activeChat.leader === currentUserId && totalActiveLeaders <= 1;
+        activeChat.leaders.includes(currentUserId) && totalActiveLeaders <= 1;
       if (!isCurrentUserActiveMember) {
         setActionError('You are not an active member of this group.');
         return;
@@ -559,7 +592,7 @@ export const useConversationHandlers = ({
         !activeChat ||
         activeChat.id !== conversationId ||
         !activeChat.isGroup ||
-        activeChat.leader !== currentUserId
+        !activeChat.leaders.includes(currentUserId)
       ) {
         console.warn('User is not authorized to delete this group.');
         setActionError('You must be the leader to delete the group.');

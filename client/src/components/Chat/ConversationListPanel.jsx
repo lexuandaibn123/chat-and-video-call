@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import GroupList from './GroupList';
-import FriendList from './FriendList';
+import ConversationItem from './ConversationItem';
 import defaultAvatarPlaceholder from '../../assets/images/avatar_male.jpg';
 import { getFriendsApi } from "../../api/users";
 import "./Modal.scss";
@@ -24,6 +23,11 @@ const ConversationListPanel = ({
   const [hasSearched, setHasSearched] = useState(false);
   const [friendSuggestions, setFriendSuggestions] = useState([]);
   const [highlightIndex, setHighlightIndex] = useState(-1);
+
+  const allConversations = [
+    ...groups.map(g => ({ ...g, type: 'group' })),
+    ...friends.map(f => ({ ...f, type: 'friend' }))
+  ];
 
   const handleOpenModal = () => {
     setIsModalOpen(true);
@@ -158,8 +162,26 @@ const ConversationListPanel = ({
         </button>
       </div>
 
-      <FriendList friends={friends} onItemClick={onItemClick} activeChat={activeChat} />
-      <GroupList groups={groups} onItemClick={onItemClick} activeChat={activeChat} />
+      <section className="conversation-section">
+        {/* <h2 className="section-title">Conversations</h2> */}
+        <ul className="conversation-list">
+          {allConversations.map(conv => (
+            <ConversationItem
+              key={conv.id}
+              id={conv.id}
+              type={conv.type} 
+              avatar={conv.avatar}
+              name={conv.name}
+              lastMessage={conv.lastMessage}
+              time={conv.time}
+              unread={conv.unread || 0}
+              status={conv.status}
+              onClick={onItemClick}
+              isActive={activeChat?.id === conv.id}
+            />
+          ))}
+        </ul>
+      </section>
 
       {isModalOpen && (
         <div className="modal-overlay">

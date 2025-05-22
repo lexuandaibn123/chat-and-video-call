@@ -49,36 +49,16 @@ const ChatWindow = ({
 
   useEffect(() => {
     if (!socket || !activeContact?.id || !userInfo?.id) {
-      console.warn('Socket, activeContact.id, or userInfo.id is missing:', {
-        socket,
-        activeContactId: activeContact?.id,
-        userId: userInfo?.id,
-      });
+      // console.warn('Socket, activeContact.id, or userInfo.id is missing:', {
+      //   socket,
+      //   activeContactId: activeContact?.id,
+      //   userId: userInfo?.id,
+      // });
       return;
     }
 
     // Tham gia phòng cuộc trò chuyện
     socket.emit('joinConversationRoom', { conversationId: activeContact.id });
-
-    const handleCallStarted = (data) => {
-      console.log('Received callStarted event:', data);
-      if (data.roomId === activeContact.id && !isVideoCallOpen && !callInvite && isUserInGroup) {
-        setCallInvite(data);
-        toast.info(`${data.username} đã bắt đầu một cuộc gọi video`, {
-          position: 'top-right',
-          autoClose: 5000,
-          theme: 'dark',
-        });
-      } else {
-        console.warn('callStarted ignored:', {
-          receivedRoomId: data.roomId,
-          activeContactId: activeContact.id,
-          isVideoCallOpen,
-          hasCallInvite: !!callInvite,
-          isUserInGroup,
-        });
-      }
-    };
 
     const handleTyping = (memberId) => {
       if (memberId !== userInfo.id && isUserInGroup) {
@@ -97,17 +77,15 @@ const ChatWindow = ({
       }
     };
 
-    socket.on('callStarted', handleCallStarted);
     socket.on('typing', handleTyping);
     socket.on('stopTyping', handleStopTyping);
 
     return () => {
       console.log('Cleaning up socket listeners for activeContact:', activeContact?.id);
-      socket.off('callStarted', handleCallStarted);
       socket.off('typing', handleTyping);
       socket.off('stopTyping', handleStopTyping);
       socket.emit('leaveConversationRoom', { conversationId: activeContact.id });
-      // setTypingUsers([]);
+      setTypingUsers([]);
     };
   }, [socket, activeContact?.id, userInfo?.id, isVideoCallOpen, callInvite, isUserInGroup]);
 

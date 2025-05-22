@@ -21,10 +21,10 @@ const ChatSettingsOverlay = ({
   onDeleteConversationMember,
   onUpdateGroupName,
   updateConversationAvatar
-}) => {
-  if (!group || !group.isGroup || !group.members) {
-    if (group?.isGroup) console.warn("ChatSettingsOverlay received group data with missing members.");
-    return null;
+  }) => {
+    if (!group || !group.isGroup || !group.members) {
+      if (group?.isGroup) console.warn("ChatSettingsOverlay received group data with missing members.");
+      return null;
   }
 
   const [addUserInput, setAddUserInput] = useState('');
@@ -127,8 +127,10 @@ const ChatSettingsOverlay = ({
     setAvatarUrl(group.avatar || defaultGroupAvatar);
   }, [group.name, group.id, group.avatar]);
 
-  const leaderId = group.leader;
-  const isCurrentUserLeader = currentUserId === leaderId;
+  console.log("group: ", group);
+
+  const leaderIds = Array.isArray(group.leaders) ? group.leaders : [group.leaders];
+  const isCurrentUserLeader = leaderIds.includes(currentUserId);
   const numberOfLeaders = processedMembers.filter(m => m.role === 'leader' && m.leftAt === null).length;
 
   const handleSearchInputChange = async (e) => {
@@ -202,7 +204,7 @@ const ChatSettingsOverlay = ({
       const conversationId = group.id;
       setAddUserInput('');
       setSelectedUserToAdd(null);
-      onAddUserConfirm(conversationId, userIdToAdd);
+      onAddUserConfirm(conversationId, userIdToAdd, selectedUserToAdd);
     }
   };
 
