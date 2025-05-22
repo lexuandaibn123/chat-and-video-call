@@ -645,7 +645,8 @@ export const useSocket = ({
     });
 
     socketRef.current.on('leftConversation', (data) => {
-      const { conversationId, userId: leavingUserId } = data;
+      const { conversation, userId: leavingUserId } = data;
+      const conversationId = conversation?._id || conversation?.id;
       console.log('leftConversation received:', data);
       console.log('Current userId:', userId);
 
@@ -657,8 +658,8 @@ export const useSocket = ({
         return member.id === leavingUserId;
       };
 
-      // Kiểm tra nếu user nhận sự kiện là user rời nhóm
       if (leavingUserId === userId) {
+        // Nếu là chính mình rời nhóm, xóa khỏi danh sách
         setRawConversations((prevRaw) =>
           prevRaw.filter((conv) => conv._id !== conversationId)
         );
@@ -667,56 +668,39 @@ export const useSocket = ({
         );
         setActiveChat((prev) => (prev && prev.id === conversationId ? null : prev));
       } else {
-        // Thành viên khác rời nhóm, cập nhật lại danh sách thành viên
+        // Thành viên khác rời nhóm, cập nhật lại danh sách thành viên bằng conversation mới nhất từ server
         setRawConversations((prevRaw) =>
           prevRaw.map((conv) =>
-            conv._id === conversationId
-              ? {
-                  ...conv,
-                  members: conv.members && Array.isArray(conv.members)
-                    ? conv.members.filter((member) => !isSameUser(member, leavingUserId))
-                    : conv.members,
-                }
+            conv._id === conversationId ? conversation : conv
+          )
+        );
+        setConversations((prevConvs) =>
+          prevConvs.map((conv) =>
+            conv.id === conversationId
+              ? processRawRooms([conversation], userId)[0]
               : conv
           )
         );
-        setConversations((prevConvs) => [
-          ...prevConvs.map((conv) =>
-            conv.id === conversationId
-              ? {
-                  ...conv,
-                  members: conv.members && Array.isArray(conv.members)
-                    ? [...conv.members.filter((member) => !isSameUser(member, leavingUserId))]
-                    : conv.members,
-                  detailedMembers: conv.detailedMembers && Array.isArray(conv.detailedMembers)
-                    ? [...conv.detailedMembers.filter((member) => !isSameUser(member, leavingUserId))]
-                    : conv.detailedMembers,
-                }
-              : conv
-          ),
-        ]);
         setActiveChat((prev) =>
           prev && prev.id === conversationId
-            ? {
-                ...prev,
-                detailedMembers: prev.detailedMembers && Array.isArray(prev.detailedMembers)
-                  ? [...prev.detailedMembers.filter((member) => !isSameUser(member, leavingUserId))]
-                  : prev.detailedMembers,
-              }
+            ? processRawRooms([conversation], userId)[0]
             : prev
         );
       }
     });
 
-    socketRef.current.on('deletedConversationByLeader', (deletedConversationId) => {
-      console.log('deletedConversationByLeader:', deletedConversationId);
+    socketRef.current.on('deletedConversationByLeader', (data) => {
+      const conversation = data.conversation;
+      const conversationId = conversation?._id || conversation?.id;
+      console.log('deletedConversationByLeader:', conversation);
+
       setRawConversations((prevRaw) =>
-        prevRaw.filter((conv) => conv._id !== deletedConversationId)
+        prevRaw.filter((conv) => conv._id !== conversationId)
       );
       setConversations((prevConvs) =>
-        prevConvs.filter((conv) => conv.id !== deletedConversationId)
+        prevConvs.filter((conv) => conv.id !== conversationId)
       );
-      setActiveChat((prev) => (prev && prev.id === deletedConversationId ? null : prev));
+      setActiveChat((prev) => (prev && prev.id === conversationId ? null : prev));
     });
 
     socketRef.current.on('updatedConversationName', (updatedConversation) => {

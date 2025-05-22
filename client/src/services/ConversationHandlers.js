@@ -127,7 +127,7 @@ export const useConversationHandlers = ({
         setActionError('User not found in group or already left.');
         return;
       }
-      const isCurrentUserLeader = activeChat.leader === currentUserId;
+      const isCurrentUserLeader = activeChat.leaders.includes(currentUserId);
       if (!isCurrentUserLeader) {
         setActionError('Only the leader can remove members.');
         return;
@@ -328,7 +328,7 @@ export const useConversationHandlers = ({
         !activeChat ||
         activeChat.id !== conversationId ||
         !activeChat.isGroup ||
-        activeChat.leader !== currentUserId ||
+        !activeChat.leaders.includes(currentUserId) ||
         leaderId !== currentUserId ||
         !currentUserId
       ) {
@@ -543,7 +543,7 @@ export const useConversationHandlers = ({
       ).length || 0;
       const totalActiveMembers = activeChat.detailedMembers?.filter((m) => !m.leftAt).length || 0;
       const isCurrentUserLeaderAndOnlyLeader =
-        activeChat.leader === currentUserId && totalActiveLeaders <= 1;
+        activeChat.leaders.includes(currentUserId) && totalActiveLeaders <= 1;
       if (!isCurrentUserActiveMember) {
         setActionError('You are not an active member of this group.');
         return;
@@ -592,7 +592,7 @@ export const useConversationHandlers = ({
         !activeChat ||
         activeChat.id !== conversationId ||
         !activeChat.isGroup ||
-        activeChat.leader !== currentUserId
+        !activeChat.leaders.includes(currentUserId)
       ) {
         console.warn('User is not authorized to delete this group.');
         setActionError('You must be the leader to delete the group.');
