@@ -42,10 +42,10 @@ const handleApiResponse = async (response) => {
 // --- Kết thúc hàm xử lý response ---
 
 // Fetch posts with pagination
-export const getPosts = async (page = 1, limit = 20) => {
+export const getPosts = async (page = 1, limit = 40) => {
   try {
     const token = localStorage.getItem('authToken'); // Lấy token từ localStorage
-    const response = await fetch(`${API_BASE_URL}/post/get-posts`, {
+    const response = await fetch(`${API_BASE_URL}/post/get-posts?page=${page}&limit=${limit}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -63,7 +63,7 @@ export const getPosts = async (page = 1, limit = 20) => {
 };
 
 // Fetch comments for a specific post with pagination
-export const getComments = async (postId, page = 1, limit = 20) => {
+export const getComments = async (postId, page = 1, limit = 40) => {
   try {
     const token = localStorage.getItem('authToken'); // Lấy token từ localStorage
     const response = await fetch(`${API_BASE_URL}/post/get-posts`, {

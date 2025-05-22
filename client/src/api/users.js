@@ -110,3 +110,21 @@ export const getUserDetailsApi = async (userId) => {
         throw error;
     }
 };
+
+// Lấy danh sách gợi ý kết bạn
+export const getPotentialFriendsApi = async () => {
+    const url = `${API_BASE_URL}/user/potential-friends`;
+    console.log("Calling getPotentialFriendsApi with URL:", url);
+    try {
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+        });
+        const result = await handleApiResponse(response);
+        return result.data || [];
+    } catch (error) {
+        console.error('Error fetching potential friends:', error);
+        throw error;
+    }
+};
