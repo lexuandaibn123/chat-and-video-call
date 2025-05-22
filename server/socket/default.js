@@ -51,6 +51,24 @@ const initDefaultNameSpace = (defaultNamespace) => {
       }
     });
 
+    client.on("joinRoom", async ({ roomId }) => {
+      try {
+        if (!roomId || roomId.length < 1) throw new Error("Invalid roomId");
+        const conversation =
+          await ConversationService.verifyConversationAndUserByWs({
+            conversationId: roomId,
+            userId: userInfo.id,
+          });
+
+        if (!conversation) throw new Error("Conversation not found");
+
+        client.join(roomId);
+      } catch (error) {
+        console.error(error);
+        client.emit("error", error);
+      }
+    });
+
     client.on("typing", ({ roomId, memberId }) =>
       client.in(roomId).emit("typing", memberId)
     );
@@ -60,19 +78,20 @@ const initDefaultNameSpace = (defaultNamespace) => {
     );
 
     client.on("createConversation", async ({ members, name }) => {
-      if (members.length < 1) {
-        client.emit("error", "Members array is empty");
-        return;
-      }
-
       try {
+        if (members.length < 1) throw new Error("Members array is empty");
+
         const conversation = await ConversationService.createConversationByWs({
           userId: userInfo.id,
           members,
           name,
         });
         client.join(conversation._id.toString());
-        client.emit("createdConversation", conversation);
+
+        conversation.members.forEach((member) => {
+          const memberId = member.id.toString();
+          defaultNamespace.in(memberId).emit("newConversation", conversation);
+        });
       } catch (error) {
         console.error(error);
         client.emit("error", error);
@@ -82,24 +101,25 @@ const initDefaultNameSpace = (defaultNamespace) => {
     client.on(
       "addNewMember",
       async ({ conversationId, newMemberId, role = "member" }) => {
-        if (!conversationId || conversationId.length < 1) {
-          client.emit("error", "Invalid conversationId");
-          return;
-        }
-
-        if (!newMemberId || newMemberId.length < 1) {
-          client.emit("error", "Invalid newMemberId");
-          return;
-        }
-
         try {
+          if (!conversationId || conversationId.length < 1)
+            throw new Error("Invalid conversationId");
+
+          if (!newMemberId || newMemberId.length < 1)
+            throw new Error("Invalid newMemberId");
+
           const conversation = await ConversationService.addNewMemberByWs({
             userId: userInfo.id,
             conversationId,
             newMemberId,
             role,
           });
-          client.in(conversationId).emit("addedNewMember", conversation);
+          defaultNamespace
+            .in(newMemberId)
+            .emit("newConversation", conversation);
+          defaultNamespace
+            .in(conversationId)
+            .emit("addedNewMember", conversation);
         } catch (error) {
           console.error(error);
           client.emit("error", error);
@@ -108,23 +128,19 @@ const initDefaultNameSpace = (defaultNamespace) => {
     );
 
     client.on("removeMember", async ({ conversationId, memberId }) => {
-      if (!conversationId || conversationId.length < 1) {
-        client.emit("error", "Invalid conversationId");
-        return;
-      }
-
-      if (!memberId || memberId.length < 1) {
-        client.emit("error", "Invalid memberId");
-        return;
-      }
-
       try {
+        if (!conversationId || conversationId.length < 1)
+          throw new Error("Invalid conversationId");
+
+        if (!memberId || memberId.length < 1)
+          throw new Error("Invalid memberId");
+
         const conversation = await ConversationService.removeMemberByWs({
           userId: userInfo.id,
           conversationId,
           memberId,
         });
-        client.in(conversationId).emit("removedMember", conversation);
+        defaultNamespace.in(conversationId).emit("removedMember", conversation);
       } catch (error) {
         console.error(error);
         client.emit("error", error);
@@ -132,17 +148,17 @@ const initDefaultNameSpace = (defaultNamespace) => {
     });
 
     client.on("leaveConversation", async ({ conversationId }) => {
-      if (!conversationId || conversationId.length < 1) {
-        client.emit("error", "Invalid conversationId");
-        return;
-      }
-
       try {
-        const conversation = await ConversationService.leaveConversationByWs({
+        if (!conversationId || conversationId.length < 1)
+          throw new Error("Invalid conversationId");
+
+        await ConversationService.leaveConversationByWs({
           userId: userInfo.id,
           conversationId,
         });
-        client.in(conversationId).emit("leftConversation", conversation);
+        defaultNamespace
+          .in(conversationId)
+          .emit("leftConversation", { conversationId, userId: userInfo.id });
       } catch (error) {
         console.error(error);
         client.emit("error", error);
@@ -150,18 +166,16 @@ const initDefaultNameSpace = (defaultNamespace) => {
     });
 
     client.on("deleteConversationByLeader", async ({ conversationId }) => {
-      if (!conversationId || conversationId.length < 1) {
-        client.emit("error", "Invalid conversationId");
-        return;
-      }
-
       try {
+        if (!conversationId || conversationId.length < 1)
+          throw new Error("Invalid conversationId");
+
         const conversation =
           await ConversationService.deleteConversationByLeaderAndWs({
             userId: userInfo.id,
             conversationId,
           });
-        client
+        defaultNamespace
           .in(conversationId)
           .emit("deletedConversationByLeader", conversation);
       } catch (error) {
@@ -171,49 +185,21 @@ const initDefaultNameSpace = (defaultNamespace) => {
     });
 
     client.on("updateConversationName", async ({ conversationId, newName }) => {
-      if (!conversationId || conversationId.length < 1) {
-        client.emit("error", "Invalid conversationId");
-        return;
-      }
-
-      if (!newName || newName.length < 1) {
-        client.emit("error", "Invalid newName");
-        return;
-      }
-
       try {
+        if (!conversationId || conversationId.length < 1)
+          throw new Error("Invalid conversationId");
+
+        if (!newName || newName.length < 1) throw new Error("Invalid newName");
+
         const conversation =
           await ConversationService.updateConversationNameByWs({
             userId: userInfo.id,
             conversationId,
             newName,
           });
-        client.in(conversationId).emit("updatedConversationName", conversation);
-      } catch (error) {
-        console.error(error);
-        client.emit("error", error);
-      }
-    });
-
-    client.on("updateConversationAvatar", async ({ conversationId, newAvatar }) => {
-      if (!conversationId || conversationId.length < 1) {
-        client.emit("error", "Invalid conversationId");
-        return;
-      }
-
-      if (!newAvatar || newAvatar.length < 1) {
-        client.emit("error", "Invalid newAvatar");
-        return;
-      }
-
-      try {
-        const conversation =
-          await ConversationService.updateConversationAvatarByWs({
-            userId: userInfo.id,
-            conversationId,
-            newAvatar,
-          });
-        client.in(conversationId).emit("updatedConversationAvatar", conversation);
+        defaultNamespace
+          .in(conversationId)
+          .emit("updatedConversationName", conversation);
       } catch (error) {
         console.error(error);
         client.emit("error", error);
@@ -221,17 +207,80 @@ const initDefaultNameSpace = (defaultNamespace) => {
     });
 
     client.on(
-      "newMessage",
-      async ({ conversationId, data, type, replyToMessageId = null }) => {
+      "updateConversationAvatar",
+      async ({ conversationId, newAvatar }) => {
         try {
-          if (typeof conversationId !== "string" || conversationId.length < 1) {
-            console.error("Invalid conversationId type");
-            client.in(userInfo.id).emit("error", "Invalid conversationId type");
+          if (!conversationId || conversationId.length < 1)
+            throw new Error("Invalid conversationId");
+
+          if (!newAvatar || newAvatar.length < 1)
+            throw new Error("Invalid newAvatar");
+
+          const conversation =
+            await ConversationService.updateConversationAvatarByWs({
+              userId: userInfo.id,
+              conversationId,
+              newAvatar,
+            });
+          defaultNamespace
+            .in(conversationId)
+            .emit("updatedConversationAvatar", conversation);
+        } catch (error) {
+          console.error(error);
+          client.emit("error", error);
+        }
+      }
+    );
+
+    client.on(
+      "updateMemberRole",
+      async ({ conversationId, memberId, newRole }) => {
+        try {
+          if (!conversationId || conversationId.length < 1)
+            throw new Error("Invalid conversationId");
+
+          if (!memberId || memberId.length < 1)
+            throw new Error("Invalid memberId");
+
+          if (newRole !== "leader" && newRole !== "member")
+            throw new Error("Invalid newRole");
+
+          const conversation = await ConversationService.updateMemberRoleByWs({
+            userId: userInfo.id,
+            conversationId,
+            memberId,
+            newRole,
+          });
+          if (!conversation) {
+            client.emit("error", "Conversation not found");
+            return;
           }
-          if (type !== "text" && type !== "file" && type !== "image") {
-            console.error("Invalid type");
-            client.in(userInfo.id).emit("error", "Invalid type");
-          }
+          defaultNamespace.in(conversationId).emit("updatedMemberRole", {
+            userId: memberId,
+            conversationId,
+            newRole,
+          });
+        } catch (error) {
+          console.error(error);
+          client.emit("error", error);
+        }
+      }
+    );
+
+    client.on(
+      "newMessage",
+      async ({
+        conversationId,
+        data,
+        type,
+        replyToMessageId = null,
+        tempId,
+      }) => {
+        try {
+          if (typeof conversationId !== "string" || conversationId.length < 1)
+            throw new Error("Invalid conversationId type");
+          if (type !== "text" && type !== "file" && type !== "image")
+            throw new Error("Invalid type");
 
           if (Array.isArray(data)) {
             const isValid = data.every((part) => {
@@ -241,19 +290,12 @@ const initDefaultNameSpace = (defaultNamespace) => {
                 part.data.length > 0
               );
             });
-            if (!isValid || data.length < 1) {
-              console.error("Invalid data type");
-              client.in(userInfo.id).emit("error", "Invalid data type");
-            }
+            if (!isValid || data.length < 1)
+              throw new Error("Invalid data type");
           } else if (typeof data === "object") {
-            if (data.type !== "text" && data.type !== "file") {
-              console.error("Invalid data type");
-              client.in(userInfo.id).emit("error", "Invalid data type");
-            }
-          } else {
-            console.error("Invalid data type");
-            client.in(userInfo.id).emit("error", "Invalid data type");
-          }
+            if (data.type !== "text" && data.type !== "file")
+              throw new Error("Invalid data type");
+          } else throw new Error("Invalid data type");
 
           const message = await ConversationService.createNewMessageByWs({
             userId: userInfo.id,
@@ -262,7 +304,10 @@ const initDefaultNameSpace = (defaultNamespace) => {
             type,
             replyToMessageId,
           });
-          client.in(conversationId).emit("receiveMessage", message);
+          defaultNamespace.in(conversationId).emit("receiveMessage", {
+            message,
+            tempId,
+          });
         } catch (error) {
           console.error(error);
           client.emit("error", error);
@@ -272,21 +317,18 @@ const initDefaultNameSpace = (defaultNamespace) => {
 
     client.on("editMessage", async ({ messageId, newData }) => {
       try {
-        if (typeof messageId !== "string" || messageId.length < 1) {
-          console.error("Invalid messageId type");
-          client.in(userInfo.id).emit("error", "Invalid messageId type");
-        }
-        if (typeof newData !== "string" || newData.length < 1) {
-          console.error("Invalid newData type");
-          client.in(userInfo.id).emit("error", "Invalid newData type");
-        }
+        if (typeof messageId !== "string" || messageId.length < 1)
+          throw new Error("Invalid messageId type");
+
+        if (typeof newData !== "string" || newData.length < 1)
+          throw new Error("Invalid newData type");
 
         const updatedMessage = await ConversationService.editMessageByWs({
           userId: userInfo.id,
           messageId,
           newData,
         });
-        client
+        defaultNamespace
           .in(updatedMessage.conversationId.toString())
           .emit("editedMessage", updatedMessage);
       } catch (error) {
@@ -297,16 +339,14 @@ const initDefaultNameSpace = (defaultNamespace) => {
 
     client.on("deleteMessage", async ({ messageId }) => {
       try {
-        if (typeof messageId !== "string" || messageId.length < 1) {
-          console.error("Invalid messageId type");
-          client.in(userInfo.id).emit("error", "Invalid messageId type");
-        }
+        if (typeof messageId !== "string" || messageId.length < 1)
+          throw new Error("Invalid messageId type");
 
         const deletedMessage = await ConversationService.deleteMessageByWs({
           userId: userInfo.id,
           messageId,
         });
-        client
+        defaultNamespace
           .in(deletedMessage.conversationId.toString())
           .emit("deletedMessage", deletedMessage);
       } catch (error) {
