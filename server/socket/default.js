@@ -56,7 +56,7 @@ const initDefaultNameSpace = (defaultNamespace) => {
         if (!roomId || roomId.length < 1) throw new Error("Invalid roomId");
         const conversation =
           await ConversationService.verifyConversationAndUserByWs({
-            roomId,
+            conversationId: roomId,
             userId: userInfo.id,
           });
 
@@ -152,13 +152,13 @@ const initDefaultNameSpace = (defaultNamespace) => {
         if (!conversationId || conversationId.length < 1)
           throw new Error("Invalid conversationId");
 
-        await ConversationService.leaveConversationByWs({
+        const conversation = await ConversationService.leaveConversationByWs({
           userId: userInfo.id,
           conversationId,
         });
         defaultNamespace
           .in(conversationId)
-          .emit("leftConversation", { conversationId, userId: userInfo.id });
+          .emit("leftConversation", { conversation, userId: userInfo.id });
       } catch (error) {
         console.error(error);
         client.emit("error", error);
@@ -177,7 +177,10 @@ const initDefaultNameSpace = (defaultNamespace) => {
           });
         defaultNamespace
           .in(conversationId)
-          .emit("deletedConversationByLeader", conversation);
+          .emit("deletedConversationByLeader", {
+            conversation,
+            userId: userInfo.id,
+          });
       } catch (error) {
         console.error(error);
         client.emit("error", error);
