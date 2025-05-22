@@ -49,11 +49,11 @@ const ChatWindow = ({
 
   useEffect(() => {
     if (!socket || !activeContact?.id || !userInfo?.id) {
-      console.warn('Socket, activeContact.id, or userInfo.id is missing:', {
-        socket,
-        activeContactId: activeContact?.id,
-        userId: userInfo?.id,
-      });
+      // console.warn('Socket, activeContact.id, or userInfo.id is missing:', {
+      //   socket,
+      //   activeContactId: activeContact?.id,
+      //   userId: userInfo?.id,
+      // });
       return;
     }
 

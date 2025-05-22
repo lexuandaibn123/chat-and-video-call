@@ -271,14 +271,14 @@ export const useSocket = ({
 
   useEffect(() => {
     if (!isAuthenticated || !userId || !userInfo) {
-      console.warn(
-        'useSocket: Not authenticated, missing userId, or missing userInfo. Skipping socket initialization.',
-        {
-          isAuthenticated,
-          userId,
-          userInfo,
-        }
-      );
+      // console.warn(
+      //   'useSocket: Not authenticated, missing userId, or missing userInfo. Skipping socket initialization.',
+      //   {
+      //     isAuthenticated,
+      //     userId,
+      //     userInfo,
+      //   }
+      // );
       return;
     }
 
@@ -494,22 +494,34 @@ export const useSocket = ({
       console.log(`User ${memberId} stopped typing in room ${activeChatId}`);
     });
 
-    // Xử lý tạo cuộc trò chuyện mới (caller only)
     socketRef.current.on('newConversation', (newConversation) => {
       console.log('newConversation:', newConversation);
+
+      // Đưa qua processRawRooms để lấy conversation đã format
+      const formattedConversation = processRawRooms([newConversation], userId)[0];
+
       setRawConversations((prevRaw) => {
-        if (prevRaw.some((conv) => conv._id === newConversation._id)) {
-          return prevRaw;
+        const existed = prevRaw.some((conv) => conv._id === newConversation._id);
+        if (existed) {
+          // Thay thế conversation cũ bằng cái mới
+          return prevRaw.map((conv) =>
+            conv._id === newConversation._id ? newConversation : conv
+          );
         }
         return [newConversation, ...prevRaw];
       });
+
       setConversations((prevConvs) => {
-        if (prevConvs.some((conv) => conv.id === newConversation._id)) {
-          return prevConvs; 
+        const existed = prevConvs.some((conv) => conv.id === newConversation._id);
+        if (existed) {
+          // Thay thế conversation cũ bằng cái mới đã format
+          return prevConvs.map((conv) =>
+            conv.id === newConversation._id ? formattedConversation : conv
+          );
         }
-        const formattedConversation = processRawRooms([newConversation], userId)[0];
         return [formattedConversation, ...prevConvs];
       });
+
       socketRef.current.emit('joinRoom', { roomId: newConversation._id.toString() });
       joinedRoomsRef.current.add(newConversation._id.toString());
     });
@@ -621,15 +633,15 @@ export const useSocket = ({
       }
     });
 
-    socketRef.current.on('deletedConversationByLeader', (conversation) => {
-      console.log('deletedConversationByLeader:', conversation);
+    socketRef.current.on('deletedConversationByLeader', (deletedConversationId) => {
+      console.log('deletedConversationByLeader:', deletedConversationId);
       setRawConversations((prevRaw) =>
-        prevRaw.filter((conv) => conv._id !== conversation._id)
+        prevRaw.filter((conv) => conv._id !== deletedConversationId)
       );
       setConversations((prevConvs) =>
-        prevConvs.filter((conv) => conv.id !== conversation._id)
+        prevConvs.filter((conv) => conv.id !== deletedConversationId)
       );
-      setActiveChat((prev) => (prev && prev.id === conversation._id ? null : prev));
+      setActiveChat((prev) => (prev && prev.id === deletedConversationId ? null : prev));
     });
 
     socketRef.current.on('updatedConversationName', (updatedConversation) => {
