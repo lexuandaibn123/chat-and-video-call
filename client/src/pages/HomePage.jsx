@@ -29,7 +29,7 @@ const HomePage = () => {
   //     hasImages: false,
   //   }
   // ]);
-  const [posts, setPosts] = useState([]);
+  const [posts, setPosts] = useState({});
   const [loading, setLoading] = useState(true);
   const [avt, setAvt] = useState("");
 
@@ -43,13 +43,17 @@ const HomePage = () => {
           setAvt(response.data[0].poster.avatar) || "";
           setPosts(
             response.data.map((p) => ({
-              id: p._id || "",
-              avatar: p.poster?.avatar || "/api/placeholder/40/40",
-              name: p.poster?.fullName || "Anonymous",
+              postId: p._id || "",
+              avatar: p.poster.avatar || "/api/placeholder/40/40",
+              name: p.poster.fullName || "Anonymous",
+              id_poster: p.poster._id || "",
               content: p.content || [],
-              react: p.reacts || [],
-              comment: p.comments || [],
-              time: formatTimestamp(p.datetime_created) || "Just now",
+              isDeleted: p.isDeleted || false,
+              isEdited: p.isEdited || false,
+              reacts: p.reacts || [],
+              comments: p.comments || [],
+              datetime_created: formatTimestamp(p.datetime_created) || "Just now",
+              last_updated: formatTimestamp(p.last_updated) || "Just now",
             }))
           );
           // setPosts((prev) => [p, ...prev]);

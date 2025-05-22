@@ -87,3 +87,51 @@ export const getPosts = async () => {
         throw error;
     }
 }
+
+export const editPost = async (id, content) => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/post/edit-post`, {
+            method: "PUT",
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                postId: id,
+                newContent: [
+                    {
+                        type: "text",
+                        data: content
+                    }
+                ]
+            }),
+            credentials: 'include',
+        })
+        return handleApiResponse(response);
+    }
+    catch (error) {
+        console.error("API EditPost Error:", error);
+        if (error instanceof TypeError) {
+            throw new Error('Connection error. Please check your network and CORS settings.');
+        }
+        throw error;
+    }
+}
+
+export const deletePost = async (id) => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/post/delete-post`, {
+            method: "PUT",
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                postId: id
+            }),
+            credentials: 'include',
+        })
+        return handleApiResponse(response);
+    }
+    catch (error) {
+        console.error("API DeletePost Error:", error);
+        if (error instanceof TypeError) {
+            throw new Error('Connection error. Please check your network and CORS settings.');
+        }
+        throw error;
+    }
+}   

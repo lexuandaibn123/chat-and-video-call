@@ -1,124 +1,271 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { infoApi } from "../../api/auth";
+import { editPost, deletePost } from "../../api/feeds";
 
-const PostItem = ({ id, avatar, name, content, react, comment, time }) => {
+const PostItem = ({ postId, avatar, name, id_poster, content, isDeleted, isEdited, reacts, comments, datetime_created, last_updated }) => {
   // Function to check if post has images
-  const hasImages = () => {
-    if (!content || !Array.isArray(content)) return false;
-    return content.some(item => item.type === "image");
-  };
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedContent, setEditedContent] = useState(content[0].data);
+  const [showComments, setShowComments] = useState(false);
+  const [newComment, setNewComment] = useState("");
+  const [user_id, setUserId] = useState("");
+  // const [postComments, setPostComments] = useState(comment);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isLiked, setIsLiked] = useState(false); 
+  // const [likeCount, setLikeCount] = useState(react);
 
-  // Function to get text content
-  const getTextContent = () => {
-    if (!content || !Array.isArray(content)) return "";
-    const textItems = content.filter(item => item.type === "text");
-    return textItems.length > 0 ? textItems[0].data : "";
-  };
+  // const handleLike = () => {
+  //   if (isLiked) {
+  //     setLikeCount(likeCount - 1)
+  //   } else {
+  //     setLikeCount(likeCount + 1)
+  //   }
+  //   setIsLiked(!isLiked)
+  // }
+  useEffect(() => {
+    const fetchUser = async () => {
+      const response = await infoApi();
+      if (response.success) {
+        setUserId(response.userInfo.id);
+      } else {
+        console.log("can't get user info!");
+      }
+    };
+    fetchUser();
+  }, []);
 
-  // Function to get image content
-  const getImages = () => {
-    if (!content || !Array.isArray(content)) return [];
-    return content.filter(item => item.type === "image");
-  };
+  const handleEdit = () => {
+    setIsEditing(true);
+    setIsMenuOpen(false);
+  }
 
-  // Get images if they exist
-  const postImages = getImages();
-  
+  const handleSaveEdit = async () => {
+    if (editedContent.trim() === "") {
+      alert("Post content cannot be empty");
+      setEditedContent(content[0].data);
+      setIsEditing(false);
+      return;
+    }
+    if (editedContent === content[0].data) {
+      alert("No changes made to the post");
+      setIsEditing(false);
+      return;
+    }
+    try {
+      const response = await editPost(postId, editedContent);
+      if (response.success) {
+        alert("Post updated successfully!");
+        setEditedContent(editedContent);
+        isEdited = response.data.isEdited;  
+      } else {
+        alert("Failed to update post");
+      }
+    } catch (error) {
+      console.error("Error updating post:", error); 
+    }
+    setIsEditing(false);
+  }
+
+  const handleCancelEdit = () => {
+    setEditedContent(content[0].data);
+    setIsEditing(false);
+  }
+
+  const handleDelete = async () => {
+  if (window.confirm("Are you sure you want to delete this post?")) {
+    try {
+      const response = await deletePost(postId);
+      if (response.success) {
+        alert("Post deleted successfully!");
+        // Có thể gọi callback từ props để xóa post khỏi danh sách cha
+        // hoặc reload lại danh sách bài đăng
+      } else {
+        alert("Failed to delete post");
+      }
+    } catch (error) {
+      alert("Error deleting post!");
+      console.error(error);
+    }
+    setIsMenuOpen(false);
+  }
+};
+
+  // const handleAddComment = (e) => {
+  //   e.preventDefault()
+  //   if (newComment.trim() === "") return
+
+  //   const newCommentObj = {
+  //     id: `c${Date.now()}`,
+  //     name: "You",
+  //     time: "Just now",
+  //     content: newComment,
+  //     avatar: "/placeholder.svg?height=32&width=32",
+  //   }
+
+  //   setPostComments([...postComments, newCommentObj])
+  //   setNewComment("")
+  // }
+
   return (
-    <article className="post border rounded-lg shadow-sm p-4 mb-6 bg-white">
-      <header className="post-header flex justify-between items-center mb-4">
-        <div className="post-author flex items-center">
+    <article className="post">
+      <header className="post-header">
+        <div className="post-author">
           <img
-            src={avatar || "/api/placeholder/40/40"}
-            alt={name || "Author"}
-            className="profile-image w-10 h-10 rounded-full mr-3"
+            src={avatar}
+            alt={name}
+            width="40"
+            height="40"
+            className="profile-image"
           />
           <div className="post-author-info">
-            <h3 className="post-author-name font-semibold text-gray-800">{name}</h3>
+            <h3 className="post-author-name">{name}</h3>
             <div className="post-meta">
-              <span className="post-time text-sm text-gray-500">{time}</span>
+              <span className="post-time">{datetime_created}</span>
             </div>
           </div>
         </div>
-        <button className="post-menu-button text-gray-500 hover:text-gray-700">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <circle cx="12" cy="12" r="1"></circle>
-            <circle cx="19" cy="12" r="1"></circle>
-            <circle cx="5" cy="12" r="1"></circle>
-          </svg>
-        </button>
+        {id_poster === user_id && (
+          <div className="post-menu">
+            <button
+              className="post-menu-button"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+            >
+              <i className="fas fa-ellipsis-v"></i>
+            </button>
+            {isMenuOpen && (
+              <div className="post-menu-dropdown">
+                <button className="post-menu-item" onClick={handleEdit}>
+                  <i className="fas fa-edit"></i>
+                  <span>Edit</span>
+                </button>
+                <button
+                  className="post-menu-item post-menu-item-delete" onClick={handleDelete}
+                >
+                  <i className="fas fa-trash-alt"></i>
+                  <span>Delete</span>
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </header>
 
-      <section className="post-content mb-4">
-        <p className="post-text mb-4 text-gray-700">
-          {getTextContent()}
-        </p>
+      <section className="post-content">
+        {isEditing ? (
+          <div className="post-edit">
+            <textarea
+              className="post-edit-textarea"
+              value={editedContent}
+              onChange={(e) => setEditedContent(e.target.value)}
+            />
+            <div className="post-edit-actions">
+              <button className="post-edit-cancel" onClick={handleCancelEdit}>
+                Cancel
+              </button>
+              <button className="post-edit-save" onClick={handleSaveEdit}>
+                Save
+              </button>
+            </div>
+          </div>
+        ) : (
+          <p className="post-text">{editedContent}</p>
+        )}
 
-        {postImages.length > 0 && (
-          <div className="post-images grid gap-2">
-            {postImages.map((image, index) => (
-              <img
-                key={index}
-                src={image.data || "/api/placeholder/600/400"}
-                alt={image.altText || `Image ${index + 1}`}
-                className="post-image w-full rounded-lg"
-              />
-            ))}
+        {(content.length > 1 && content[1].type === "image") && (
+          <div className="post-images">
+            <img
+              src={content[1].data}
+              alt="Project image 1"
+              width="600"
+              height="400"
+              className="post-image"
+            />
           </div>
         )}
 
-        <div className="post-stats flex items-center mt-4 text-sm text-gray-500">
-          <span className="like-icon mr-1">❤</span>
-          <span className="mr-4">{react?.length || 0} {react.length > 0 ? `reacts` : `react`}</span>
-          <span className="post-comments-count">{comment?.length || 0} {comment.length > 0 ? `comments` : `comment`}</span>
+        <div className="post-stats">
+          {reacts.length > 0 && (
+            <>
+              <span className={`like-icon ${isLiked ? "liked" : ""}`}>❤</span>
+              <span>{reacts.length} likes</span>
+            </>
+          )}
+          {comments.length > 0 && (
+            <button
+              className="post-comments-count"
+              onClick={() => setShowComments(!showComments)}
+            >
+              {comments.length} comments
+            </button>
+          )}
         </div>
       </section>
 
-      <footer className="post-footer flex border-t pt-3">
-        <button className="post-action-button flex items-center mr-6 text-gray-600 hover:text-blue-600">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="mr-2"
-          >
-            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-          </svg>
-          <span>React</span>
+      <footer className="post-footer">
+        <button
+          className={`post-action-button ${isLiked ? "liked" : ""}`}
+        >
+          <i className={`${isLiked ? "fas" : "far"} fa-heart`}></i>
+          <span>Like</span>
         </button>
-        <button className="post-action-button flex items-center text-gray-600 hover:text-blue-600">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="mr-2"
-          >
-            <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
-          </svg>
+        <button
+          className={`post-action-button ${showComments ? "active" : ""}`}
+          onClick={() => setShowComments(!showComments)}
+        >
+          <i className="far fa-comment"></i>
           <span>Comment</span>
         </button>
       </footer>
+
+      {showComments && (
+        <div className="post-comments">
+          {postComments.map((comment) => (
+            <div key={comment.id} className="comment">
+              <div className="comment-avatar">
+                <img
+                  src={comment.avatar || "/placeholder.svg"}
+                  alt={comment.name}
+                  width="32"
+                  height="32"
+                  className="profile-image"
+                />
+              </div>
+              <div className="comment-content">
+                <div className="comment-header">
+                  <span className="comment-name">{comment.name}</span>
+                  <span className="comment-role">{comment.role}</span>
+                  <span className="comment-time">{comment.time}</span>
+                </div>
+                <p className="comment-text">{comment.content}</p>
+              </div>
+            </div>
+          ))}
+
+          <form className="comment-form" onSubmit={handleAddComment}>
+            <div className="comment-avatar">
+              <img
+                src="/placeholder.svg?height=32&width=32"
+                alt="Your avatar"
+                width="32"
+                height="32"
+                className="profile-image"
+              />
+            </div>
+            <div className="comment-input-container">
+              <input
+                type="text"
+                className="comment-input"
+                placeholder="Write a comment..."
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+              />
+              <button type="submit" className="comment-submit">
+                <i className="fas fa-paper-plane"></i>
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </article>
   );
 };
