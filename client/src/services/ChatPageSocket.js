@@ -312,16 +312,16 @@ export const useSocket = ({
       console.log('Socket.IO connected:', socketRef.current.id);
       isConnectedRef.current = true;
       socketRef.current.emit('setup', { page: 1, limit: 30 });
-      // if (conversations?.length) {
-      //   conversations.forEach((conv) => {
-      //     const roomId = conv.id;
-      //     if (!joinedRoomsRef.current.has(roomId)) {
-      //       socketRef.current.emit('joinRoom', {roomId});
-      //       joinedRoomsRef.current.add(roomId);
-      //     }
-      //     // console.log('Joined:', roomId);
-      //   });
-      // }
+      if (conversations?.length) {
+        conversations.forEach((conv) => {
+          const roomId = conv.id;
+          if (!joinedRoomsRef.current.has(roomId)) {
+            socketRef.current.emit('joinRoom', {roomId});
+            joinedRoomsRef.current.add(roomId);
+          }
+          // console.log('Joined:', roomId);
+        });
+      }
     });
 
     socketRef.current.on('connected', () => {
