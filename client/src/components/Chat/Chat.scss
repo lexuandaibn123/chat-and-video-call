@@ -1002,26 +1002,26 @@
 }
 
 .chat-settings-overlay {
-  position: fixed; // Cố định trên màn hình
+  position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba($text-color, 0.6); // Nền tối mờ
+  background-color: rgba($text-color, 0.6);
   display: flex;
-  align-items: center; // Căn giữa dọc
-  justify-content: center; // Căn giữa ngang
-  z-index: 1000; // Đảm bảo hiển thị trên tất cả các phần tử khác
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
 
   .settings-content {
-    background-color: $secondary-color; // Nền trắng
+    background-color: $secondary-color;
     border-radius: $border-radius-lg;
-    width: 90%; // Chiếm 90% chiều rộng màn hình
-    max-width: 500px; // Giới hạn chiều rộng tối đa
-    max-height: 90vh; // Giới hạn chiều cao tối đa
+    width: 90%;
+    max-width: 500px;
+    max-height: 90vh;
     display: flex;
     flex-direction: column;
-    overflow: hidden; // Ngăn nội dung tràn ra khi cuộn
+    overflow: hidden;
 
     .settings-header {
       display: flex;
@@ -1037,7 +1037,7 @@
         color: $text-color;
       }
 
-      .icon-button { // Nút đóng
+      .icon-button {
         background: none;
         border: none;
         color: $text-muted-color;
@@ -1046,60 +1046,75 @@
         padding: $spacing-xs;
         border-radius: 50%;
         transition: color $transition-fast ease-out;
-        &:hover:not(:disabled) { // Add not(:disabled)
-          color: $error-color; // Màu đỏ khi hover nút đóng
+        &:hover:not(:disabled) {
+          color: $error-color;
           background-color: $container-bg-color;
         }
-         &:disabled { opacity: 0.5; cursor: not-allowed; } // Add disabled style
+        &:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
       }
 
       .name-edit-wrap {
         display: flex;
         flex-direction: row;
+        align-items: center;
+        flex-grow: 1;
 
-        .group-name-edit { // Style for the name edit mode in header
+        .group-name-edit {
           display: flex;
           align-items: center;
           flex-grow: 1;
-          margin-right: $spacing-md;
-          justify-content: space-between;
 
           input[type="text"] {
-              flex-grow: 1;
-              padding: $spacing-xs $spacing-sm;
-              border: 1px solid $input-border-color;
-              border-radius: $border-radius-sm;
-              font-size: $font-size-base; // Smaller font for edit mode
-              margin-right: $spacing-sm;
+            flex-grow: 1;
+            padding: $spacing-xs $spacing-sm;
+            border: 1px solid $input-border-color;
+            border-radius: $border-radius-sm;
+            font-size: $font-size-base;
+            margin-right: $spacing-sm;
           }
           .icon-button {
-              font-size: $font-size-large; // Smaller icon buttons
-              padding: $spacing-xs;
+            font-size: $font-size-large;
+            padding: $spacing-xs;
           }
         }
       }
 
-      .edit-name-button { // Style for the edit icon button
+      .edit-name-button {
         font-size: $font-size-large;
         padding: $spacing-xs;
         margin-left: $spacing-sm;
         color: $text-muted-color;
-        &:hover:not(:disabled) { color: $primary-color; } // Add not(:disabled)
-         &:disabled { opacity: 0.5; cursor: not-allowed; } // Add disabled style
+        &:hover:not(:disabled) {
+          color: $primary-color;
+        }
+        &:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
       }
     }
 
     .settings-body {
-      flex-grow: 1; // Chiếm hết không gian còn lại cho nội dung cuộn
-      overflow-y: auto; // Cho phép cuộn nội dung
+      flex-grow: 1;
+      overflow-y: auto;
       padding: $spacing-lg;
 
-      // --- Custom scrollbar (optional) ---
-      &::-webkit-scrollbar { width: 8px; }
-      &::-webkit-scrollbar-track { background: transparent; }
-      &::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
-      &::-webkit-scrollbar-thumb:hover { background: #aaa; }
-
+      &::-webkit-scrollbar {
+        width: 8px;
+      }
+      &::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      &::-webkit-scrollbar-thumb {
+        background: #ccc;
+        border-radius: 4px;
+      }
+      &::-webkit-scrollbar-thumb:hover {
+        background: #aaa;
+      }
 
       .group-info {
         display: flex;
@@ -1108,11 +1123,13 @@
         margin-bottom: $spacing-lg;
         padding-bottom: $spacing-lg;
         border-bottom: 1px solid $input-border-color;
+        position: relative;
 
         .avatar-wrapper {
           position: relative;
-          width: 80px; // Match avatar size
+          width: 80px;
           height: 80px;
+          margin-bottom: $spacing-xs;
 
           .avatar.large {
             width: 100%;
@@ -1127,17 +1144,17 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.5); // Semi-transparent black overlay
+            background: rgba(0, 0, 0, 0.5);
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 50%; // Match the avatar's circular shape
-            z-index: 1; // Ensure overlay is above the avatar
+            border-radius: 50%;
+            z-index: 1;
 
             .fa-spinner {
               font-size: 24px;
               color: #fff;
-              animation: spin 1s linear infinite; // Ensure the spinner rotates
+              animation: spin 1s linear infinite;
             }
           }
 
@@ -1170,13 +1187,13 @@
             display: flex;
             align-items: center;
             padding: $spacing-sm 0;
-            border-bottom: 1px solid $container-bg-color; // Đường kẻ nhẹ giữa các thành viên
-            &:last-child { border-bottom: none; } // Bỏ đường kẻ cuối cùng
-             // Add hover effect
-             &:hover {
-                background-color: $container-bg-color;
-             }
-
+            border-bottom: 1px solid $container-bg-color;
+            &:last-child {
+              border-bottom: none;
+            }
+            &:hover {
+              background-color: $container-bg-color;
+            }
 
             .avatar.small {
               width: 30px;
@@ -1190,28 +1207,35 @@
             .member-name {
               flex-grow: 1;
               color: $text-color;
-              font-size: $font-size-base; // Increase font size for better readability
-              font-weight: $font-weight-medium; // Adjust font weight
-              // Add space for roles/you/left indicators
-              span { font-weight: $font-weight-normal; font-size: $font-size-small; color: $text-muted-color; margin-left: $spacing-xs; }
+              font-size: $font-size-base;
+              font-weight: $font-weight-medium;
             }
 
             .member-actions {
               display: flex;
               gap: $spacing-xs;
 
-              .icon-button.small { // Style for small action buttons
-                font-size: 14px; // Smaller icon size
+              .icon-button.small {
+                font-size: 14px;
                 padding: $spacing-xs;
                 border-radius: 50%;
                 transition: background-color $transition-fast ease-out;
                 &:hover:not(:disabled) {
-                    background-color: $container-bg-color;
+                  background-color: $container-bg-color;
                 }
-                 &.warning:hover:not(:disabled) { color: $error-color; }
-                 &.primary:hover:not(:disabled) { color: $primary-color; }
-                 &.secondary:hover:not(:disabled) { color: $text-color; }
-                 &:disabled { opacity: 0.5; cursor: not-allowed; }
+                &.warning:hover:not(:disabled) {
+                  color: $error-color;
+                }
+                &.primary:hover:not(:disabled) {
+                  color: $primary-color;
+                }
+                &.secondary:hover:not(:disabled) {
+                  color: $text-color;
+                }
+                &:disabled {
+                  opacity: 0.5;
+                  cursor: not-allowed;
+                }
               }
             }
           }
@@ -1219,173 +1243,228 @@
       }
 
       .add-user-section {
-          margin-bottom: $spacing-lg;
-          padding-bottom: $spacing-lg;
-          border-bottom: 1px solid $input-border-color;
+        margin-bottom: $spacing-lg;
+        padding-bottom: $spacing-lg;
+        border-bottom: 1px solid $input-border-color;
+        position: relative;
 
-           h4 {
-              font-size: $font-size-large;
-              color: $text-color;
-              margin-top: 0;
-              margin-bottom: $spacing-md;
-            }
-
-          .add-user-search-form {
-              display: flex;
-              gap: $spacing-sm;
-              margin-bottom: $spacing-md;
-              flex-direction: row;
-
-              input {
-                  flex-grow: 1;
-                  padding: $spacing-sm $spacing-md;
-                  border: 1px solid $input-border-color;
-                  border-radius: $border-radius-md;
-                  font-size: $font-size-base;
-                  &:disabled { opacity: 0.8; cursor: not-allowed; }
-              }
-              button {
-                  background-color: $primary-color;
-                  color: $secondary-color;
-                  border: none;
-                  border-radius: $border-radius-md;
-                  cursor: pointer;
-                  transition: background-color $transition-fast ease-out;
-                  display: flex; // Use flex to center icon/spinner
-                  align-items: center;
-                  justify-content: center;
-                  width: 35px; // Fixed width for button
-                  height: 35px; // Fixed height for button
-                  padding: 0; // Remove padding
-                  &:hover:not(:disabled) {
-                      background-color: color.adjust($primary-color, $lightness: -5%);
-                  }
-                  &:disabled {
-                      opacity: 0.5;
-                      cursor: not-allowed;
-                  }
-              }
-          }
-
-           .search-results-list {
-               border: 1px solid $input-border-color;
-               border-radius: $border-radius-md;
-               max-height: 150px; // Giới hạn chiều cao kết quả
-               overflow-y: auto; // Cho phép cuộn kết quả
-               margin-bottom: $spacing-md;
-
-               .search-result-item {
-                  display: flex;
-                  align-items: center;
-                  padding: $spacing-sm $spacing-md;
-                  cursor: pointer;
-                  border-bottom: 1px solid $container-bg-color;
-                  transition: background-color $transition-fast ease-out;
-
-                  &:last-child { border-bottom: none; }
-
-                  &:hover {
-                      background-color: $container-bg-color;
-                  }
-                  &.selected {
-                      background-color: color.adjust($primary-color, $alpha: -0.9); // Nền xanh nhạt khi chọn
-                  }
-
-                  .avatar.tiny {
-                    width: 20px; // Even smaller avatar in search results
-                    height: 20px;
-                    margin-right: $spacing-sm; // Space between avatar and name
-                  }
-                  span { font-size: $font-size-large; } // Match member name font size
-                  }
-           }
-
-           .add-user-confirm-button {
-                display: block; // Chiếm toàn bộ chiều rộng
-                width: 100%;
-                padding: $spacing-sm;
-                background-color: $success-color; // Màu xanh cho nút thêm
-                color: $secondary-color;
-                border: none;
-                border-radius: $border-radius-md;
-                cursor: pointer;
-                font-size: $font-size-base;
-                transition: background-color $transition-fast ease-out;
-                 &:hover:not(:disabled) {
-                      background-color: color.adjust($success-color, $lightness: -5%);
-                  }
-                   &:disabled {
-                       opacity: 0.5;
-                       cursor: not-allowed;
-                   }
-           }
-      }
-
-        .info-message {
-             font-size: $font-size-small;
-             color: $text-muted-color;
-             text-align: center;
-             margin-top: $spacing-md;
+        h4 {
+          font-size: $font-size-large;
+          color: $text-color;
+          margin-top: 0;
+          margin-bottom: $spacing-md;
         }
 
+        .add-user-search-form {
+          display: flex;
+          gap: $spacing-sm;
+          margin-bottom: $spacing-md;
+          flex-direction: row;
+
+          input {
+            flex-grow: 1;
+            padding: $spacing-sm $spacing-md;
+            border: 1px solid $input-border-color;
+            border-radius: $border-radius-md;
+            font-size: $font-size-base;
+            &:disabled {
+              opacity: 0.8;
+              cursor: not-allowed;
+            }
+          }
+          button {
+            background-color: $primary-color;
+            color: $secondary-color;
+            border: none;
+            border-radius: $border-radius-md;
+            cursor: pointer;
+            transition: background-color $transition-fast ease-out;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 35px;
+            height: 35px;
+            padding: 0;
+            &:hover:not(:disabled) {
+              background-color: color.adjust($primary-color, $lightness: -5%);
+            }
+            &:disabled {
+              opacity: 0.5;
+              cursor: not-allowed;
+            }
+          }
+        }
+
+        .suggestions-dropdown {
+          position: absolute;
+          top: calc(100% + #{$spacing-xs});
+          left: 0;
+          right: 0;
+          background: $secondary-color;
+          border: 1px solid $input-border-color;
+          border-radius: $border-radius-md;
+          box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+          max-height: 150px;
+          overflow-y: auto;
+          z-index: $zindex-popup + 1;
+
+          .suggestion-item {
+            padding: 4px 8px;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            transition: background-color $transition-fast ease-out;
+
+            &:hover,
+            &.highlighted {
+              background-color: $hover-bg-color;
+            }
+
+            .name-avatar {
+              display: flex;
+              align-items: center;
+              gap: $spacing-xs;
+
+              .avatar.tiny {
+                width: 20px !important;
+                height: 20px !important;
+                max-width: 20px !important;
+                max-height: 20px !important;
+                border-radius: 50%;
+                object-fit: cover;
+                margin-right: $spacing-xs;
+                border: 1px solid $input-border-color;
+              }
+
+              span {
+                font-size: 0.85rem;
+                color: $text-color;
+              }
+            }
+          }
+        }
+
+        .search-results-list {
+          border: 1px solid $input-border-color;
+          border-radius: $border-radius-md;
+          max-height: 150px;
+          overflow-y: auto;
+          margin-bottom: $spacing-md;
+
+          .search-result-item {
+            display: flex;
+            align-items: center;
+            padding: $spacing-sm $spacing-md;
+            cursor: pointer;
+            border-bottom: 1px solid $container-bg-color;
+            transition: background-color $transition-fast ease-out;
+
+            &:last-child {
+              border-bottom: none;
+            }
+
+            &:hover {
+              background-color: $container-bg-color;
+            }
+            &.selected {
+              background-color: color.adjust($primary-color, $alpha: -0.9);
+            }
+
+            .avatar.tiny {
+              width: 20px;
+              height: 20px;
+              margin-right: $spacing-sm;
+            }
+            span {
+              font-size: $font-size-large;
+            }
+          }
+        }
+
+        .add-user-confirm-button {
+          display: block;
+          width: 100%;
+          padding: $spacing-sm;
+          background-color: $success-color;
+          color: $secondary-color;
+          border: none;
+          border-radius: $border-radius-md;
+          cursor: pointer;
+          font-size: $font-size-base;
+          transition: background-color $transition-fast ease-out;
+          &:hover:not(:disabled) {
+            background-color: color.adjust($success-color, $lightness: -5%);
+          }
+          &:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+          }
+        }
+      }
+
+      .info-message {
+        font-size: $font-size-small;
+        color: $text-muted-color;
+        text-align: center;
+        margin-top: $spacing-md;
+      }
+
       .action-status {
-         color: $primary-color;
-         text-align: center;
-         margin-top: $spacing-md;
-         .fas.fa-spinner { margin-left: $spacing-xs; } // Khoảng cách icon spinner
+        color: $primary-color;
+        text-align: center;
+        margin-top: $spacing-md;
+        .fas.fa-spinner {
+          margin-left: $spacing-xs;
+        }
       }
 
       .action-error {
-         color: $error-color;
-         text-align: center;
-         margin-top: $spacing-md;
+        color: $error-color;
+        text-align: center;
+        margin-top: $spacing-md;
       }
 
-      .group-actions-footer { // Container for leave/delete buttons
+      .group-actions-footer {
         display: flex;
-        gap: $spacing-md; // Space between buttons
-        justify-content: center; // Center the buttons
+        gap: $spacing-md;
+        justify-content: center;
         margin-top: $spacing-lg;
         padding-top: $spacing-lg;
-        border-top: 1px solid $input-border-color; // Separator
+        border-top: 1px solid $input-border-color;
       }
 
       .button {
-        // ... (Existing button styles) ...
         padding: $spacing-sm $spacing-md;
         border-radius: $border-radius-md;
         cursor: pointer;
         font-size: $font-size-base;
         font-weight: $font-weight-medium;
         transition: background-color $transition-fast ease-out, color $transition-fast ease-out, border-color $transition-fast ease-out;
-        &:disabled { opacity: 0.5; cursor: not-allowed; }
+        &:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
 
         &.secondary {
-             background-color: $container-bg-color;
-             color: $text-color;
-             border: 1px solid $input-border-color;
-             &:hover:not(:disabled) {
-                  background-color: color.adjust($container-bg-color, $lightness: -5%);
-             }
-             &.warning { color: $error-color; } // Text color red for warning secondary
+          background-color: $container-bg-color;
+          color: $text-color;
+          border: 1px solid $input-border-color;
+          &:hover:not(:disabled) {
+            background-color: color.adjust($container-bg-color, $lightness: -5%);
+          }
+          &.warning {
+            color: $error-color;
+          }
         }
         &.danger {
-             background-color: $error-color;
-             color: $secondary-color;
-             border: none;
-             &:hover:not(:disabled) {
-                  background-color: color.adjust($error-color, $lightness: -5%);
-             }
+          background-color: $error-color;
+          color: $secondary-color;
+          border: none;
+          &:hover:not(:disabled) {
+            background-color: color.adjust($error-color, $lightness: -5%);
+          }
         }
       }
-
-      // Remove the redundant .leave-group-section, .delete-group-section rules if using .group-actions-footer
-      // .leave-group-section, .delete-group-section {
-      //      margin-top: $spacing-lg;
-      //      text-align: center;
-      //      .button { ... }
-      // }
-
     }
   }
 }
