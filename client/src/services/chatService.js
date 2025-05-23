@@ -151,6 +151,7 @@ export const processRawRooms = (rawRooms, currentUserId) => {
             leaders: leaderIds,
             isGroup: isGroup,
             detailedMembers: processedMembers, // Sử dụng processedMembers cho các logic khác
+            lastMessageType: latestMessage?.lastMessageType || 'text', // Thêm lastMessageType để hiển thị icon
         };
     });
 
@@ -377,38 +378,61 @@ export const buildFileMessagePayload = (conversationId, fileType, uploadedFileDe
 
 
 // Hàm cập nhật danh sách conversations sau khi có tin nhắn mới (đã gửi thành công hoặc nhận được qua socket)
-export const updateConversationsListLatestMessage = (prevConversations, activeChatId, latestMessage) => {
-    if (!latestMessage || !activeChatId) {
-        console.warn("updateConversationsListLatestMessage: Missing latestMessage or activeChatId");
-        return [...prevConversations]; // Return current list if invalid input
+export const updateConversationsListLatestMessage = (
+  prevConversations,
+  activeChatId,
+  latestMessage,
+  currentUserId // <-- thêm tham số này
+) => {
+  if (!latestMessage || !activeChatId) {
+    console.warn("updateConversationsListLatestMessage: Missing latestMessage or activeChatId");
+    return [...prevConversations];
+  }
+
+  const updatedConversations = prevConversations.map(conv => {
+    if (conv.id !== activeChatId) return conv;
+
+    // Nếu là tin nhắn của chính mình, không tăng unread, không đổi lastMessageType
+    if (latestMessage.senderId === currentUserId) {
+      return {
+        ...conv,
+        lastMessage: latestMessage.type === 'text'
+          ? latestMessage.content?.text?.data || ''
+          : `[${latestMessage.type.toUpperCase()}]`,
+        time: latestMessage.datetime_created
+          ? new Date(latestMessage.datetime_created).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase()
+          : '',
+        latestMessageTimestamp: latestMessage.datetime_created || conv.latestMessageTimestamp,
+        latestMessage: latestMessage._id || conv.latestMessage,
+        // Không cập nhật unread và lastMessageType
+      };
     }
 
-    const updatedConversations = prevConversations.map(conv =>
-        conv.id === activeChatId
-            ? {
-                ...conv,
-                // Lấy lastMessage text hoặc placeholder
-                lastMessage: latestMessage.type === 'text' ? latestMessage.content?.text?.data || '' : `[${latestMessage.type.toUpperCase()}]`,
-                // Format thời gian
-                time: latestMessage.datetime_created ? new Date(latestMessage.datetime_created).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase() : '',
-                // Cập nhật timestamp và ID tin nhắn cuối
-                latestMessageTimestamp: latestMessage.datetime_created || conv.latestMessageTimestamp, // Giữ timestamp cũ nếu latestMessage không có
-                latestMessage: latestMessage._id || conv.latestMessage, // Giữ ID cũ nếu latestMessage không có ID
-                // unread count logic cần thêm vào đây nếu tin nhắn đến từ người khác
-            }
-            : conv
-    );
+    // Nếu là tin nhắn của người khác, cập nhật unread và lastMessageType
+    return {
+      ...conv,
+      lastMessage: latestMessage.type === 'text'
+        ? latestMessage.content?.text?.data || ''
+        : `[${latestMessage.type.toUpperCase()}]`,
+      time: latestMessage.datetime_created
+        ? new Date(latestMessage.datetime_created).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase()
+        : '',
+      latestMessageTimestamp: latestMessage.datetime_created || conv.latestMessageTimestamp,
+      latestMessage: latestMessage._id || conv.latestMessage,
+      lastMessageType: latestMessage.type || 'text',
+      unread: (conv.unread || 0) + 1,
+    };
+  });
 
-    // Sắp xếp lại danh sách theo timestamp mới nhất
-    updatedConversations.sort((a, b) => {
-        const dateA = new Date(a.latestMessageTimestamp || 0); // Dùng timestamp mới hoặc 0 nếu không có
-        const dateB = new Date(b.latestMessageTimestamp || 0);
-        return dateB.getTime() - dateA.getTime(); // Sắp xếp giảm dần
-    });
+  // Sắp xếp lại danh sách theo timestamp mới nhất
+  updatedConversations.sort((a, b) => {
+    const dateA = new Date(a.latestMessageTimestamp || 0);
+    const dateB = new Date(b.latestMessageTimestamp || 0);
+    return dateB.getTime() - dateA.getTime();
+  });
 
-    return updatedConversations;
+  return updatedConversations;
 };
-
 // Hàm tìm kiếm thành viên trong danh sách thành viên chi tiết của phòng chat
 export const findMemberInDetailedList = (detailedMembers, memberIdToFind) => {
     if (!detailedMembers || !Array.isArray(detailedMembers) || !memberIdToFind) {

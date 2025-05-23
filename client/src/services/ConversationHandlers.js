@@ -171,9 +171,9 @@ export const useConversationHandlers = ({
                 }
               : prevActive
           );
-          alert('Member removed successfully!');
         }
       );
+      alert('Member removed successfully!');
     },
     [
       activeChat,
@@ -223,6 +223,7 @@ export const useConversationHandlers = ({
           setEditingGroupName('');
         }
       );
+      alert('Group name changed successfully!');
     },
     [
       activeChat,
@@ -504,10 +505,10 @@ export const useConversationHandlers = ({
               }
             )
           );
-          alert('Member added successfully!');
           setAddUserSearchResults([]);
         }
       );
+      alert('Member added successfully!');
     },
     [
       activeChat,
@@ -570,6 +571,7 @@ export const useConversationHandlers = ({
           setIsMobileChatActive(false);
         }
       );
+      alert('You have left the group successfully!');
     },
     [
       activeChat,
@@ -618,6 +620,7 @@ export const useConversationHandlers = ({
           setIsMobileChatActive(false);
         }
       );
+      alert('Group deleted successfully!');
     },
     [
       activeChat,
@@ -640,18 +643,18 @@ export const useConversationHandlers = ({
           "Are you sure you want to delete this conversation? (This will only delete it for you)"
         )
       ) {
-        await performSettingsAction(
+        performSettingsAction(
           () => deleteConversationMemberApi({ conversationId }),
           "Delete conversation",
           (response) => {
-            setConversations((prevConvs) =>
-              filterConversationFromList(prevConvs, conversationId)
+            setConversations((prevConvs) => filterConversationFromList(prevConvs, conversationId)
             );
             setActiveChat(null);
             setIsSettingsOpen(false);
             setIsMobileChatActive(false);
           }
         );
+        alert("Conversation deleted successfully!");
       } else {
         setActionError(null);
       }
@@ -717,6 +720,7 @@ export const useConversationHandlers = ({
           setEditingGroupName('');
         }
       );
+      alert('Group name changed successfully!');
     },
     [
       activeChat,

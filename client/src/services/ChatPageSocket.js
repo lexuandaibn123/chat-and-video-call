@@ -312,16 +312,16 @@ export const useSocket = ({
       console.log('Socket.IO connected:', socketRef.current.id);
       isConnectedRef.current = true;
       socketRef.current.emit('setup', { page: 1, limit: 30 });
-      if (conversations?.length) {
-        conversations.forEach((conv) => {
-          const roomId = conv.id;
-          if (!joinedRoomsRef.current.has(roomId)) {
-            socketRef.current.emit('joinRoom', {roomId});
-            joinedRoomsRef.current.add(roomId);
-          }
-          // console.log('Joined:', roomId);
-        });
-      }
+      // if (conversations?.length) {
+      //   conversations.forEach((conv) => {
+      //     const roomId = conv.id;
+      //     if (!joinedRoomsRef.current.has(roomId)) {
+      //       socketRef.current.emit('joinRoom', {roomId});
+      //       joinedRoomsRef.current.add(roomId);
+      //     }
+      //     // console.log('Joined:', roomId);
+      //   });
+      // }
     });
 
     socketRef.current.on('connected', () => {
@@ -516,7 +516,7 @@ export const useSocket = ({
         });
       }
       setConversations((prevConvs) =>
-        updateConversationsListLatestMessage(prevConvs, msg.conversationId, msg)
+        updateConversationsListLatestMessage(prevConvs, msg.conversationId, msg, userId)
       );
     });
 
@@ -650,6 +650,7 @@ export const useSocket = ({
         datetime_created: now.toISOString(),
         senderId: null,
         conversationId: updatedConversation._id,
+        lastMessageType: 'system',
       };
 
       // Gán vào latestMessage (nếu muốn giữ lại latestMessage cũ, hãy cân nhắc logic)
@@ -690,6 +691,7 @@ export const useSocket = ({
         datetime_created: now.toISOString(),
         senderId: null,
         conversationId: updatedConversation._id,
+        lastMessageType: 'system',
       };
 
       // Gán vào latestMessage
@@ -732,6 +734,7 @@ export const useSocket = ({
         datetime_created: now.toISOString(),
         senderId: null,
         conversationId: conversationId,
+        lastMessageType: 'system',
       };
 
       const conversationWithSystemMsg = {
@@ -791,6 +794,7 @@ export const useSocket = ({
         datetime_created: now.toISOString(),
         senderId: null,
         conversationId: updatedConversation._id,
+        lastMessageType: 'system',
       };
 
       // Gán vào latestMessage
@@ -823,10 +827,11 @@ export const useSocket = ({
       const systemMessage = {
         _id: `system-${now.getTime()}`,
         type: 'text',
-        content: { text: { data: 'Group\' avatar has been updated.' } },
+        content: { text: { data: 'Group\'s avatar has been updated.' } },
         datetime_created: now.toISOString(),
         senderId: null,
         conversationId: updatedConversation._id,
+        lastMessageType: 'system',
       };
 
       // Gán vào latestMessage

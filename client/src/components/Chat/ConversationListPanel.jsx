@@ -14,7 +14,8 @@ const ConversationListPanel = ({
   onAddClick,
   onCreateConversation,
   addUserSearchResults,
-  onAddUserSearch
+  onAddUserSearch,
+  setConversations
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -28,6 +29,15 @@ const ConversationListPanel = ({
     ...groups.map(g => ({ ...g, type: 'group' })),
     ...friends.map(f => ({ ...f, type: 'friend' }))
   ];
+
+  // Hàm xử lý khi click vào conversation
+  const handleReadConversation = (id) => {
+    setConversations((prev) =>
+      prev.map((conv) =>
+        conv.id === id ? { ...conv, unread: 0, lastMessageType: '' } : conv
+      )
+    );
+  };
 
   const handleOpenModal = () => {
     setIsModalOpen(true);
@@ -136,8 +146,8 @@ const ConversationListPanel = ({
       if (selectedUsers.length <= 2) {
         name = selectedUsers.map(u => u.fullName || u._id).join(', ');
       } else {
-        const firstTwo = selectedUsers.slice(0,2).map(u => u.fullName || u._id);
-        name = `${userInfo.fullName}, ${firstTwo.join(', ')}, ... (+${selectedUsers.length-2})`;
+        const firstTwo = selectedUsers.slice(0, 2).map(u => u.fullName || u._id);
+        name = `${userInfo.fullName}, ${firstTwo.join(', ')}, ... (+${selectedUsers.length - 2})`;
       }
     }
 
@@ -163,13 +173,12 @@ const ConversationListPanel = ({
       </div>
 
       <section className="conversation-section">
-        {/* <h2 className="section-title">Conversations</h2> */}
         <ul className="conversation-list">
           {allConversations.map(conv => (
             <ConversationItem
               key={conv.id}
               id={conv.id}
-              type={conv.type} 
+              type={conv.type}
               avatar={conv.avatar}
               name={conv.name}
               lastMessage={conv.lastMessage}
@@ -178,6 +187,8 @@ const ConversationListPanel = ({
               status={conv.status}
               onClick={onItemClick}
               isActive={activeChat?.id === conv.id}
+              lastMessageType={conv.lastMessageType || ''}
+              onReadConversation={handleReadConversation} 
             />
           ))}
         </ul>
@@ -299,6 +310,6 @@ const ConversationListPanel = ({
       )}
     </aside>
   );
-}
+};
 
 export default ConversationListPanel;

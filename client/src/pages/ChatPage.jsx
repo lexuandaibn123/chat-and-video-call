@@ -234,6 +234,7 @@ const ChatPage = () => {
   // Socket listeners for video call
   useEffect(() => {
     if (!socket || !user?.id || !user?.email) {
+      console.warn('Socket not connected or user not authenticated');
       return;
     }
 
@@ -586,6 +587,7 @@ const ChatPage = () => {
         socket={socket}
         sendTyping={sendTyping}
         sendStopTyping={sendStopTyping}
+        setConversations={setConversations}
       />
       {callInvite && (
         <div className="call-invite-popup">

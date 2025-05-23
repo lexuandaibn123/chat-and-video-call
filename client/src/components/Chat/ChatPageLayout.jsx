@@ -38,7 +38,8 @@ const ChatPageLayout = ({
   userInfo,
   socket,
   sendTyping,
-  sendStopTyping
+  sendStopTyping,
+  setConversations
 }) => {
   // Filter conversations for groups and friends
   const filteredConversations = conversations.filter((conv) => {
@@ -121,6 +122,7 @@ const ChatPageLayout = ({
         onCreateConversation={handlers.handleCreateConversation} // Thêm prop
         addUserSearchResults={addUserSearchResults}
         searchTerm={searchTerm}
+        setConversations={setConversations}
       />
 
       <ChatWindow
