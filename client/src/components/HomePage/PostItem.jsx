@@ -303,6 +303,7 @@ const handleunlikePost = async () => {
           postId={postId}
           avatar={userInfo.avatar}
           name={userInfo.fullName}
+          userId={user_id}
           comments={comments}
           visibleComments={visibleComments}
           setVisibleComments={setVisibleComments}

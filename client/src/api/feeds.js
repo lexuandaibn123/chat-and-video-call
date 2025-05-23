@@ -179,28 +179,28 @@ export const unlikePost = async (id) => {
     }
 }
 
-// export const commentPost = async (id, content) => {
-//     try {
-//         const response = await fetch(`${API_BASE_URL}/api/post/comment-to-post`, {
-//             method: "POST",
-//             headers: { 'Content-Type': 'application/json' },
-//             body: JSON.stringify({
-//                 postId: id,
-//                 type: "text",
-//                 data: {
-//                     type: "text",
-//                     data: content,
-//                 },
-//             }),
-//             credentials: 'include',
-//         })
-//         return handleApiResponse(response);
-//     }
-//     catch (error) {
-//         console.error("API CommentPost Error:", error);
-//         if (error instanceof TypeError) {
-//             throw new Error('Connection error. Please check your network and CORS settings.');
-//         }
-//         throw error;
-//     }
-// }
+export const commentPost = async (id, content) => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/post/comment-to-post`, {
+            method: "POST",
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                postId: id,
+                type: "text",
+                data: {
+                    type: "text",
+                    data: content,
+                },
+            }),
+            credentials: 'include',
+        })
+        return handleApiResponse(response);
+    }
+    catch (error) {
+        console.error("API CommentPost Error:", error);
+        if (error instanceof TypeError) {
+            throw new Error('Connection error. Please check your network and CORS settings.');
+        }
+        throw error;
+    }
+}
