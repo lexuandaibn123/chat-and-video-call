@@ -39,7 +39,7 @@ const HomePage = () => {
       try {
         const response = await getPosts();
         if (response.success) {
-          console.log("Get successfully!");
+          // console.log("Get successfully!");
           setAvt(response.data[0].poster.avatar) || "";
           setPosts(
             response.data.map((p) => ({

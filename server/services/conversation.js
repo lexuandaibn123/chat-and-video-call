@@ -612,7 +612,7 @@ class ConversationService {
         if (userRole == "leader" && numberOfLeader <= 1) {
           const firstMember = conversation.members.find(
             (member) =>
-              member.id.toString() != userInfo.id && member.leftAt == null
+              member.id._id.toString() != userInfo.id && member.leftAt == null
           );
           if (!firstMember) {
             return res.status(400).json({
@@ -622,18 +622,20 @@ class ConversationService {
           }
           await ConversationRepository.updateRole(
             conversationId,
-            firstMember.id,
+            firstMember.id._id.toString(),
             "leader"
           );
         }
-        await ConversationRepository.leaveConversation(
-          conversationId,
-          userInfo.id
-        );
+        const updatedConversation =
+          await ConversationRepository.leaveConversation(
+            conversationId,
+            userInfo.id
+          );
 
         return res.status(200).json({
           success: true,
           message: "Left conversation successfully",
+          data: updatedConversation,
         });
       } catch (error) {
         console.error(error);
@@ -666,7 +668,8 @@ class ConversationService {
 
       if (userRole == "leader" && numberOfLeader <= 1) {
         const firstMember = conversation.members.find(
-          (member) => member.id.toString() != userId && member.leftAt == null
+          (member) =>
+            member.id._id.toString() != userId && member.leftAt == null
         );
         if (!firstMember) {
           throw new Error(
@@ -675,13 +678,14 @@ class ConversationService {
         }
         await ConversationRepository.updateRole(
           conversationId,
-          firstMember.id,
+          firstMember.id._id.toString(),
           "leader"
         );
       }
-      await ConversationRepository.leaveConversation(conversationId, userId);
+      const updatedConversation =
+        await ConversationRepository.leaveConversation(conversationId, userId);
 
-      return "Left conversation successfully";
+      return updatedConversation;
     } catch (error) {
       console.error(error);
       throw error;
@@ -706,14 +710,16 @@ class ConversationService {
           "You are not a member of the conversation"
         );
 
-        await ConversationRepository.deleteConversationByMemberId(
-          conversationId,
-          userInfo.id
-        );
+        const updatedConversation =
+          await ConversationRepository.deleteConversationByMemberId(
+            conversationId,
+            userInfo.id
+          );
 
         return res.status(200).json({
           success: true,
           message: "Deleted conversation successfully",
+          data: updatedConversation,
         });
       } catch (error) {
         console.error(error);
@@ -743,13 +749,17 @@ class ConversationService {
           "You are not a leader of the conversation"
         );
 
-        await ConversationRepository.updateById(conversationId, {
-          isDeleted: true,
-        });
+        const updatedConversation = await ConversationRepository.updateById(
+          conversationId,
+          {
+            isDeleted: true,
+          }
+        );
 
         return res.status(200).json({
           success: true,
           message: "Deleted conversation successfully",
+          data: updatedConversation,
         });
       } catch (error) {
         console.error(error);
@@ -774,11 +784,14 @@ class ConversationService {
         "You are not a leader of the conversation"
       );
 
-      await ConversationRepository.updateById(conversationId, {
-        isDeleted: true,
-      });
+      const updatedConversation = await ConversationRepository.updateById(
+        conversationId,
+        {
+          isDeleted: true,
+        }
+      );
 
-      return "Deleted conversation successfully";
+      return updatedConversation;
     } catch (error) {
       console.error(error);
       throw error;

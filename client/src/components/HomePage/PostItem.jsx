@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { infoApi } from "../../api/auth";
-import { editPost, deletePost } from "../../api/feeds";
+import { editPost, deletePost, likePost, unlikePost } from "../../api/feeds";
+import PostComments from "./PostComments";
 
 const PostItem = ({ postId, avatar, name, id_poster, content, isDeleted, isEdited, reacts, comments, datetime_created, last_updated }) => {
   // Function to check if post has images
@@ -12,7 +13,10 @@ const PostItem = ({ postId, avatar, name, id_poster, content, isDeleted, isEdite
   // const [postComments, setPostComments] = useState(comment);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLiked, setIsLiked] = useState(false); 
-  // const [likeCount, setLikeCount] = useState(react);
+  const [likeCount, setLikeCount] = useState(0);
+  const [positionLiked, setPositionLiked] = useState(-1);
+  const [visibleComments, setVisibleComments] = useState(3);
+  const [userInfo, setUserInfo] = useState({});
 
   // const handleLike = () => {
   //   if (isLiked) {
@@ -27,12 +31,29 @@ const PostItem = ({ postId, avatar, name, id_poster, content, isDeleted, isEdite
       const response = await infoApi();
       if (response.success) {
         setUserId(response.userInfo.id);
+        setUserInfo(response.userInfo);
       } else {
         console.log("can't get user info!");
       }
     };
     fetchUser();
   }, []);
+
+  useEffect(() => {
+    let count = 0;
+    let liked = false;
+    reacts.forEach((react, index) => {
+      if (react.react.type !== "unreacted") {
+        count++;
+        if (react.react.userId._id === user_id) {
+          liked = true;
+          setPositionLiked(index);
+        }
+      }
+    });
+    setLikeCount(count);
+    setIsLiked(liked);
+  }, [reacts, user_id]);
 
   const handleEdit = () => {
     setIsEditing(true);
@@ -90,6 +111,34 @@ const PostItem = ({ postId, avatar, name, id_poster, content, isDeleted, isEdite
   }
 };
 
+  const handleLikePost = async () => { 
+    try {
+      const response = await likePost(postId);  
+      if (response.success) {
+        setIsLiked(true);
+        setLikeCount(likeCount + 1);  
+      } else {
+        alert("Failed to like post", response.message || response.error);
+      }   
+    } catch (error) {
+      console.error("Error liking post:", error); 
+  }
+}
+
+const handleunlikePost = async () => {
+  try { 
+    const response = await unlikePost(postId);
+    if (response.success) {
+      setIsLiked(false);
+      setLikeCount(likeCount - 1);
+    } else {
+      alert("Failed to unlike post", response.message || response.error);
+    }
+  } catch (error) {
+    console.error("Error unliking post:", error);
+  }
+}
+
   // const handleAddComment = (e) => {
   //   e.preventDefault()
   //   if (newComment.trim() === "") return
@@ -105,6 +154,13 @@ const PostItem = ({ postId, avatar, name, id_poster, content, isDeleted, isEdite
   //   setPostComments([...postComments, newCommentObj])
   //   setNewComment("")
   // }
+
+  // const displayedComments = comments.slice(-visibleComments); // Lấy N comment cuối cùng
+
+  // const hasMoreComments = comments.length > visibleComments;
+
+  // const handleShowMoreComments = () => setVisibleComments((prev) => prev + 3);
+  // const handleShowLessComments = () => setVisibleComments(3);
 
   return (
     <article className="post">
@@ -171,15 +227,18 @@ const PostItem = ({ postId, avatar, name, id_poster, content, isDeleted, isEdite
           <p className="post-text">{editedContent}</p>
         )}
 
-        {(content.length > 1 && content[1].type === "image") && (
+        {/* Hiển thị tất cả ảnh nếu có */}
+        {content && Array.isArray(content) && content.filter(item => item.type === "image").length > 0 && (
           <div className="post-images">
-            <img
-              src={content[1].data}
-              alt="Project image 1"
-              width="600"
-              height="400"
-              className="post-image"
-            />
+            {content.filter(item => item.type === "image").map((img, idx) => (
+              <img
+                key={idx}
+                src={img.data}
+                alt={`Project image ${idx + 1}`}
+                className="post-image"
+                onClick={() => window.open(img.data, "_blank")}
+              />
+            ))}
           </div>
         )}
 
@@ -187,7 +246,7 @@ const PostItem = ({ postId, avatar, name, id_poster, content, isDeleted, isEdite
           {reacts.length > 0 && (
             <>
               <span className={`like-icon ${isLiked ? "liked" : ""}`}>❤</span>
-              <span>{reacts.length} likes</span>
+              <span>{likeCount} {(likeCount > 1) ? `likes` : `like`}</span>
             </>
           )}
           {comments.length > 0 && (
@@ -202,69 +261,54 @@ const PostItem = ({ postId, avatar, name, id_poster, content, isDeleted, isEdite
       </section>
 
       <footer className="post-footer">
-        <button
-          className={`post-action-button ${isLiked ? "liked" : ""}`}
-        >
-          <i className={`${isLiked ? "fas" : "far"} fa-heart`}></i>
+        <button className={`post-action-button ${isLiked ? "liked" : ""}`} 
+        onClick={isLiked ? handleunlikePost : handleLikePost}>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill={isLiked ? "currentColor" : "none"}
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+          </svg>
           <span>Like</span>
         </button>
         <button
           className={`post-action-button ${showComments ? "active" : ""}`}
           onClick={() => setShowComments(!showComments)}
         >
-          <i className="far fa-comment"></i>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+          </svg>
           <span>Comment</span>
         </button>
       </footer>
-
       {showComments && (
-        <div className="post-comments">
-          {postComments.map((comment) => (
-            <div key={comment.id} className="comment">
-              <div className="comment-avatar">
-                <img
-                  src={comment.avatar || "/placeholder.svg"}
-                  alt={comment.name}
-                  width="32"
-                  height="32"
-                  className="profile-image"
-                />
-              </div>
-              <div className="comment-content">
-                <div className="comment-header">
-                  <span className="comment-name">{comment.name}</span>
-                  <span className="comment-role">{comment.role}</span>
-                  <span className="comment-time">{comment.time}</span>
-                </div>
-                <p className="comment-text">{comment.content}</p>
-              </div>
-            </div>
-          ))}
-
-          <form className="comment-form" onSubmit={handleAddComment}>
-            <div className="comment-avatar">
-              <img
-                src="/placeholder.svg?height=32&width=32"
-                alt="Your avatar"
-                width="32"
-                height="32"
-                className="profile-image"
-              />
-            </div>
-            <div className="comment-input-container">
-              <input
-                type="text"
-                className="comment-input"
-                placeholder="Write a comment..."
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-              />
-              <button type="submit" className="comment-submit">
-                <i className="fas fa-paper-plane"></i>
-              </button>
-            </div>
-          </form>
-        </div>
+        <PostComments
+          postId={postId}
+          avatar={userInfo.avatar}
+          name={userInfo.fullName}
+          comments={comments}
+          visibleComments={visibleComments}
+          setVisibleComments={setVisibleComments}
+          newComment={newComment}
+          setNewComment={setNewComment}
+        />
       )}
     </article>
   );
