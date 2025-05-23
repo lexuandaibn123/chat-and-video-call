@@ -56,6 +56,11 @@ class ReactRepository {
       )
       .sort({ last_updated: -1 });
   }
+
+  async hasUserReacted(postId, userId) {
+    const react = await React.findOne({ postId, userId });
+    return !!react;
+  }
 }
 
 module.exports = new ReactRepository();
