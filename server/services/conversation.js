@@ -468,32 +468,19 @@ class ConversationService {
       if (!member) {
         throw new Error("User not found");
       }
-      const isFormerMember = this._isFormerMemberOfConversation(
-        conversation,
-        newMemberId
+
+      const memberObj = {
+        id: newMemberId,
+        role,
+        joinedAt: new Date(),
+        leftAt: null,
+        latestDeletedAt: null,
+      };
+
+      const updatedConversation = await ConversationRepository.addMember(
+        conversationId,
+        memberObj
       );
-
-      let updatedConversation;
-
-      if (isFormerMember) {
-        updatedConversation = await ConversationRepository.reAddFormerMember(
-          conversationId,
-          newMemberId
-        );
-      } else {
-        const memberObj = {
-          id: newMemberId,
-          role,
-          joinedAt: new Date(),
-          leftAt: null,
-          latestDeletedAt: null,
-        };
-
-        updatedConversation = await ConversationRepository.addMember(
-          conversationId,
-          memberObj
-        );
-      }
 
       if (!updatedConversation) {
         throw new Error("Failed to add new member");
@@ -668,8 +655,7 @@ class ConversationService {
 
       if (userRole == "leader" && numberOfLeader <= 1) {
         const firstMember = conversation.members.find(
-          (member) =>
-            member.id._id.toString() != userId && member.leftAt == null
+          (member) => member.id.toString() != userId && member.leftAt == null
         );
         if (!firstMember) {
           throw new Error(
@@ -678,14 +664,13 @@ class ConversationService {
         }
         await ConversationRepository.updateRole(
           conversationId,
-          firstMember.id._id.toString(),
+          firstMember.id,
           "leader"
         );
       }
-      const updatedConversation =
-        await ConversationRepository.leaveConversation(conversationId, userId);
+      await ConversationRepository.leaveConversation(conversationId, userId);
 
-      return updatedConversation;
+      return "Left conversation successfully";
     } catch (error) {
       console.error(error);
       throw error;
@@ -784,14 +769,11 @@ class ConversationService {
         "You are not a leader of the conversation"
       );
 
-      const updatedConversation = await ConversationRepository.updateById(
-        conversationId,
-        {
-          isDeleted: true,
-        }
-      );
+      await ConversationRepository.updateById(conversationId, {
+        isDeleted: true,
+      });
 
-      return updatedConversation;
+      return "Deleted conversation successfully";
     } catch (error) {
       console.error(error);
       throw error;

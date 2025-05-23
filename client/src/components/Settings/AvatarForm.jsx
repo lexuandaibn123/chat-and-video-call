@@ -29,6 +29,7 @@ const AvatarForm = () => {
       await avtUpdate(uploadedUrl);
       toast.success("Cập nhật ảnh đại diện thành công!");
       alert("Cập nhật ảnh đại diện thành công!");
+      toast.success("Cập nhật ảnh đại diện thành công!");
     } catch (err) {
       setError(`Có lỗi xảy ra: ${err.message}`);
       toast.error(`Có lỗi xảy ra: ${err.message}`);

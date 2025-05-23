@@ -78,20 +78,19 @@ const initDefaultNameSpace = (defaultNamespace) => {
     );
 
     client.on("createConversation", async ({ members, name }) => {
-      try {
-        if (members.length < 1) throw new Error("Members array is empty");
+      if (members.length < 1) {
+        client.emit("error", "Members array is empty");
+        return;
+      }
 
+      try {
         const conversation = await ConversationService.createConversationByWs({
           userId: userInfo.id,
           members,
           name,
         });
         client.join(conversation._id.toString());
-
-        conversation.members.forEach((member) => {
-          const memberId = member.id.toString();
-          defaultNamespace.in(memberId).emit("newConversation", conversation);
-        });
+        client.emit("createdConversation", conversation);
       } catch (error) {
         console.error(error);
         client.emit("error", error);
@@ -101,25 +100,24 @@ const initDefaultNameSpace = (defaultNamespace) => {
     client.on(
       "addNewMember",
       async ({ conversationId, newMemberId, role = "member" }) => {
+        if (!conversationId || conversationId.length < 1) {
+          client.emit("error", "Invalid conversationId");
+          return;
+        }
+
+        if (!newMemberId || newMemberId.length < 1) {
+          client.emit("error", "Invalid newMemberId");
+          return;
+        }
+
         try {
-          if (!conversationId || conversationId.length < 1)
-            throw new Error("Invalid conversationId");
-
-          if (!newMemberId || newMemberId.length < 1)
-            throw new Error("Invalid newMemberId");
-
           const conversation = await ConversationService.addNewMemberByWs({
             userId: userInfo.id,
             conversationId,
             newMemberId,
             role,
           });
-          defaultNamespace
-            .in(newMemberId)
-            .emit("newConversation", conversation);
-          defaultNamespace
-            .in(conversationId)
-            .emit("addedNewMember", conversation);
+          client.in(conversationId).emit("addedNewMember", conversation);
         } catch (error) {
           console.error(error);
           client.emit("error", error);
@@ -128,19 +126,23 @@ const initDefaultNameSpace = (defaultNamespace) => {
     );
 
     client.on("removeMember", async ({ conversationId, memberId }) => {
+      if (!conversationId || conversationId.length < 1) {
+        client.emit("error", "Invalid conversationId");
+        return;
+      }
+
+      if (!memberId || memberId.length < 1) {
+        client.emit("error", "Invalid memberId");
+        return;
+      }
+
       try {
-        if (!conversationId || conversationId.length < 1)
-          throw new Error("Invalid conversationId");
-
-        if (!memberId || memberId.length < 1)
-          throw new Error("Invalid memberId");
-
         const conversation = await ConversationService.removeMemberByWs({
           userId: userInfo.id,
           conversationId,
           memberId,
         });
-        defaultNamespace.in(conversationId).emit("removedMember", conversation);
+        client.in(conversationId).emit("removedMember", conversation);
       } catch (error) {
         console.error(error);
         client.emit("error", error);
@@ -148,17 +150,17 @@ const initDefaultNameSpace = (defaultNamespace) => {
     });
 
     client.on("leaveConversation", async ({ conversationId }) => {
-      try {
-        if (!conversationId || conversationId.length < 1)
-          throw new Error("Invalid conversationId");
+      if (!conversationId || conversationId.length < 1) {
+        client.emit("error", "Invalid conversationId");
+        return;
+      }
 
+      try {
         const conversation = await ConversationService.leaveConversationByWs({
           userId: userInfo.id,
           conversationId,
         });
-        defaultNamespace
-          .in(conversationId)
-          .emit("leftConversation", { conversation, userId: userInfo.id });
+        client.in(conversationId).emit("leftConversation", conversation);
       } catch (error) {
         console.error(error);
         client.emit("error", error);
@@ -166,21 +168,20 @@ const initDefaultNameSpace = (defaultNamespace) => {
     });
 
     client.on("deleteConversationByLeader", async ({ conversationId }) => {
-      try {
-        if (!conversationId || conversationId.length < 1)
-          throw new Error("Invalid conversationId");
+      if (!conversationId || conversationId.length < 1) {
+        client.emit("error", "Invalid conversationId");
+        return;
+      }
 
+      try {
         const conversation =
           await ConversationService.deleteConversationByLeaderAndWs({
             userId: userInfo.id,
             conversationId,
           });
-        defaultNamespace
+        client
           .in(conversationId)
-          .emit("deletedConversationByLeader", {
-            conversation,
-            userId: userInfo.id,
-          });
+          .emit("deletedConversationByLeader", conversation);
       } catch (error) {
         console.error(error);
         client.emit("error", error);
@@ -188,87 +189,54 @@ const initDefaultNameSpace = (defaultNamespace) => {
     });
 
     client.on("updateConversationName", async ({ conversationId, newName }) => {
+      if (!conversationId || conversationId.length < 1) {
+        client.emit("error", "Invalid conversationId");
+        return;
+      }
+
+      if (!newName || newName.length < 1) {
+        client.emit("error", "Invalid newName");
+        return;
+      }
+
       try {
-        if (!conversationId || conversationId.length < 1)
-          throw new Error("Invalid conversationId");
-
-        if (!newName || newName.length < 1) throw new Error("Invalid newName");
-
         const conversation =
           await ConversationService.updateConversationNameByWs({
             userId: userInfo.id,
             conversationId,
             newName,
           });
-        defaultNamespace
-          .in(conversationId)
-          .emit("updatedConversationName", conversation);
+        client.in(conversationId).emit("updatedConversationName", conversation);
       } catch (error) {
         console.error(error);
         client.emit("error", error);
       }
     });
 
-    client.on(
-      "updateConversationAvatar",
-      async ({ conversationId, newAvatar }) => {
-        try {
-          if (!conversationId || conversationId.length < 1)
-            throw new Error("Invalid conversationId");
-
-          if (!newAvatar || newAvatar.length < 1)
-            throw new Error("Invalid newAvatar");
-
-          const conversation =
-            await ConversationService.updateConversationAvatarByWs({
-              userId: userInfo.id,
-              conversationId,
-              newAvatar,
-            });
-          defaultNamespace
-            .in(conversationId)
-            .emit("updatedConversationAvatar", conversation);
-        } catch (error) {
-          console.error(error);
-          client.emit("error", error);
-        }
+    client.on("updateConversationAvatar", async ({ conversationId, newAvatar }) => {
+      if (!conversationId || conversationId.length < 1) {
+        client.emit("error", "Invalid conversationId");
+        return;
       }
-    );
 
-    client.on(
-      "updateMemberRole",
-      async ({ conversationId, memberId, newRole }) => {
-        try {
-          if (!conversationId || conversationId.length < 1)
-            throw new Error("Invalid conversationId");
+      if (!newAvatar || newAvatar.length < 1) {
+        client.emit("error", "Invalid newAvatar");
+        return;
+      }
 
-          if (!memberId || memberId.length < 1)
-            throw new Error("Invalid memberId");
-
-          if (newRole !== "leader" && newRole !== "member")
-            throw new Error("Invalid newRole");
-
-          const conversation = await ConversationService.updateMemberRoleByWs({
+      try {
+        const conversation =
+          await ConversationService.updateConversationAvatarByWs({
             userId: userInfo.id,
             conversationId,
-            memberId,
-            newRole,
+            newAvatar,
           });
-          if (!conversation) {
-            client.emit("error", "Conversation not found");
-            return;
-          }
-          defaultNamespace.in(conversationId).emit("updatedMemberRole", {
-            userId: memberId,
-            conversationId,
-            newRole,
-          });
-        } catch (error) {
-          console.error(error);
-          client.emit("error", error);
-        }
+        client.in(conversationId).emit("updatedConversationAvatar", conversation);
+      } catch (error) {
+        console.error(error);
+        client.emit("error", error);
       }
-    );
+    });
 
     client.on(
       "newMessage",
