@@ -11,6 +11,22 @@ class PostRepository {
         "poster",
         "-password -verificationToken -resetToken -resetTokenExpiry"
       )
+      .populate({
+        path: "reacts.react",
+        populate: {
+          path: "userId",
+          model: "User",
+          select: "-password -verificationToken -resetToken -resetTokenExpiry",
+        },
+      })
+      .populate({
+        path: "comments.comment",
+        populate: {
+          path: "userId",
+          model: "User",
+          select: "-password -verificationToken -resetToken -resetTokenExpiry",
+        },
+      })
       .sort({ last_updated: -1 });
   }
 
@@ -30,17 +46,50 @@ class PostRepository {
         "poster",
         "-password -verificationToken -resetToken -resetTokenExpiry"
       )
+      .populate({
+        path: "reacts.react",
+        populate: {
+          path: "userId",
+          model: "User",
+          select: "-password -verificationToken -resetToken -resetTokenExpiry",
+        },
+      })
+      .populate({
+        path: "comments.comment",
+        populate: {
+          path: "userId",
+          model: "User",
+          select: "-password -verificationToken -resetToken -resetTokenExpiry",
+        },
+      })
       .sort({ last_updated: -1 });
   }
 
   async findByUserIds(ids, page = 1, limit = 10, query = {}, select = "") {
     return await Post.find({ poster: { $in: ids }, ...query }, select)
       .skip((page - 1) * limit)
-      .limit(limit).populate(
+      .limit(limit)
+      .populate(
         "poster",
         "-password -verificationToken -resetToken -resetTokenExpiry"
       )
-      .sort({ last_updated: -1 });;
+      .populate({
+        path: "reacts.react",
+        populate: {
+          path: "userId",
+          model: "User",
+          select: "-password -verificationToken -resetToken -resetTokenExpiry",
+        },
+      })
+      .populate({
+        path: "comments.comment",
+        populate: {
+          path: "userId",
+          model: "User",
+          select: "-password -verificationToken -resetToken -resetTokenExpiry",
+        },
+      })
+      .sort({ last_updated: -1 });
   }
 
   async findAll(page = 1, limit = 10, query = {}) {
@@ -54,6 +103,22 @@ class PostRepository {
         "poster",
         "-password -verificationToken -resetToken -resetTokenExpiry"
       )
+      .populate({
+        path: "reacts.react",
+        populate: {
+          path: "userId",
+          model: "User",
+          select: "-password -verificationToken -resetToken -resetTokenExpiry",
+        },
+      })
+      .populate({
+        path: "comments.comment",
+        populate: {
+          path: "userId",
+          model: "User",
+          select: "-password -verificationToken -resetToken -resetTokenExpiry",
+        },
+      })
       .sort({ last_updated: -1 });
   }
 }

@@ -18,6 +18,10 @@
   display: none;
 }
 
+.tab-container {
+  display: none;
+}
+
 // Style cho form đơn giản hơn (forgot/reset/verify)
 .auth-form-simple {
   background: $secondary-color;

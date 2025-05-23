@@ -74,7 +74,6 @@ export const avtUpdate = async (avatarUrl) => {
 };
 
 export const passwordUpdate = async (email, oldPassword, newPassword) => {
-  console.log(email, oldPassword, newPassword);
   try {
     const response = await fetch(`${API_BASE_URL}/auth/change-password`, {
       method: 'PUT',
