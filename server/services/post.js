@@ -303,7 +303,7 @@ class PostService {
             type,
           });
           await PostRepository.updateById(postId, {
-            $push: { reacts: data._id },
+            $push: { reacts: { react: data._id } },
           });
         }
         return res.status(200).json({
@@ -396,7 +396,7 @@ class PostService {
         const comment = await CommentRepository.create(commentObj);
 
         await PostRepository.updateById(postId, {
-          $push: { comments: comment._id },
+          $push: { comments: { comment: comment._id } },
         });
 
         return res.status(200).json({
