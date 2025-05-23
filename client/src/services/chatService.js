@@ -137,9 +137,13 @@ export const processRawRooms = (rawRooms, currentUserId) => {
             type: conversationType,
             name: conversationName || 'Unknown Conversation',
             avatar: conversationAvatar,
-            lastMessage: latestMessage ?
-                (latestMessage.type === 'text' ? latestMessage.content?.text?.data || '' : `[${latestMessage.type}]`)
-                : '',
+            lastMessage: latestMessage
+              ? latestMessage.isDeleted
+                  ? `${latestMessage.senderName || 'Someone'} deleted a message`
+                  : (latestMessage.type === 'text'
+                      ? latestMessage.content?.text?.data || ''
+                      : `[${latestMessage.type}]`)
+              : '',
             time: lastMessageTime,
             createdAt: room.datetime_created,
             latestMessage: latestMessage?._id || null,

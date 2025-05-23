@@ -796,37 +796,56 @@
            }
       }
 
+      .typing-bubble-list {
+        display: flex;
+        gap: 12px;
+        align-items: flex-end;
+        margin: 8px 0;
+      }
+
       .typing-bubble {
-        width: 60px;
         display: flex;
         align-items: center;
-        padding: 15px $spacing-md;
-        margin: 4px 8px;
         background: #f0f2f5;
-        border-radius: $border-radius-md;
-        max-width: 100px;
-        font-size: 14px;
-        color: #333;
+        border-radius: 20px;
+        padding: 6px 14px 6px 6px;
+        min-width: 60px;
+        max-width: 120px;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+        position: relative;
+        margin-right: 0;
+
+        .typing-avatar {
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          object-fit: cover;
+          margin-right: 8px;
+          border: 1px solid #e0e0e0;
+          background: #fff;
+          flex-shrink: 0;
+        }
+
+        .dots {
+          display: flex;
+          align-items: center;
+          height: 100%;
+        }
+        .dot {
+          width: 7px;
+          height: 7px;
+          background: #666;
+          border-radius: 50%;
+          margin: 0 2px;
+          animation: typing 1s infinite;
+        }
+        .dot:nth-child(2) { animation-delay: 0.2s; }
+        .dot:nth-child(3) { animation-delay: 0.4s; }
       }
-      .typing-bubble .dots {
-        display: flex;
-        align-items: center;
-        // margin-left: 8px;
-      }
-      .typing-bubble .dot {
-        width: 8px;
-        height: 8px;
-        background: #666;
-        border-radius: 50%;
-        margin: 0 2px;
-        animation: typing 1s infinite;
-      }
-      .typing-bubble .dot:nth-child(2) { animation-delay: 0.2s; }
-      .typing-bubble .dot:nth-child(3) { animation-delay: 0.4s; }
       @keyframes typing {
         0%, 100% { transform: translateY(0); }
         50% { transform: translateY(-4px); }
-    }
+      }
 
     .group-access-denied-message {
       position: relative;
@@ -1295,7 +1314,7 @@
       .add-user-section {
         margin-bottom: $spacing-lg;
         padding-bottom: $spacing-lg;
-        border-bottom: 1px solid $input-border-color;
+        // border-bottom: 1px solid $input-border-color;
         position: relative;
 
         h4 {
@@ -1306,6 +1325,7 @@
         }
 
         .add-user-search-form {
+          position: relative;
           display: flex;
           gap: $spacing-sm;
           margin-bottom: $spacing-md;
@@ -1347,7 +1367,7 @@
 
         .suggestions-dropdown {
           position: absolute;
-          top: calc(100% + #{$spacing-xs});
+          top: 100%;
           left: 0;
           right: 0;
           background: $secondary-color;

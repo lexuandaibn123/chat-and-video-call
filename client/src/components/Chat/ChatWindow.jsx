@@ -42,6 +42,8 @@ const ChatWindow = ({
   const [callInvite, setCallInvite] = useState(null);
   const [typingUsers, setTypingUsers] = useState([]);
 
+  console.log('Active contact:', activeContact);
+
   // Determine if user is in group
   const isUserInGroup = activeContact?.isGroup
     ? activeContact.detailedMembers.some(member => member.id === userInfo.id)
@@ -371,12 +373,30 @@ const ChatWindow = ({
           ))
         )}
         {typingUsers.length > 0 && (
-          <div className="typing-bubble">
-            <div className="dots">
-              <span className="dot"></span>
-              <span className="dot"></span>
-              <span className="dot"></span>
-            </div>
+          <div className="typing-bubble-list">
+            {typingUsers.map((userId) => {
+              // Tìm member object trong activeContact.members
+              const memberObj = activeContact.members?.find(
+                m => (typeof m.id === 'object' ? m.id._id : m.id) === userId
+              );
+              const avatarUrl =
+                (memberObj && memberObj.id && memberObj.id.avatar) ||
+                defaultUserAvatar;
+              return (
+                <div className="typing-bubble" key={userId}>
+                  <img
+                    src={avatarUrl}
+                    alt="Typing user"
+                    className="typing-avatar"
+                  />
+                  <div className="dots">
+                    <span className="dot"></span>
+                    <span className="dot"></span>
+                    <span className="dot"></span>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
         {!isUserInGroup && isGroupChat && (

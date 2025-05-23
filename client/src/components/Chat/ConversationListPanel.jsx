@@ -28,7 +28,17 @@ const ConversationListPanel = ({
   const allConversations = [
     ...groups.map(g => ({ ...g, type: 'group' })),
     ...friends.map(f => ({ ...f, type: 'friend' }))
-  ];
+  ].sort((a, b) => {
+    // Ưu tiên trường latestMessageTimestamp, fallback sang time nếu không có
+    const aTime = a.latestMessageTimestamp || a.time || 0;
+    const bTime = b.latestMessageTimestamp || b.time || 0;
+    // Nếu là string ISO, chuyển sang số
+    const aTs = typeof aTime === 'string' ? new Date(aTime).getTime() : aTime;
+    const bTs = typeof bTime === 'string' ? new Date(bTime).getTime() : bTime;
+    return bTs - aTs;
+  });
+
+  console.log("All conversations:", allConversations);
 
   // Hàm xử lý khi click vào conversation
   const handleReadConversation = (id) => {
@@ -143,11 +153,18 @@ const ConversationListPanel = ({
 
     let name = conversationName;
     if (!name) {
-      if (selectedUsers.length <= 2) {
-        name = selectedUsers.map(u => u.fullName || u._id).join(', ');
+      // Lấy tên người tạo nhóm
+      const creatorName = userInfo.fullName || userInfo.email || userInfo._id;
+      if (selectedUsers.length === 1) {
+        // Nếu chỉ có 1 người được chọn, tên nhóm là "creator, user"
+        name = `${creatorName}, ${selectedUsers[0].fullName || selectedUsers[0].email || selectedUsers[0]._id}`;
+      } else if (selectedUsers.length === 2) {
+        // Nếu có 2 người, tên nhóm là "creator, user1, user2"
+        name = `${creatorName}, ${selectedUsers.map(u => u.fullName || u.email || u._id).join(', ')}`;
       } else {
-        const firstTwo = selectedUsers.slice(0, 2).map(u => u.fullName || u._id);
-        name = `${userInfo.fullName}, ${firstTwo.join(', ')}, ... (+${selectedUsers.length - 2})`;
+        // Nếu nhiều hơn 2 người, tên nhóm là "creator, user1, user2, ... (+n)"
+        const firstTwo = selectedUsers.slice(0, 2).map(u => u.fullName || u.email || u._id);
+        name = `${creatorName}, ${firstTwo.join(', ')}, ... (+${selectedUsers.length - 2})`;
       }
     }
 

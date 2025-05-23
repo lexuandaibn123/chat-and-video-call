@@ -103,7 +103,13 @@ const MessageBubble = ({
                         {images.map((img, index) => {
                             const imageUrl = img.data;
                             const imageName = img.metadata?.fileName || `Image ${index + 1}`;
-                            if (!imageUrl && status !== 'uploading') {
+                            if (!imageUrl && status === 'uploading') {
+                                // Hiển thị skeleton khi đang upload mà chưa có url
+                                return (
+                                    <div key={index} className="skeleton-image" />
+                                );
+                            }
+                            if (!imageUrl) {
                                 return <p key={index} className="message-text">[Image URL Missing: {imageName}]</p>;
                             }
                             return (
@@ -236,7 +242,7 @@ const MessageBubble = ({
 
              {/* Options Button & Menu (Conditionally rendered) */}
              {shouldShowOptionsButton && (
-                  <div className={`message-options-container ${sender}`}>
+                  <div className={`message-options-container ${sender} ${showMenu ? 'active-menu' : ''}`}>
                        {/* Options Button */}
                        <button
                             className="icon-button message-options-button"

@@ -415,6 +415,7 @@ export const useConversationHandlers = ({
         const isEmailFormat = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedTerm);
         const isIdFormat = /^[a-fA-F0-9]{24}$/.test(trimmedTerm);
         if (!isEmailFormat && !isIdFormat) {
+          alert('Invalid search term: Must be a valid email or ObjectID.');
           throw new Error('Invalid search term: Must be a valid email or ObjectID.');
         }
         if (isEmailFormat) {

@@ -538,7 +538,7 @@ export const useSocket = ({
         );
       }
       setConversations((prevConvs) =>
-        updateConversationsListLatestMessage(prevConvs, updatedMessage.conversationId, updatedMessage)
+        updateConversationsListLatestMessage(prevConvs, updatedMessage.conversationId, updatedMessage, userId)
       );
     });
 
@@ -555,7 +555,7 @@ export const useSocket = ({
         );
       }
       setConversations((prevConvs) =>
-        updateConversationsListLatestMessage(prevConvs, deletedMessage.conversationId, deletedMessage)
+        updateConversationsListLatestMessage(prevConvs, deletedMessage.conversationId, deletedMessage, userId)
       );
     });
 
