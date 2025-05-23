@@ -391,6 +391,7 @@ const ChatWindow = ({
           <UploadButton
             endpoint="conversationUploader"
             key="file-uploader"
+            multiple={true}
             disabled={sendingMessage || !activeContact || isEditingMode || !isUserInGroup}
             content={{ button: <i className="fas fa-paperclip"></i> }}
             appearance={{

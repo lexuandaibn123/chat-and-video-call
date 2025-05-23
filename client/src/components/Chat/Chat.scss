@@ -629,7 +629,7 @@
                   align-items: flex-end; // Align bubble and timestamp right within the column
               }
               .message-bubble {
-                  background-color: $primary-color; // Your primary color
+                  background-color: color.adjust($primary-color, $lightness: -10%); // Your primary color
                   color: $secondary-color; // Often white/light color for text
                   border-radius: $border-radius-md $border-radius-md $border-radius-sm $border-radius-md; // Tail bottom-right
               }
@@ -637,7 +637,28 @@
                 text-align: right; // Center the timestamp below the deleted bubble
                 // No absolute positioning needed here; flows normally within message-content-area
               }
-               // align-self isn't strictly necessary on timestamp here if parent has align-items
+              // align-self isn't strictly necessary on timestamp here if parent has align-items
+
+              .message-file-link .fa-file-pdf {
+                color: #e74c3c;
+              }
+              /* Đổi màu icon file Word thành xanh */
+              .message-file-link .fa-file-word {
+                color: #2980d9;
+              }
+              /* Đổi màu icon mặc định */
+              .message-file-link .fa-file {
+                color: #888;
+              }
+
+              .message-file-link .file-name {
+                color: $secondary-color;
+                font-weight: $font-weight-medium;
+              }
+
+              .message-file-link .file-size {
+                color: $secondary-color;
+              }
           }
 
           // Styles for received bubble/content/timestamp
@@ -656,6 +677,21 @@
                 // No absolute positioning needed here; flows normally within message-content-area
               }
                // align-self isn't strictly necessary on timestamp here if parent has align-items
+              .message-file-link .fa-file-pdf {
+                color: #e74c3c;
+              }
+              /* Đổi màu icon file Word thành xanh */
+              .message-file-link .fa-file-word {
+                color: #2980d9;
+              }
+              /* Đổi màu icon mặc định */
+              .message-file-link .fa-file {
+                color: #888;
+              }
+
+              .message-file-link .file-name {
+                font-weight: $font-weight-medium;
+              }
           }
 
 

@@ -107,7 +107,7 @@ export const useConversationHandlers = ({
 
   // --- Handler for removing a user ---
   const handleRemoveUser = useCallback(
-    (conversationId, userIdToRemove) => {
+    (conversationId, userIdToRemove, userData) => {
       const currentUserId = currentUserIdRef.current;
       if (
         !activeChat ||
@@ -143,7 +143,7 @@ export const useConversationHandlers = ({
       if (
         !window.confirm(
           `Are you sure you want to remove ${
-            memberToRemove.fullName || userIdToRemove
+            userData.fullName || userIdToRemove
           } from the group?`
         )
       ) {
@@ -485,25 +485,76 @@ export const useConversationHandlers = ({
         'Add member',
         () => {
           setConversations((prevConvs) =>
-            updateConversationsAfterMemberAdded(prevConvs, conversationId, {
-              id: userIdToAdd,
-              ...userToAdd,
-              role: 'member',
-              joinedAt: new Date().toISOString(),
-            })
-          );
-          setActiveChat((prevActive) =>
-            updateActiveChatAfterMemberAdded(
-              prevActive,
-              conversationId,
-              null,
-              {
-                id: userIdToAdd,
-                ...userToAdd,
+            prevConvs.map(conv => {
+              if (conv.id !== conversationId) return conv;
+              // Thêm vào detailedMembers
+              const addedUserDetailed = {
+                id: userToAdd._id,
+                role: 'member',
+                leftAt: null,
+                addedAt: new Date().toISOString(),
+                fullName: userToAdd.fullName,
+                avatar: userToAdd.avatar,
+                email: userToAdd.email,
+              };
+              // Thêm vào members (object user đầy đủ)
+              const addedUserMember = {
+                id: {
+                  _id: userToAdd._id,
+                  id: userToAdd._id,
+                  fullName: userToAdd.fullName,
+                  avatar: userToAdd.avatar,
+                  email: userToAdd.email,
+                  emailVerified: userToAdd.emailVerified,
+                  isAdmin: userToAdd.isAdmin,
+                },
                 role: 'member',
                 joinedAt: new Date().toISOString(),
-              }
-            )
+                leftAt: null,
+              };
+              return {
+                ...conv,
+                detailedMembers: [...(conv.detailedMembers || []), addedUserDetailed],
+                members: [...(conv.members || []), addedUserMember],
+              };
+            })
+          );
+          // Cập nhật trực tiếp activeChat
+          setActiveChat(prevActive =>
+            prevActive && prevActive.id === conversationId
+              ? {
+                  ...prevActive,
+                  detailedMembers: [
+                    ...(prevActive.detailedMembers || []),
+                    {
+                      id: userToAdd._id,
+                      role: 'member',
+                      leftAt: null,
+                      addedAt: new Date().toISOString(),
+                      fullName: userToAdd.fullName,
+                      avatar: userToAdd.avatar,
+                      email: userToAdd.email,
+                    },
+                  ],
+                  members: [
+                    ...(prevActive.members || []),
+                    {
+                      id: {
+                        _id: userToAdd._id,
+                        id: userToAdd._id,
+                        fullName: userToAdd.fullName,
+                        avatar: userToAdd.avatar,
+                        email: userToAdd.email,
+                        emailVerified: userToAdd.emailVerified,
+                        isAdmin: userToAdd.isAdmin,
+                      },
+                      role: 'member',
+                      joinedAt: new Date().toISOString(),
+                      leftAt: null,
+                    },
+                  ],
+                }
+              : prevActive
           );
           setAddUserSearchResults([]);
         }

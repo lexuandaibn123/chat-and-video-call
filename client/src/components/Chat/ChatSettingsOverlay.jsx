@@ -376,7 +376,7 @@ const ChatSettingsOverlay = ({
                       <button
                         className="icon-button small warning"
                         title="Remove User"
-                        onClick={() => onRemoveUser(group.id, member.id._id)}
+                        onClick={() => onRemoveUser(group.id, member.id._id, member.id)}
                         disabled={isPerformingAction}
                       >
                         {isPerformingAction ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-user-times"></i>}
