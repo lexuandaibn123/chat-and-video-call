@@ -11,12 +11,15 @@ const PostComments = ({
   newComment = "",
   setNewComment,
 }) => {
+  const [replyComments, setReplyComments] = useState([]);
   const [comments, setComments] = useState([]);
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editedCommentContent, setEditedCommentContent] = useState("");
   const [expandedReplies, setExpandedReplies] = useState({});
   const [replyingToCommentId, setReplyingToCommentId] = useState(null);
   const [newReply, setNewReply] = useState("");
+  const [isSubmittingReply, setIsSubmittingReply] = useState(false);
+  const [repliesMap, setRepliesMap] = useState({}); // { [commentId]: [replyObj, ...] }
   
   // Lấy comments từ API khi postId thay đổi
   useEffect(() => {
@@ -24,7 +27,23 @@ const PostComments = ({
       try {
         const response = await getCommentsByPostId(postId);
         if (response.success) {
-          setComments(response.data);
+          // Phân loại comment gốc và reply
+          const rootComments = [];
+          const repliesMap = {};
+          for (const comment of response.data) {
+            if (!comment.replyToCommentId) {
+              rootComments.push(comment);
+            } else {
+              // Đưa reply vào repliesMap theo comment cha
+              const parentId = comment.replyToCommentId._id || comment.replyToCommentId;
+              if (!repliesMap[parentId]) {
+                repliesMap[parentId] = [];
+              }
+              repliesMap[parentId].push(comment);
+            }
+          }
+          setComments(rootComments);
+          setRepliesMap(repliesMap);
           setVisibleComments(3); // Reset visible comments when postId changes
         } else {
           console.error("Failed to fetch comments:", response.message);
@@ -112,21 +131,44 @@ const PostComments = ({
     }
   };
 
-  const toggleReplies = (commentId) => {
+  // Hàm fetch replies cho một comment
+  const fetchReplies = async (commentId, replyIds) => {
+    // Giả sử bạn có API getRepliesByIds (nếu không, cần implement ở backend)
+    // Nếu backend chỉ trả về id, bạn cần fetch từng reply hoặc batch fetch
+    try {
+      // Ví dụ: const res = await getRepliesByIds(replyIds);
+      // if (res.success) setRepliesMap(prev => ({ ...prev, [commentId]: res.data }));
+      // Nếu chưa có API, tạm thời để rỗng hoặc log ra replyIds
+      setRepliesMap(prev => ({ ...prev, [commentId]: replyIds }));
+    } catch (error) {
+      console.error("Error fetching replies:", error);
+    }
+  };
+
+  // Khi expand replies, fetch replies nếu chưa có
+  const toggleReplies = (commentId, replyIds) => {
     setExpandedReplies((prev) => ({
       ...prev,
       [commentId]: !prev[commentId],
     }));
+    if (!repliesMap[commentId] && replyIds && replyIds.length > 0) {
+      fetchReplies(commentId, replyIds);
+    }
   };
 
-  const handleReplyClick = (commentId) => {
+  const handleReplyClick = async (commentId) => {
     setReplyingToCommentId(commentId);
     setNewReply("");
   };
 
   const handleAddReply = async (commentId, e) => {
     e.preventDefault();
-    if (!newReply.trim()) return;
+    if (!newReply.trim()) {
+      alert("Reply content cannot be empty");
+      return;
+    }
+    
+    setIsSubmittingReply(true);
     try {
       const response = await replyComment(postId, newReply, commentId);
       if (response.success) {
@@ -136,11 +178,34 @@ const PostComments = ({
         const res = await getCommentsByPostId(postId);
         if (res.success) setComments(res.data);
       } else {
-        console.error("Failed to add reply:", response.message);
+        alert("Failed to add reply: " + (response.message || "Unknown error"));
       }
     } catch (error) {
-      console.error("Error adding reply:", error);
+      alert("Error adding reply: " + error.message);
+    } finally {
+      setIsSubmittingReply(false);
     }
+  };
+
+  // Hàm render replies dạng cây
+  const RenderReplies = ({ parentId }) => {
+    const replies = repliesMap[parentId] || [];
+    return replies.map((reply) => (
+      <div key={reply._id} className="reply">
+        <div className="reply-avatar">
+          <img
+            src={reply.userId.avatar}
+            alt={reply.userId.fullName}
+            className="profile-image"
+          />
+        </div>
+        <div className="reply-content">
+          <span className="reply-name">{reply.userId.fullName}</span>
+          <span className="reply-time">{reply.datetime_created}</span>
+          <p className="reply-text">{reply.content.text.data}</p>
+        </div>
+      </div>
+    ));
   };
 
   return (
@@ -205,9 +270,9 @@ const PostComments = ({
                   <span>Reply</span>
                 </button>
 
-                {comment.replyToCommentId && (
-                  <button className="comment-view-replies" onClick={() => toggleReplies(comment.comment._id)}>
-                    {expandedReplies[comment.comment._id] ? (
+                {comment.replies && Array.isArray(comment.replies) && (
+                  <button className="comment-view-replies" onClick={() => toggleReplies(comment._id, comment.replies)}>
+                    {expandedReplies[comment._id] ? (
                       <>
                         <i className="fas fa-chevron-up"></i>
                         <span>Hide replies</span>
@@ -223,6 +288,12 @@ const PostComments = ({
               </div>
             </div>
           </div>
+
+          {expandedReplies[comment._id] && repliesMap[comment._id] && (
+            <div className="comment-replies">
+              <RenderReplies parentId={comment._id} />
+            </div>
+          )}
 
           {replyingToCommentId === comment._id && (
             <form className="reply-form" onSubmit={(e) => handleAddReply(comment._id, e)}>
@@ -248,8 +319,12 @@ const PostComments = ({
                   <button type="button" className="reply-cancel" onClick={() => setReplyingToCommentId(null)}>
                     Cancel
                   </button>
-                  <button type="submit" className="reply-submit">
-                    Reply
+                  <button 
+                    type="submit" 
+                    className="reply-submit"
+                    disabled={isSubmittingReply}
+                  >
+                    {isSubmittingReply ? "Sending..." : "Reply"}
                   </button>
                 </div>
               </div>

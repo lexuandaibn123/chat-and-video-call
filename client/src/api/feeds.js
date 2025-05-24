@@ -274,13 +274,13 @@ export const replyComment = async (postId, content, replyCommentId) => {
             method: "POST",
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                postId,
+                postId: postId,
                 type: "text",
                 data: {
                     type: "text",
                     data: content,
                 },
-                replyCommentId: replyCommentId
+                replyCommentId: replyCommentId,
             }),
             credentials: 'include',
         })
