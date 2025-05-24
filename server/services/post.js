@@ -437,6 +437,13 @@ class PostService {
 
         const comment = await CommentRepository.create(commentObj);
 
+        if (replyToCommentId) {
+          await this._mustBeValidComment(replyToCommentId);
+          await CommentRepository.updateById(replyToCommentId, {
+            $push: { replies: { comment: comment._id } },
+          });
+        }
+
         await PostRepository.updateById(postId, {
           $push: { comments: { comment: comment._id } },
         });
@@ -506,6 +513,14 @@ class PostService {
         this._mustBeOwnerOfComment(comment, userInfo.id.toString());
 
         await CommentRepository.updateById(commentId, { isDeleted: true });
+
+        const replies = comment.replies.map((reply) =>
+          reply.comment.toString()
+        );
+
+        if (replies.length > 0) {
+          await CommentRepository.updateByIds(replies, { isDeleted: true });
+        }
 
         return res.status(200).json({
           success: true,

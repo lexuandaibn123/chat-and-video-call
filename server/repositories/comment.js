@@ -17,6 +17,14 @@ class CommentRepository {
     return await Comment.findByIdAndUpdate(id, { ...data }, { new: true });
   }
 
+  async updateByIds(ids, data) {
+    return await Comment.updateMany(
+      { _id: { $in: ids } },
+      { ...data },
+      { new: true }
+    );
+  }
+
   async findByUserId(userId, page = 1, limit = 10, query = {}) {
     return Comment.find({
       isDeleted: false,
