@@ -12,20 +12,18 @@ class PostRepository {
         "-password -verificationToken -resetToken -resetTokenExpiry"
       )
       .populate({
-        path: "reacts.react",
-        populate: {
-          path: "userId",
-          model: "User",
-          select: "-password -verificationToken -resetToken -resetTokenExpiry",
-        },
+        path: "comments.comment",
+        match: { isDeleted: false },
+        select: "_id",
       })
       .populate({
-        path: "comments.comment",
-        populate: {
-          path: "userId",
-          model: "User",
-          select: "-password -verificationToken -resetToken -resetTokenExpiry",
+        path: "reacts.react",
+        match: {
+          type: {
+            $ne: "unreacted",
+          },
         },
+        select: "_id",
       })
       .sort({ last_updated: -1 });
   }
@@ -47,20 +45,18 @@ class PostRepository {
         "-password -verificationToken -resetToken -resetTokenExpiry"
       )
       .populate({
-        path: "reacts.react",
-        populate: {
-          path: "userId",
-          model: "User",
-          select: "-password -verificationToken -resetToken -resetTokenExpiry",
-        },
+        path: "comments.comment",
+        match: { isDeleted: false },
+        select: "_id",
       })
       .populate({
-        path: "comments.comment",
-        populate: {
-          path: "userId",
-          model: "User",
-          select: "-password -verificationToken -resetToken -resetTokenExpiry",
+        path: "reacts.react",
+        match: {
+          type: {
+            $ne: "unreacted",
+          },
         },
+        select: "_id",
       })
       .sort({ last_updated: -1 });
   }
@@ -74,20 +70,18 @@ class PostRepository {
         "-password -verificationToken -resetToken -resetTokenExpiry"
       )
       .populate({
-        path: "reacts.react",
-        populate: {
-          path: "userId",
-          model: "User",
-          select: "-password -verificationToken -resetToken -resetTokenExpiry",
-        },
+        path: "comments.comment",
+        match: { isDeleted: false },
+        select: "_id",
       })
       .populate({
-        path: "comments.comment",
-        populate: {
-          path: "userId",
-          model: "User",
-          select: "-password -verificationToken -resetToken -resetTokenExpiry",
+        path: "reacts.react",
+        match: {
+          type: {
+            $ne: "unreacted",
+          },
         },
+        select: "_id",
       })
       .sort({ last_updated: -1 });
   }
@@ -104,20 +98,18 @@ class PostRepository {
         "-password -verificationToken -resetToken -resetTokenExpiry"
       )
       .populate({
-        path: "reacts.react",
-        populate: {
-          path: "userId",
-          model: "User",
-          select: "-password -verificationToken -resetToken -resetTokenExpiry",
-        },
+        path: "comments.comment",
+        match: { isDeleted: false },
+        select: "_id",
       })
       .populate({
-        path: "comments.comment",
-        populate: {
-          path: "userId",
-          model: "User",
-          select: "-password -verificationToken -resetToken -resetTokenExpiry",
+        path: "reacts.react",
+        match: {
+          type: {
+            $ne: "unreacted",
+          },
         },
+        select: "_id",
       })
       .sort({ last_updated: -1 });
   }

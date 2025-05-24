@@ -204,3 +204,92 @@ export const commentPost = async (id, content) => {
         throw error;
     }
 }
+
+export const getCommentsByPostId = async (id) => {
+    try {
+        const response = await fetch(
+            `${API_BASE_URL}/api/post/get-comments/${id}?page=1&limit=20`,
+            {
+                method: "GET",
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+            }
+        );
+        return handleApiResponse(response);
+    } catch (error) {
+        console.error("API GetCommentsByPostId Error:", error);
+        if (error instanceof TypeError) {
+            throw new Error('Connection error. Please check your network and CORS settings.');
+        }
+        throw error;
+    }
+};
+
+export const editComment = async (id, content) => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/post/edit-comment`, {
+            method: "PUT",
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                commentId: id,
+                newData: content
+            }),
+            credentials: 'include',
+        })
+        return handleApiResponse(response);
+    }
+    catch (error) {
+        console.error("API EditComment Error:", error);
+        if (error instanceof TypeError) {
+            throw new Error('Connection error. Please check your network and CORS settings.');
+        }
+        throw error;
+    }
+}   
+
+export const deleteComment = async (id) => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/post/delete-comment`, {
+            method: "PUT",
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                commentId: id
+            }),
+            credentials: 'include',
+        })
+        return handleApiResponse(response);
+    }
+    catch (error) {
+        console.error("API DeleteComment Error:", error);
+        if (error instanceof TypeError) {
+            throw new Error('Connection error. Please check your network and CORS settings.');
+        }
+        throw error;
+    }
+}  
+
+export const replyComment = async (postId, content, replyCommentId) => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/post/comment-to-post`, {
+            method: "POST",
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                postId,
+                type: "text",
+                data: {
+                    type: "text",
+                    data: content,
+                },
+                replyCommentId: replyCommentId
+            }),
+            credentials: 'include',
+        })
+        return handleApiResponse(response);
+    } catch (error) {
+        console.error("API ReplyComment Error:", error);
+        if (error instanceof TypeError) {
+            throw new Error('Connection error. Please check your network and CORS settings.');
+        }
+        throw error;
+    }
+}

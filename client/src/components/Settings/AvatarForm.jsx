@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect } from 'react';
 import { avtUpdate } from "../../api/setting";
 import { UploadButton } from '../../utils/uploadthing';
 import { toast } from 'react-toastify';
@@ -23,8 +23,6 @@ const AvatarForm = () => {
     }
 
     setError("");
-    console.log("avatarUrl: ", avatarUrl);
-
     try {
       await avtUpdate(uploadedUrl);
       toast.success("Cập nhật ảnh đại diện thành công!");

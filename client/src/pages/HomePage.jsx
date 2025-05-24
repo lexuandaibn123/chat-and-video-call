@@ -44,16 +44,15 @@ const HomePage = () => {
           setPosts(
             response.data.map((p) => ({
               postId: p._id || "",
-              avatar: p.poster.avatar || "/api/placeholder/40/40",
-              name: p.poster.fullName || "Anonymous",
-              id_poster: p.poster._id || "",
+              poster: p.poster || {},
               content: p.content || [],
-              isDeleted: p.isDeleted || false,
               isEdited: p.isEdited || false,
+              isDeleted: p.isDeleted || false,
               reacts: p.reacts || [],
               comments: p.comments || [],
-              datetime_created: formatTimestamp(p.datetime_created) || "Just now",
-              last_updated: formatTimestamp(p.last_updated) || "Just now",
+              datetime_created: p.datetime_created || "",
+              datetime_updated: p.last_updated || "",
+              hasUserReacted: p.hasUserReacted || false,
             }))
           );
           // setPosts((prev) => [p, ...prev]);
@@ -76,15 +75,15 @@ const HomePage = () => {
   // };
 
   // Helper: Format timestamp
-  const formatTimestamp = (timestamp) => {
-    if (!timestamp) return "Just now";
-    try {
-      const date = new Date(timestamp);
-      return date.toLocaleString();
-    } catch {
-      return "Just now";
-    }
-  };
+  // const formatTimestamp = (timestamp) => {
+  //   if (!timestamp) return "Just now";
+  //   try {
+  //     const date = new Date(timestamp);
+  //     return date.toLocaleString();
+  //   } catch {
+  //     return "Just now";
+  //   }
+  // };
 
   return (
 
