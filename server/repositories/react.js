@@ -58,7 +58,13 @@ class ReactRepository {
   }
 
   async hasUserReacted(postId, userId) {
-    const react = await React.findOne({ postId, userId });
+    const react = await React.findOne({
+      postId,
+      userId,
+      type: {
+        $ne: "unreacted",
+      },
+    });
     return !!react;
   }
 }

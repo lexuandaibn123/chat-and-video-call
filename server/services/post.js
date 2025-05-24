@@ -51,6 +51,16 @@ class PostService {
       throw new Error("You are not the owner of this comment");
     }
   }
+
+  _filterPosts(posts) {
+    return posts.map((post) => {
+      post.comments = post.comments.filter((c) => c.comment !== null);
+
+      post.reacts = post.reacts.filter((r) => r.react !== null);
+
+      return post;
+    });
+  }
   async createPost(req, res) {
     try {
       const { content } = req.body;
@@ -137,7 +147,7 @@ class PostService {
         return res.status(200).json({
           success: true,
           message: "Post updated successfully",
-          data: updatedPost,
+          data: this._filterPosts([updatedPost])[0],
         });
       } catch (error) {
         console.error(error);
@@ -222,7 +232,7 @@ class PostService {
         return res.status(200).json({
           success: true,
           message: "Posts retrieved successfully",
-          data: posts,
+          data: this._filterPosts(posts),
         });
       } catch (error) {
         console.error(error);
@@ -263,7 +273,7 @@ class PostService {
         return res.status(200).json({
           success: true,
           message: "Posts retrieved successfully",
-          data: posts,
+          data: this._filterPosts(posts),
         });
       } catch (error) {
         console.error(error);
@@ -293,7 +303,12 @@ class PostService {
         return res.status(200).json({
           success: true,
           message: "Post retrieved successfully",
-          data: { post, comments, reacts, hasUserReacted },
+          data: {
+            post: this._filterPosts([post])[0],
+            comments,
+            reacts,
+            hasUserReacted,
+          },
         });
       } catch (error) {
         console.error(error);

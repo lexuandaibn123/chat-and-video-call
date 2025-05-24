@@ -11,6 +11,20 @@ class PostRepository {
         "poster",
         "-password -verificationToken -resetToken -resetTokenExpiry"
       )
+      .populate({
+        path: "comments.comment",
+        match: { isDeleted: false },
+        select: "_id",
+      })
+      .populate({
+        path: "reacts.react",
+        match: {
+          type: {
+            $ne: "unreacted",
+          },
+        },
+        select: "_id",
+      })
       .sort({ last_updated: -1 });
   }
 
@@ -30,6 +44,20 @@ class PostRepository {
         "poster",
         "-password -verificationToken -resetToken -resetTokenExpiry"
       )
+      .populate({
+        path: "comments.comment",
+        match: { isDeleted: false },
+        select: "_id",
+      })
+      .populate({
+        path: "reacts.react",
+        match: {
+          type: {
+            $ne: "unreacted",
+          },
+        },
+        select: "_id",
+      })
       .sort({ last_updated: -1 });
   }
 
@@ -41,6 +69,20 @@ class PostRepository {
         "poster",
         "-password -verificationToken -resetToken -resetTokenExpiry"
       )
+      .populate({
+        path: "comments.comment",
+        match: { isDeleted: false },
+        select: "_id",
+      })
+      .populate({
+        path: "reacts.react",
+        match: {
+          type: {
+            $ne: "unreacted",
+          },
+        },
+        select: "_id",
+      })
       .sort({ last_updated: -1 });
   }
 
@@ -55,6 +97,20 @@ class PostRepository {
         "poster",
         "-password -verificationToken -resetToken -resetTokenExpiry"
       )
+      .populate({
+        path: "comments.comment",
+        match: { isDeleted: false },
+        select: "_id",
+      })
+      .populate({
+        path: "reacts.react",
+        match: {
+          type: {
+            $ne: "unreacted",
+          },
+        },
+        select: "_id",
+      })
       .sort({ last_updated: -1 });
   }
 }
