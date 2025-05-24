@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { getPosts, getComments } from '../api/notification';
+import { getPosts, getMyPosts, getComments } from '../api/notification';
 import { infoApi } from "../api/auth";
-import { getPotentialFriendsApi, getUserDetailsApi } from "../api/users";
+import { getPotentialFriendsApi } from "../api/users";
 import NotificationList from '../components/Notification/NotificationList';
+import defaultUserAvatar from '../assets/images/avatar_male.jpg';
 import '../components/Notification/style.scss';
 
 const NotificationsPage = () => {
@@ -17,6 +18,7 @@ const NotificationsPage = () => {
   const [discoverItems, setDiscoverItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  // const [myPosts, setMyPosts] = useState([]);
 
   useEffect(() => {
     const fetchUserInfo = async () => {
@@ -57,104 +59,114 @@ const NotificationsPage = () => {
   };
 
   useEffect(() => {
+    if (!user.id) return;
     const fetchData = async () => {
       try {
         // Fetch posts for notifications
         const postsResponse = await getPosts(1, 20);
+        const myPostsResponse = await getMyPosts(1, 20);
         if (!postsResponse.success) throw new Error(postsResponse.message || 'Failed to fetch posts');
+        if (!myPostsResponse.success) throw new Error(myPostsResponse.message || 'Failed to fetch my posts');
+        console.log('Posts:', postsResponse.data);
+        console.log('My Posts:', myPostsResponse.data);
 
-                // Fetch potential friends for Discover (returns array directly)
+        // Fetch potential friends for Discover (returns array directly)
         const potentialFriends = await getPotentialFriendsApi();
         console.log('Potential Friends:', potentialFriends);
         // Enrich each friend with full profile (avatar) via infoApi
-        const discoverData = await Promise.all(
-          potentialFriends.map(async item => {
-            // assuming infoApi can accept an ID parameter to fetch other user
-            const userInfoResp = await getUserDetailsApi(item.info._id);
-            console.log('User Info:', userInfoResp);
-            const avatar = userInfoResp.success && userInfoResp.userInfo?.avatar
-              ? userInfoResp.userInfo.avatar
-              : '/default-avatar.jpg';
-            return {
-              id: item.info._id,
-              name: item.info.fullName,
-              image: avatar,
-              mutualFriends: item.mutualFriends.length
-            };
-          })
-        );
+        const discoverData = potentialFriends.map(item => ({
+          id: item.info._id,
+          name: item.info.fullName,
+          image: item.info.avatar || defaultUserAvatar,
+          mutualFriends: item.mutualFriends.length
+        }));
         setDiscoverItems(discoverData);
 
         // Build notifications from posts
-        const postNotifications = postsResponse.data.flatMap(post => {
-          const posterId = post.poster?._id;
-          const isOwnPost = posterId === currentUserId;
-          const base = {
-            id: post._id,
-            user: post.poster?.fullName || 'Anonymous',
-            image: post.poster?.avatar || '/default-avatar.jpg',
-            datetime: post.datetime_created,
-            time: formatTimeAgo(post.datetime_created)
-          };
-          if (!isOwnPost) {
+        const postNotifications = postsResponse.data
+          .filter(post => post.poster?._id !== currentUserId) // chỉ bài của bạn bè
+          .map(post => {
             const hasImage = post.content?.some(c => c.type === 'image');
-            return [{
-              ...base,
+            return {
               id: `${post._id}-new-post`,
+              user: post.poster?.fullName || 'Anonymous',
+              image: post.poster?.avatar || defaultUserAvatar,
+              datetime: post.datetime_created,
+              time: formatTimeAgo(post.datetime_created),
               action: hasImage ? 'posted a new photo' : 'made a new post',
               details: post.content?.[0]?.data || '',
               icon: hasImage ? '📷' : '✍️',
               contentPreview: post.content?.[0]?.data || ''
-            }];
-          }
+            };
+          });
+
+        const reactAndCommentNotifications = myPostsResponse.data.flatMap(post => {
           const notis = [];
-          const likes = post.reacts?.length || 0;
-          if (likes) notis.push({
-            ...base,
-            id: `${post._id}-react`,
-            action: 'liked your post',
-            details: `${likes} likes on your post`,
-            icon: '❤️',
-            reactCount: likes,
-            contentPreview: `${likes} others liked your post.`
-          });
-          const comments = post.comments?.length || 0;
-          if (comments) notis.push({
-            ...base,
-            id: `${post._id}-comment`,
-            action: 'commented on your post',
-            details: `${comments} comments on your post`,
-            icon: '💬',
-            commentCount: comments,
-            contentPreview: `${comments} others commented on your post.`
-          });
+          const likeCount = post.reacts?.length || 0;
+          const commentCount = post.comments?.length || 0;
+
+          // Thông báo tổng số lượt like
+          if (likeCount > 0) {
+            notis.push({
+              id: `${post._id}-react-summary`,
+              user: 'Your post', // Không có user cụ thể
+              image: defaultUserAvatar,
+              datetime: post.datetime_created,
+              time: formatTimeAgo(post.datetime_created),
+              action: ` received ${likeCount} like${likeCount > 1 ? 's' : ''}.`,
+              // details: `Your post received ${likeCount} like${likeCount > 1 ? 's' : ''}.`,
+              icon: '❤️',
+              reactCount: likeCount,
+              contentPreview: post.content?.[0]?.data || '',
+            });
+          }
+
+          // Thông báo tổng số lượt comment
+          if (commentCount > 0) {
+            notis.push({
+              id: `${post._id}-comment-summary`,
+              user: 'Your post', // Không có user cụ thể
+              image: defaultUserAvatar,
+              datetime: post.datetime_created,
+              time: formatTimeAgo(post.datetime_created),
+              action: ` received ${commentCount} comment${commentCount > 1 ? 's' : ''}.`,
+              // details: `Your post received ${commentCount} comment${commentCount > 1 ? 's' : ''}.`,
+              icon: '💬',
+              commentCount: commentCount,
+              contentPreview: post.content?.[0]?.data || '',
+            });
+          }
+
           return notis;
         });
-
-        // Fetch detailed comments on user's post
-        const myPost = postsResponse.data.find(p => p.poster?._id === currentUserId);
+        // Lấy chi tiết comment bằng getComments
         let commentNotifications = [];
-        if (myPost) {
+        for (const myPost of myPostsResponse.data || []) {
           const commentsResp = await getComments(myPost._id, 1, 20);
           if (commentsResp.success) {
             const others = commentsResp.data.filter(c => c.userId?._id !== currentUserId);
-            commentNotifications = others.map(c => ({
-              id: c._id,
+            commentNotifications.push(...others.map(c => ({
+              id: `${myPost._id}-comment-${c._id}`,
               user: c.userId?.fullName || 'Anonymous',
               action: 'commented on your post',
               details: c.content?.text?.data || '',
               datetime: c.datetime_created,
               time: formatTimeAgo(c.datetime_created),
-              image: c.userId?.avatar || '/default-avatar.jpg',
+              image: c.userId?.avatar || defaultUserAvatar,
               icon: '💬',
               commentCount: others.length,
-              contentPreview: `${others.length} others commented on your post.`
-            }));
+              contentPreview: `${others.length} people commented on your post.`
+            })));
           }
         }
 
         // Combine and sort
-        const allNotifications = [...postNotifications, ...commentNotifications]
+        const allNotifications = [
+          ...postNotifications,
+          ...reactAndCommentNotifications,
+          ...commentNotifications
+        ]
+          .filter(noti => noti.user !== 'Anonymous')
           .sort((a, b) => new Date(b.datetime) - new Date(a.datetime));
         setNotifications(allNotifications);
       } catch (err) {
@@ -168,7 +180,14 @@ const NotificationsPage = () => {
     if (currentUserId) fetchData();
   }, [currentUserId]);
 
-  if (loading) return <div>Loading...</div>;
+  if (loading || !user.id) {
+    return (
+      <div className="loading-container">
+        <div className="spinner"></div>
+        <div>Loading...</div>
+      </div>
+    );
+  }
   if (error) return <div>Error: {error}</div>;
 
   return (
@@ -192,7 +211,7 @@ const NotificationsPage = () => {
         <div className={`discover-section ${activeTab === 'discover' ? 'active' : ''}`}>
           <h2>Discover</h2>
           <div className="scrollable-content">
-            <NotificationList type="discover" items={discoverItems} />
+            <NotificationList type="discover" items={discoverItems} userInfo={user.id ? user : undefined} />
           </div>
         </div>
       </div>

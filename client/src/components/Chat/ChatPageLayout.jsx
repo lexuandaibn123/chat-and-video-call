@@ -38,7 +38,10 @@ const ChatPageLayout = ({
   userInfo,
   socket,
   sendTyping,
-  sendStopTyping
+  sendStopTyping,
+  setConversations,
+  isCallOngoing,
+  ongoingCallRoomId
 }) => {
   // Filter conversations for groups and friends
   const filteredConversations = conversations.filter((conv) => {
@@ -121,6 +124,8 @@ const ChatPageLayout = ({
         onCreateConversation={handlers.handleCreateConversation} // Thêm prop
         addUserSearchResults={addUserSearchResults}
         searchTerm={searchTerm}
+        setConversations={setConversations}
+        ongoingCallRoomId={ongoingCallRoomId}
       />
 
       <ChatWindow
@@ -151,6 +156,7 @@ const ChatPageLayout = ({
         socket={socket}
         sendTyping={sendTyping} 
         sendStopTyping={sendStopTyping}
+        isCallOngoing={isCallOngoing}
       />
 
       {isSettingsOpen && activeChat?.isGroup && activeChat.detailedMembers && (

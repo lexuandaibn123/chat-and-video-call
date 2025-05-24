@@ -103,7 +103,13 @@ const MessageBubble = ({
                         {images.map((img, index) => {
                             const imageUrl = img.data;
                             const imageName = img.metadata?.fileName || `Image ${index + 1}`;
-                            if (!imageUrl && status !== 'uploading') {
+                            if (!imageUrl && status === 'uploading') {
+                                // Hiển thị skeleton khi đang upload mà chưa có url
+                                return (
+                                    <div key={index} className="skeleton-image" />
+                                );
+                            }
+                            if (!imageUrl) {
                                 return <p key={index} className="message-text">[Image URL Missing: {imageName}]</p>;
                             }
                             return (
@@ -120,32 +126,62 @@ const MessageBubble = ({
                     </div>
                 );
             case 'file':
-                 const file = content?.file;
-                 const fileUrl = file?.data;
-                 const fileName = file?.metadata?.fileName;
-                 const fileSize = file?.metadata?.size;
+                const file = content?.file;
+                const fileUrl = file?.data;
+                const fileName = file?.metadata?.fileName;
+                const fileSize = file?.metadata?.size;
 
-                 if (!fileName) {
-                      return status === 'uploading' ? <p className="message-text">[Uploading File...]</p> : <p className="message-text">[Invalid File Data: Name Missing]</p>;
-                 }
-                 return (
-                      <a
-                         href={fileUrl || '#'}
-                         target={fileUrl ? "_blank" : undefined}
-                         rel={fileUrl ? "noopener noreferrer" : undefined}
-                         className={`message-file-link ${!fileUrl || status === 'uploading' ? 'disabled-link' : ''}`}
-                         onClick={(!fileUrl || status === 'uploading') ? (e) => e.preventDefault() : undefined}
-                         style={{ opacity: status === 'uploading' ? 0.7 : 1, cursor: (!fileUrl || status === 'uploading') ? 'default' : 'pointer' }}
-                      >
-                           {status === 'uploading' ?
-                               <i className="fas fa-spinner fa-spin"></i> :
-                               <i className="fas fa-file-alt"></i>
-                           }
-                           <span className="file-name">{fileName}</span>
-                           {fileSize != null && <span className="file-size">({(fileSize / 1024).toFixed(1)} KB)</span>}
-                            {status === 'failed' && <i className="fas fa-exclamation-circle file-status-icon failed" title="Failed"></i>}
-                      </a>
-                 );
+                // Hàm lấy icon theo loại file
+                const getFileIconClass = (name) => {
+                    if (!name) return "fas fa-file-alt";
+                    const ext = name.split('.').pop().toLowerCase();
+                    if (["pdf"].includes(ext)) return "fas fa-file-pdf";
+                    if (["doc", "docx"].includes(ext)) return "fas fa-file-word";
+                    if (["xls", "xlsx"].includes(ext)) return "fas fa-file-excel";
+                    if (["ppt", "pptx"].includes(ext)) return "fas fa-file-powerpoint";
+                    if (["zip", "rar", "7z"].includes(ext)) return "fas fa-file-archive";
+                    if (["jpg", "jpeg", "png", "gif", "bmp", "webp"].includes(ext)) return "fas fa-file-image";
+                    if (["mp3", "wav", "ogg"].includes(ext)) return "fas fa-file-audio";
+                    if (["mp4", "avi", "mov", "wmv", "mkv"].includes(ext)) return "fas fa-file-video";
+                    if (["txt", "md", "rtf"].includes(ext)) return "fas fa-file-alt";
+                    return "fas fa-file";
+                };
+
+                if (!fileName) {
+                    return status === 'uploading'
+                    ? <p className="message-text">[Uploading File...]</p>
+                    : <p className="message-text">[Invalid File Data: Name Missing]</p>;
+                }
+                return (
+                    <a
+                    href={fileUrl || '#'}
+                    target={fileUrl ? "_blank" : undefined}
+                    rel={fileUrl ? "noopener noreferrer" : undefined}
+                    className={`message-file-link ${!fileUrl || status === 'uploading' ? 'disabled-link' : ''}`}
+                    onClick={(!fileUrl || status === 'uploading') ? (e) => e.preventDefault() : undefined}
+                    style={{ opacity: status === 'uploading' ? 0.7 : 1, cursor: (!fileUrl || status === 'uploading') ? 'default' : 'pointer' }}
+                    >
+                    {/* Icon luôn hiển thị */}
+                    {status === 'uploading'
+                        ? <i className="fas fa-spinner fa-spin"></i>
+                        : <i className={getFileIconClass(fileName)}></i>
+                    }
+                    <span className="file-name">{fileName}</span>
+                    {fileSize != null && (
+                        <span className="file-size">
+                            (
+                            {fileSize >= 1024 * 1024
+                            ? `${(fileSize / (1024 * 1024)).toFixed(2)} MB`
+                            : fileSize >= 1024
+                            ? `${(fileSize / 1024).toFixed(1)} KB`
+                            : `${fileSize} B`
+                            }
+                            )
+                        </span>
+                        )}
+                    {status === 'failed' && <i className="fas fa-exclamation-circle file-status-icon failed" title="Failed"></i>}
+                    </a>
+                );
             default:
                 return <p className="message-text">[{type ? type.toUpperCase() : 'UNKNOWN'}] Unsupported message type.</p>;
         }
@@ -206,7 +242,7 @@ const MessageBubble = ({
 
              {/* Options Button & Menu (Conditionally rendered) */}
              {shouldShowOptionsButton && (
-                  <div className={`message-options-container ${sender}`}>
+                  <div className={`message-options-container ${sender} ${showMenu ? 'active-menu' : ''}`}>
                        {/* Options Button */}
                        <button
                             className="icon-button message-options-button"

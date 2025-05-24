@@ -32,6 +32,7 @@ const ChatWindow = ({
   socket,
   sendTyping,
   sendStopTyping,
+  isCallOngoing,
 }) => {
   const messageListEndRef = useRef(null);
   const messageInputRef = useRef(null);
@@ -42,26 +43,26 @@ const ChatWindow = ({
   const [callInvite, setCallInvite] = useState(null);
   const [typingUsers, setTypingUsers] = useState([]);
 
+  console.log('Active contact:', activeContact);
+  console.log('[DEBUG] ChatWindow props.isCallOngoing:', isCallOngoing);
+
   // Determine if user is in group
   const isUserInGroup = activeContact?.isGroup
     ? activeContact.detailedMembers.some(member => member.id === userInfo.id)
     : true; // Always true for non-group chats
 
   useEffect(() => {
-    if (!socket || !activeContact?.id || !userInfo?.id) {
-      // console.warn('Socket, activeContact.id, or userInfo.id is missing:', {
-      //   socket,
-      //   activeContactId: activeContact?.id,
-      //   userId: userInfo?.id,
-      // });
-      return;
-    }
+    if (!socket || !activeContact?.id || !userInfo?.id) return;
 
-    // Tham gia phòng cuộc trò chuyện
     socket.emit('joinConversationRoom', { conversationId: activeContact.id });
 
-    const handleTyping = (memberId) => {
-      if (memberId !== userInfo.id && isUserInGroup) {
+    const handleTyping = (data) => {
+      const { roomId, memberId } = data || {};
+      if (
+        roomId === activeContact.id &&
+        memberId !== userInfo.id &&
+        isUserInGroup
+      ) {
         setTypingUsers((prev) => {
           if (!prev.includes(memberId)) {
             return [...prev, memberId];
@@ -71,23 +72,24 @@ const ChatWindow = ({
       }
     };
 
-    const handleStopTyping = (memberId) => {
-      if (isUserInGroup) {
+    const handleStopTyping = (data) => {
+      const { roomId, memberId } = data || {};
+      if (roomId === activeContact.id && isUserInGroup) {
         setTypingUsers((prev) => prev.filter((id) => id !== memberId));
       }
     };
 
+    // Lắng nghe với callback nhận 2 tham số (memberId, data)
     socket.on('typing', handleTyping);
     socket.on('stopTyping', handleStopTyping);
 
     return () => {
-      console.log('Cleaning up socket listeners for activeContact:', activeContact?.id);
       socket.off('typing', handleTyping);
       socket.off('stopTyping', handleStopTyping);
       socket.emit('leaveConversationRoom', { conversationId: activeContact.id });
       setTypingUsers([]);
     };
-  }, [socket, activeContact?.id, userInfo?.id, isVideoCallOpen, callInvite, isUserInGroup]);
+  }, [socket, activeContact?.id, userInfo?.id, isUserInGroup, isVideoCallOpen, callInvite]);
 
   useEffect(() => {
     if (!isLoadingMessages && editingMessageId === null) {
@@ -305,9 +307,9 @@ const ChatWindow = ({
         </div>
         <div className="chat-actions">
           <button
-            className="icon-button"
-            title="Video Call"
-            disabled={isEditingMode || sendingMessage || isVideoCallOpen || !isUserInGroup}
+            className={`icon-button ${isCallOngoing || callInvite ? 'ongoing-call' : ''}`} // Thêm class để áp dụng hiệu ứng
+            title={isCallOngoing ? 'There is an ongoing video call' : callInvite ? 'Join the video call' : 'Video Call'} // Cập nhật title động
+            disabled={isEditingMode || sendingMessage || !isUserInGroup} // Điều chỉnh disabled
             onClick={() => {
               if (!isUserInGroup) {
                 toast.error('You are not a member of this group.', {
@@ -317,8 +319,14 @@ const ChatWindow = ({
                 });
                 return;
               }
-              console.log('Starting video call for room:', activeContact.id);
-              setIsVideoCallOpen(true);
+              if (isCallOngoing || callInvite) {
+                // Nếu đang có cuộc gọi hoặc có lời mời, tham gia cuộc gọi
+                handleJoinCall();
+              } else {
+                // Nếu không có cuộc gọi, bắt đầu cuộc gọi mới
+                console.log('Starting video call for room:', activeContact.id);
+                setIsVideoCallOpen(true);
+              }
             }}
           >
             <i className="fas fa-video"></i>
@@ -344,6 +352,19 @@ const ChatWindow = ({
             </button>
           )}
         </div>
+
+        {/* {(isCallOngoing || callInvite) && (
+          <div className="call-indicator">
+            <i className="fas fa-video" style={{ color: '#28a745', marginRight: 4 }}></i>
+            <span>
+              {isCallOngoing
+                ? 'Đang có cuộc gọi video'
+                : callInvite
+                ? `${callInvite.username} đang gọi video...`
+                : ''}
+            </span>
+          </div>
+        )} */}
       </header>
       <div className="message-list-container">
         {isLoadingMessages ? (
@@ -373,12 +394,30 @@ const ChatWindow = ({
           ))
         )}
         {typingUsers.length > 0 && (
-          <div className="typing-bubble">
-            <div className="dots">
-              <span className="dot"></span>
-              <span className="dot"></span>
-              <span className="dot"></span>
-            </div>
+          <div className="typing-bubble-list">
+            {typingUsers.map((userId) => {
+              // Tìm member object trong activeContact.members
+              const memberObj = activeContact.members?.find(
+                m => (typeof m.id === 'object' ? m.id._id : m.id) === userId
+              );
+              const avatarUrl =
+                (memberObj && memberObj.id && memberObj.id.avatar) ||
+                defaultUserAvatar;
+              return (
+                <div className="typing-bubble" key={userId}>
+                  <img
+                    src={avatarUrl}
+                    alt="Typing user"
+                    className="typing-avatar"
+                  />
+                  <div className="dots">
+                    <span className="dot"></span>
+                    <span className="dot"></span>
+                    <span className="dot"></span>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
         {!isUserInGroup && isGroupChat && (
@@ -393,6 +432,7 @@ const ChatWindow = ({
           <UploadButton
             endpoint="conversationUploader"
             key="file-uploader"
+            multiple={true}
             disabled={sendingMessage || !activeContact || isEditingMode || !isUserInGroup}
             content={{ button: <i className="fas fa-paperclip"></i> }}
             appearance={{

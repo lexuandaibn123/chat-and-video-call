@@ -33,6 +33,7 @@ const ChatPage = () => {
   const [callInvite, setCallInvite] = useState(null);
   const [isVideoCallOpen, setIsVideoCallOpen] = useState(false);
   const [activeCallRoomId, setActiveCallRoomId] = useState(null);
+  const [ongoingCallRoomId, setOngoingCallRoomId] = useState(null);
   const currentUserIdRef = useRef(null);
   const optimisticMessagesRef = useRef({});
   const videoSocketRef = useRef(null);
@@ -221,6 +222,7 @@ const ChatPage = () => {
         userId: user.id,
       });
     }
+    // setOngoingCallRoomId(null);
     setIsVideoCallOpen(false);
     setActiveCallRoomId(null);
     setCallInvite(null);
@@ -234,11 +236,12 @@ const ChatPage = () => {
   // Socket listeners for video call
   useEffect(() => {
     if (!socket || !user?.id || !user?.email) {
+      console.warn('Socket not connected or user not authenticated');
       return;
     }
 
     const handleCallStarted = (data) => {
-      console.log('Received callStarted event:', data);
+      console.log('[DEBUG] Received callStarted event:', data);
       const now = Date.now();
       const lastCall = lastCallStartedRef.current[data.roomId] || 0;
       // Ignore duplicate events within 2 seconds
@@ -259,6 +262,7 @@ const ChatPage = () => {
         ? conversation.detailedMembers.some(member => member.id === user.id)
         : true;
       if (!isVideoCallOpen && !callInvite && isUserInGroup) {
+        setOngoingCallRoomId(data.roomId);
         setCallInvite(data);
         toast.info(`${data.username} đã bắt đầu một cuộc gọi video`, {
           position: 'top-right',
@@ -275,10 +279,24 @@ const ChatPage = () => {
       }
     };
 
+    const handleCallEnded = (data) => {
+      console.log('[DEBUG] Received callEnded event:', data);
+      // Kiểm tra xem roomId có khớp với ongoingCallRoomId không
+      if (data.roomId === ongoingCallRoomId) {
+        // Đặt lại các state tương ứng với callStarted
+        setOngoingCallRoomId(null);
+        setCallInvite(null);
+        setIsVideoCallOpen(false); // Đảm bảo đóng giao diện video call
+        setActiveCallRoomId(null); // Đặt lại activeCallRoomId để đồng bộ
+      }
+    };
+
     socket.on('callStarted', handleCallStarted);
+    socket.on('callEnded', handleCallEnded);
 
     return () => {
       socket.off('callStarted', handleCallStarted);
+      socket.off('callEnded', handleCallEnded);
     };
   }, [socket, user?.id, user?.email, isVideoCallOpen, callInvite, conversations]);
 
@@ -549,6 +567,12 @@ const ChatPage = () => {
     }
   }, [activeChat, user, fetchMessages]);
 
+  const isCallOngoing =
+    ongoingCallRoomId && activeChat?.id
+      ? String(ongoingCallRoomId) === String(activeChat.id)
+      : false;
+  console.log('[DEBUG] isCallOngoing:', isCallOngoing, 'ongoingCallRoomId:', ongoingCallRoomId, 'activeChat?.id:', activeChat?.id);
+
   return (
     <div className="chat-page-container">
       <ChatPageLayout
@@ -586,6 +610,9 @@ const ChatPage = () => {
         socket={socket}
         sendTyping={sendTyping}
         sendStopTyping={sendStopTyping}
+        setConversations={setConversations}
+        isCallOngoing={isCallOngoing}
+        ongoingCallRoomId={ongoingCallRoomId}
       />
       {callInvite && (
         <div className="call-invite-popup">

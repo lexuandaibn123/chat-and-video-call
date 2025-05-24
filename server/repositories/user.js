@@ -52,6 +52,29 @@ class UserRepository {
       }
     );
   }
+
+  async getRandomUsers(excludeIds = [], page = 1, limit = 10) {
+    const pg = Number(page) || 1;
+    const lim = Number(limit) || 10;
+    const skipCount = (pg - 1) * lim;
+
+    const pipeline = [
+      { $match: { _id: { $nin: excludeIds } } },
+      { $sample: { size: pg * lim } },
+      { $skip: skipCount },
+      { $limit: lim },
+      {
+        $project: {
+          password: 0,
+          verificationToken: 0,
+          resetToken: 0,
+          resetTokenExpiry: 0,
+        },
+      },
+    ];
+
+    return User.aggregate(pipeline).exec();
+  }
 }
 
 module.exports = new UserRepository();

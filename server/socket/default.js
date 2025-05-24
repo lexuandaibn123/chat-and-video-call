@@ -70,11 +70,11 @@ const initDefaultNameSpace = (defaultNamespace) => {
     });
 
     client.on("typing", ({ roomId, memberId }) =>
-      client.in(roomId).emit("typing", memberId)
+      client.in(roomId).emit("typing", { roomId, memberId })
     );
 
     client.on("stopTyping", ({ roomId, memberId }) =>
-      client.in(roomId).emit("stopTyping", memberId)
+      client.in(roomId).emit("stopTyping", { roomId, memberId })
     );
 
     client.on("createConversation", async ({ members, name }) => {

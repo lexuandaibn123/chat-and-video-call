@@ -37,6 +37,7 @@ const ChatSettingsOverlay = ({
   const [processedMembers, setProcessedMembers] = useState([]);
   const [friendSuggestions, setFriendSuggestions] = useState([]);
   const [highlightIndex, setHighlightIndex] = useState(-1);
+  const [hasSearched, setHasSearched] = useState(false);
 
   // Hàm trợ giúp xử lý ID
   const getProcessedUserId = (userData) => {
@@ -137,6 +138,7 @@ const ChatSettingsOverlay = ({
     const term = e.target.value;
     setAddUserInput(term);
     setHighlightIndex(-1);
+    setHasSearched(false);
 
     if (term.trim()) {
       try {
@@ -183,6 +185,7 @@ const ChatSettingsOverlay = ({
     e.preventDefault();
     const trimmedInput = addUserInput.trim();
     console.log("Submitting search with term:", trimmedInput);
+    setHasSearched(true);
     if (trimmedInput) {
       onAddUserSearch(trimmedInput);
       setSelectedUserToAdd(null);
@@ -376,7 +379,7 @@ const ChatSettingsOverlay = ({
                       <button
                         className="icon-button small warning"
                         title="Remove User"
-                        onClick={() => onRemoveUser(group.id, member.id._id)}
+                        onClick={() => onRemoveUser(group.id, member.id._id, member.id)}
                         disabled={isPerformingAction}
                       >
                         {isPerformingAction ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-user-times"></i>}
@@ -412,28 +415,29 @@ const ChatSettingsOverlay = ({
               <button type="submit" disabled={isPerformingAction || !addUserInput.trim()}>
                 {isPerformingAction && !actionError ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-search"></i>}
               </button>
-            </form>
-            {friendSuggestions.length > 0 && (
-              <div className="suggestions-dropdown">
-                {friendSuggestions.map((friend, idx) => (
-                  <div
-                    key={friend._id}
-                    className={`suggestion-item ${idx === highlightIndex ? 'highlighted' : ''}`}
-                    onClick={() => handleSelectSuggestion(friend)}
-                  >
-                    <div className="name-avatar">
-                      <img
-                        src={friend.avatar || defaultUserAvatar}
-                        alt={friend.fullName || friend.email || friend._id}
-                        className="avatar tiny"
-                      />
-                      <span>{friend.fullName || friend.email || friend._id}</span>
+
+              {friendSuggestions.length > 0 && (
+                <div className="suggestions-dropdown">
+                  {friendSuggestions.map((friend, idx) => (
+                    <div
+                      key={friend._id}
+                      className={`suggestion-item ${idx === highlightIndex ? 'highlighted' : ''}`}
+                      onClick={() => handleSelectSuggestion(friend)}
+                    >
+                      <div className="name-avatar">
+                        <img
+                          src={friend.avatar || defaultUserAvatar}
+                          alt={friend.fullName || friend.email || friend._id}
+                          className="avatar tiny"
+                        />
+                        <span>{friend.fullName || friend.email || friend._id}</span>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            {searchResults && searchResults.length > 0 && (
+                  ))}
+                </div>
+              )}
+            </form>
+            {hasSearched && searchResults && searchResults.length > 0 && (
               <div className="search-results-list">
                 {searchResults.map(user => (
                   <div
@@ -447,7 +451,7 @@ const ChatSettingsOverlay = ({
                 ))}
               </div>
             )}
-            {searchResults && searchResults.length === 0 && addUserInput.trim() && !isPerformingAction && !actionError && (
+            {hasSearched && searchResults && searchResults.length === 0 && addUserInput.trim() && !isPerformingAction && !actionError && (
               <div className="info-message">No users found.</div>
             )}
             {selectedUserToAdd && (
@@ -458,7 +462,7 @@ const ChatSettingsOverlay = ({
           </div>
 
           {isPerformingAction && !actionError && <div className="action-status">Processing... <i className="fas fa-spinner fa-spin"></i></div>}
-          {actionError && <div className="action-error">Error: {actionError}</div>}
+          {/* {actionError && <div className="action-error">Error: {actionError}</div>} */}
 
           <div className="group-actions-footer">
             {processedMembers.some(m => m.id?._id === currentUserId && m.leftAt === null && processedMembers.filter(m => m.leftAt === null).length > 1) && (

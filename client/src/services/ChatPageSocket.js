@@ -312,16 +312,16 @@ export const useSocket = ({
       console.log('Socket.IO connected:', socketRef.current.id);
       isConnectedRef.current = true;
       socketRef.current.emit('setup', { page: 1, limit: 30 });
-      if (conversations?.length) {
-        conversations.forEach((conv) => {
-          const roomId = conv.id;
-          if (!joinedRoomsRef.current.has(roomId)) {
-            socketRef.current.emit('joinRoom', {roomId});
-            joinedRoomsRef.current.add(roomId);
-          }
-          // console.log('Joined:', roomId);
-        });
-      }
+      // if (conversations?.length) {
+      //   conversations.forEach((conv) => {
+      //     const roomId = conv.id;
+      //     if (!joinedRoomsRef.current.has(roomId)) {
+      //       socketRef.current.emit('joinRoom', {roomId});
+      //       joinedRoomsRef.current.add(roomId);
+      //     }
+      //     // console.log('Joined:', roomId);
+      //   });
+      // }
     });
 
     socketRef.current.on('connected', () => {
@@ -516,7 +516,7 @@ export const useSocket = ({
         });
       }
       setConversations((prevConvs) =>
-        updateConversationsListLatestMessage(prevConvs, msg.conversationId, msg)
+        updateConversationsListLatestMessage(prevConvs, msg.conversationId, msg, userId, activeChatId)
       );
     });
 
@@ -538,7 +538,7 @@ export const useSocket = ({
         );
       }
       setConversations((prevConvs) =>
-        updateConversationsListLatestMessage(prevConvs, updatedMessage.conversationId, updatedMessage)
+        updateConversationsListLatestMessage(prevConvs, updatedMessage.conversationId, updatedMessage, userId, activeChatId)
       );
     });
 
@@ -555,7 +555,7 @@ export const useSocket = ({
         );
       }
       setConversations((prevConvs) =>
-        updateConversationsListLatestMessage(prevConvs, deletedMessage.conversationId, deletedMessage)
+        updateConversationsListLatestMessage(prevConvs, deletedMessage.conversationId, deletedMessage, userId, activeChatId)
       );
     });
 
@@ -572,29 +572,66 @@ export const useSocket = ({
     socketRef.current.on('newConversation', (newConversation) => {
       console.log('newConversation:', newConversation);
 
-      // Đưa qua processRawRooms để lấy conversation đã format
-      const formattedConversation = processRawRooms([newConversation], userId)[0];
-
       setRawConversations((prevRaw) => {
         const existed = prevRaw.some((conv) => conv._id === newConversation._id);
+        const now = new Date();
+        const systemMessage = {
+          _id: `system-${now.getTime()}`,
+          type: 'text',
+          content: {
+            text: {
+              data: existed
+                ? 'You have rejoined the group.'
+                : 'A new group has been created.'
+            }
+          },
+          datetime_created: now.toISOString(),
+          senderId: null,
+          conversationId: newConversation._id,
+        };
+
+        const conversationWithSystemMsg = {
+          ...newConversation,
+          latestMessage: systemMessage,
+        };
+
+        // Đưa qua processRawRooms để lấy conversation đã format
+        const formattedConversation = processRawRooms([conversationWithSystemMsg], userId)[0];
+
+        // Cập nhật rawConversations
         if (existed) {
-          // Thay thế conversation cũ bằng cái mới
           return prevRaw.map((conv) =>
-            conv._id === newConversation._id ? newConversation : conv
+            conv._id === newConversation._id ? conversationWithSystemMsg : conv
           );
         }
-        return [newConversation, ...prevRaw];
+        return [conversationWithSystemMsg, ...prevRaw];
       });
 
       setConversations((prevConvs) => {
+        const filtered = prevConvs.filter((conv) => conv.id !== newConversation._id);
+        // Đảm bảo luôn đẩy lên đầu
+        const now = new Date();
         const existed = prevConvs.some((conv) => conv.id === newConversation._id);
-        if (existed) {
-          // Thay thế conversation cũ bằng cái mới đã format
-          return prevConvs.map((conv) =>
-            conv.id === newConversation._id ? formattedConversation : conv
-          );
-        }
-        return [formattedConversation, ...prevConvs];
+        const systemMessage = {
+          _id: `system-${now.getTime()}`,
+          type: 'text',
+          content: {
+            text: {
+              data: existed
+                ? 'You have rejoined the group.'
+                : 'A new group has been created.'
+            }
+          },
+          datetime_created: now.toISOString(),
+          senderId: null,
+          conversationId: newConversation._id,
+        };
+        const conversationWithSystemMsg = {
+          ...newConversation,
+          latestMessage: systemMessage,
+        };
+        const formattedConversation = processRawRooms([conversationWithSystemMsg], userId)[0];
+        return [formattedConversation, ...filtered];
       });
 
       socketRef.current.emit('joinRoom', { roomId: newConversation._id.toString() });
@@ -603,21 +640,40 @@ export const useSocket = ({
 
     socketRef.current.on('addedNewMember', (updatedConversation) => {
       console.log('addedNewMember:', updatedConversation);
+
+      // Tạo lastMessage dạng object phù hợp với processRawRooms
+      const now = new Date();
+      const systemMessage = {
+        _id: `system-${now.getTime()}`,
+        type: 'text',
+        content: { text: { data: 'A new member joined the group.' } },
+        datetime_created: now.toISOString(),
+        senderId: null,
+        conversationId: updatedConversation._id,
+        lastMessageType: 'system',
+      };
+
+      // Gán vào latestMessage (nếu muốn giữ lại latestMessage cũ, hãy cân nhắc logic)
+      const conversationWithSystemMsg = {
+        ...updatedConversation,
+        latestMessage: systemMessage,
+      };
+
       setRawConversations((prevRaw) =>
         prevRaw.map((conv) =>
-          conv._id === updatedConversation._id ? updatedConversation : conv
+          conv._id === updatedConversation._id ? conversationWithSystemMsg : conv
         )
       );
       setConversations((prevConvs) =>
         prevConvs.map((conv) =>
           conv.id === updatedConversation._id
-            ? processRawRooms([updatedConversation], userId)[0]
+            ? processRawRooms([conversationWithSystemMsg], userId)[0]
             : conv
         )
       );
       setActiveChat((prev) =>
         prev && prev.id === updatedConversation._id
-          ? processRawRooms([updatedConversation], userId)[0]
+          ? processRawRooms([conversationWithSystemMsg], userId)[0]
           : prev
       );
       setAddUserSearchResults([]);
@@ -625,21 +681,40 @@ export const useSocket = ({
 
     socketRef.current.on('removedMember', (updatedConversation) => {
       console.log('removedMember:', updatedConversation);
+
+      // Tạo systemMessage thông báo thành viên đã bị xóa
+      const now = new Date();
+      const systemMessage = {
+        _id: `system-${now.getTime()}`,
+        type: 'text',
+        content: { text: { data: 'A member has been removed.' } },
+        datetime_created: now.toISOString(),
+        senderId: null,
+        conversationId: updatedConversation._id,
+        lastMessageType: 'system',
+      };
+
+      // Gán vào latestMessage
+      const conversationWithSystemMsg = {
+        ...updatedConversation,
+        latestMessage: systemMessage,
+      };
+
       setRawConversations((prevRaw) =>
         prevRaw.map((conv) =>
-          conv._id === updatedConversation._id ? updatedConversation : conv
+          conv._id === updatedConversation._id ? conversationWithSystemMsg : conv
         )
       );
       setConversations((prevConvs) =>
         prevConvs.map((conv) =>
           conv.id === updatedConversation._id
-            ? processRawRooms([updatedConversation], userId)[0]
+            ? processRawRooms([conversationWithSystemMsg], userId)[0]
             : conv
         )
       );
       setActiveChat((prev) =>
         prev && prev.id === updatedConversation._id
-          ? processRawRooms([updatedConversation], userId)[0]
+          ? processRawRooms([conversationWithSystemMsg], userId)[0]
           : prev
       );
     });
@@ -650,12 +725,21 @@ export const useSocket = ({
       console.log('leftConversation received:', data);
       console.log('Current userId:', userId);
 
-      // Hàm kiểm tra member.id có phải là user rời nhóm không
-      const isSameUser = (member, leavingUserId) => {
-        if (typeof member.id === 'object' && member.id._id) {
-          return member.id._id === leavingUserId;
-        }
-        return member.id === leavingUserId;
+      // Tạo systemMessage thông báo thành viên đã rời nhóm
+      const now = new Date();
+      const systemMessage = {
+        _id: `system-${now.getTime()}`,
+        type: 'text',
+        content: { text: { data: 'A member has left the group.' } },
+        datetime_created: now.toISOString(),
+        senderId: null,
+        conversationId: conversationId,
+        lastMessageType: 'system',
+      };
+
+      const conversationWithSystemMsg = {
+        ...conversation,
+        latestMessage: systemMessage,
       };
 
       if (leavingUserId === userId) {
@@ -670,20 +754,15 @@ export const useSocket = ({
       } else {
         // Thành viên khác rời nhóm, cập nhật lại danh sách thành viên bằng conversation mới nhất từ server
         setRawConversations((prevRaw) =>
-          prevRaw.map((conv) =>
-            conv._id === conversationId ? conversation : conv
-          )
+          [conversationWithSystemMsg, ...prevRaw.filter((conv) => conv._id !== conversationId)]
         );
-        setConversations((prevConvs) =>
-          prevConvs.map((conv) =>
-            conv.id === conversationId
-              ? processRawRooms([conversation], userId)[0]
-              : conv
-          )
-        );
+        setConversations((prevConvs) => {
+          const filtered = prevConvs.filter((conv) => conv.id !== conversationId);
+          return [processRawRooms([conversationWithSystemMsg], userId)[0], ...filtered];
+        });
         setActiveChat((prev) =>
           prev && prev.id === conversationId
-            ? processRawRooms([conversation], userId)[0]
+            ? processRawRooms([conversationWithSystemMsg], userId)[0]
             : prev
         );
       }
@@ -705,21 +784,35 @@ export const useSocket = ({
 
     socketRef.current.on('updatedConversationName', (updatedConversation) => {
       console.log('updatedConversationName:', updatedConversation);
+
+      // Tạo systemMessage thông báo đổi tên nhóm
+      const now = new Date();
+      const systemMessage = {
+        _id: `system-${now.getTime()}`,
+        type: 'text',
+        content: { text: { data: 'Group\'s name has been updated.' } },
+        datetime_created: now.toISOString(),
+        senderId: null,
+        conversationId: updatedConversation._id,
+        lastMessageType: 'system',
+      };
+
+      // Gán vào latestMessage
+      const conversationWithSystemMsg = {
+        ...updatedConversation,
+        latestMessage: systemMessage,
+      };
+
       setRawConversations((prevRaw) =>
-        prevRaw.map((conv) =>
-          conv._id === updatedConversation._id ? updatedConversation : conv
-        )
+        [conversationWithSystemMsg, ...prevRaw.filter((conv) => conv._id !== updatedConversation._id)]
       );
-      setConversations((prevConvs) =>
-        prevConvs.map((conv) =>
-          conv.id === updatedConversation._id
-            ? processRawRooms([updatedConversation], userId)[0]
-            : conv
-        )
-      );
+      setConversations((prevConvs) => {
+        const filtered = prevConvs.filter((conv) => conv.id !== updatedConversation._id);
+        return [processRawRooms([conversationWithSystemMsg], userId)[0], ...filtered];
+      });
       setActiveChat((prev) =>
         prev && prev.id === updatedConversation._id
-          ? processRawRooms([updatedConversation], userId)[0]
+          ? processRawRooms([conversationWithSystemMsg], userId)[0]
           : prev
       );
       setIsEditingName(false);
@@ -728,21 +821,35 @@ export const useSocket = ({
 
     socketRef.current.on('updatedConversationAvatar', (updatedConversation) => {
       console.log('updatedConversationAvatar:', updatedConversation);
+
+      // Tạo systemMessage thông báo đổi avatar nhóm
+      const now = new Date();
+      const systemMessage = {
+        _id: `system-${now.getTime()}`,
+        type: 'text',
+        content: { text: { data: 'Group\'s avatar has been updated.' } },
+        datetime_created: now.toISOString(),
+        senderId: null,
+        conversationId: updatedConversation._id,
+        lastMessageType: 'system',
+      };
+
+      // Gán vào latestMessage
+      const conversationWithSystemMsg = {
+        ...updatedConversation,
+        latestMessage: systemMessage,
+      };
+
       setRawConversations((prevRaw) =>
-        prevRaw.map((conv) =>
-          conv._id === updatedConversation._id ? updatedConversation : conv
-        )
+        [conversationWithSystemMsg, ...prevRaw.filter((conv) => conv._id !== updatedConversation._id)]
       );
-      setConversations((prevConvs) =>
-        prevConvs.map((conv) =>
-          conv.id === updatedConversation._id
-            ? processRawRooms([updatedConversation], userId)[0]
-            : conv
-        )
-      );
+      setConversations((prevConvs) => {
+        const filtered = prevConvs.filter((conv) => conv.id !== updatedConversation._id);
+        return [processRawRooms([conversationWithSystemMsg], userId)[0], ...filtered];
+      });
       setActiveChat((prev) =>
         prev && prev.id === updatedConversation._id
-          ? processRawRooms([updatedConversation], userId)[0]
+          ? processRawRooms([conversationWithSystemMsg], userId)[0]
           : prev
       );
     });

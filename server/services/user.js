@@ -1,5 +1,6 @@
 const UserRepository = require("../repositories/user");
 const ConversationRepository = require("../repositories/conversation");
+const mongoose = require("mongoose");
 class UserService {
   async findUserById(req, res) {
     try {
@@ -286,6 +287,57 @@ class UserService {
       }
     } catch (error) {
       console.error("Error getting potential friends:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+
+  async getRandomUsers(req, res) {
+    try {
+      const { page = 1, limit = 10 } = req.query;
+
+      const userId = req.session.userInfo.id;
+      try {
+        const conversations = [
+          ...(await ConversationRepository.findByUserId(userId, 1, 0, {
+            isGroup: false,
+          })),
+        ];
+
+        const friendIds = [
+          ...new Set(
+            conversations
+              .flatMap((conversation) => conversation.members)
+              .filter((member) => member.id !== null)
+              .map((member) =>
+                typeof member.id === "object"
+                  ? member.id._id.toString()
+                  : member.id.toString()
+              )
+          ),
+        ];
+
+        const excludeIds = [
+          new mongoose.Types.ObjectId(userId),
+          ...friendIds.map((id) => new mongoose.Types.ObjectId(id)),
+        ];
+
+        const users = await UserRepository.getRandomUsers(
+          excludeIds,
+          page,
+          limit
+        );
+
+        return res.status(200).json({
+          success: true,
+          message: "Random users found",
+          data: users,
+        });
+      } catch (error) {
+        console.error(error);
+        return res.status(400).json({ error: error.message });
+      }
+    } catch (error) {
+      console.error("Error getting random users:", error);
       return res.status(500).json({ error: "Internal server error" });
     }
   }
