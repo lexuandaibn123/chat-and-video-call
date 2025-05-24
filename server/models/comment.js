@@ -19,6 +19,15 @@ const { TextPartSchema } = require("./part");
  *           type: string
  *           description: ID of the comment this is a reply to, or null if it's a top-level comment
  *           example: 507f1f77bcf86cd799439013
+ *         replies:
+ *           type: array
+ *           items:
+ *            type: object
+ *            properties:
+ *              comment:
+ *                type: string
+ *                description: ID of the reply comment
+ *                example: 507f1f77bcf86cd799439014
  *         userId:
  *           type: string
  *           description: ID of the user who made the comment
@@ -72,6 +81,14 @@ const { TextPartSchema } = require("./part");
  *         replyToCommentId:
  *           type: object
  *           $ref: '#/components/schemas/CommentWithoutPopulate'
+ *         replies:
+ *           type: array
+ *           items:
+ *            type: object
+ *            properties:
+ *              comment:
+ *                type: object
+ *                $ref: '#/components/schemas/CommentWithoutPopulate'
  *         userId:
  *           type: object
  *           $ref: '#/components/schemas/User'
@@ -118,6 +135,15 @@ const CommentSchema = new mongoose.Schema(
       ref: "Comment",
       default: null,
     },
+    replies: [
+      {
+        comment: {
+          type: mongoose.Types.ObjectId,
+          ref: "Comment",
+        },
+        _id: false,
+      },
+    ],
     userId: { type: mongoose.Types.ObjectId, ref: "User" },
     type: {
       type: String,
