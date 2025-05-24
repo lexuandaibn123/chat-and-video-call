@@ -65,8 +65,31 @@ export const getPosts = async (page = 1, limit = 40) => {
 // Fetch comments for a specific post with pagination
 export const getComments = async (postId, page = 1, limit = 40) => {
   try {
+    const token = localStorage.getItem('authToken');
+    const response = await fetch(
+      `${API_BASE_URL}/post/get-comments/${postId}?page=${page}&limit=${limit}`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'Origin': window.location.origin,
+        },
+        credentials: 'include',
+        mode: 'cors',
+      }
+    );
+    return handleApiResponse(response);
+  } catch (error) {
+    console.error('Error fetching post info:', error.message);
+    throw error;
+  }
+};
+
+export const getMyPosts = async (page = 1, limit = 20) => {
+  try {
     const token = localStorage.getItem('authToken'); // Lấy token từ localStorage
-    const response = await fetch(`${API_BASE_URL}/post/get-posts`, {
+    const response = await fetch(`${API_BASE_URL}/post/get-posts-by-user?page=${page}&limit=${limit}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -78,7 +101,7 @@ export const getComments = async (postId, page = 1, limit = 40) => {
     });
     return handleApiResponse(response);
   } catch (error) {
-    console.error('Error fetching comments:', error.message);
+    console.error('Error fetching my posts:', error.message);
     throw error;
   }
 };
