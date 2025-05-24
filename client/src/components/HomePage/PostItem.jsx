@@ -3,7 +3,18 @@ import { infoApi } from "../../api/auth";
 import { editPost, deletePost, likePost, unlikePost } from "../../api/feeds";
 import PostComments from "./PostComments";
 
-const PostItem = ({ postId, avatar, name, id_poster, content, isDeleted, isEdited, reacts, comments, datetime_created, last_updated }) => {
+const PostItem = ({
+  postId,
+  poster = {},
+  content = [],
+  isDeleted = false,
+  isEdited = false,
+  reacts = [],
+  comments = [],
+  datetime_created = "",
+  datetime_updated = "",
+  hasUserReacted = false,
+}) => {
   // Function to check if post has images
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState(content[0].data);
@@ -12,8 +23,8 @@ const PostItem = ({ postId, avatar, name, id_poster, content, isDeleted, isEdite
   const [user_id, setUserId] = useState("");
   // const [postComments, setPostComments] = useState(comment);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isLiked, setIsLiked] = useState(false); 
-  const [likeCount, setLikeCount] = useState(0);
+  const [isLiked, setIsLiked] = useState(hasUserReacted);
+  const [likeCount, setLikeCount] = useState(reacts.length);
   const [positionLiked, setPositionLiked] = useState(-1);
   const [visibleComments, setVisibleComments] = useState(3);
   const [userInfo, setUserInfo] = useState({});
@@ -40,25 +51,17 @@ const PostItem = ({ postId, avatar, name, id_poster, content, isDeleted, isEdite
   }, []);
 
   useEffect(() => {
-    let count = 0;
     let liked = false;
-    reacts.forEach((react, index) => {
-      if (react.react.type !== "unreacted") {
-        count++;
-        if (react.react.userId._id === user_id) {
-          liked = true;
-          setPositionLiked(index);
-        }
-      }
-    });
-    setLikeCount(count);
+    if (hasUserReacted) {
+      liked = true;
+    }
     setIsLiked(liked);
-  }, [reacts, user_id]);
+  }, []);
 
   const handleEdit = () => {
     setIsEditing(true);
     setIsMenuOpen(false);
-  }
+  };
 
   const handleSaveEdit = async () => {
     if (editedContent.trim() === "") {
@@ -77,67 +80,68 @@ const PostItem = ({ postId, avatar, name, id_poster, content, isDeleted, isEdite
       if (response.success) {
         alert("Post updated successfully!");
         setEditedContent(editedContent);
-        isEdited = response.data.isEdited;  
+        isEdited = response.data.isEdited;
       } else {
         alert("Failed to update post");
       }
     } catch (error) {
-      console.error("Error updating post:", error); 
+      console.error("Error updating post:", error);
     }
     setIsEditing(false);
-  }
+  };
 
   const handleCancelEdit = () => {
     setEditedContent(content[0].data);
     setIsEditing(false);
-  }
+  };
 
   const handleDelete = async () => {
-  if (window.confirm("Are you sure you want to delete this post?")) {
-    try {
-      const response = await deletePost(postId);
-      if (response.success) {
-        alert("Post deleted successfully!");
-        // Có thể gọi callback từ props để xóa post khỏi danh sách cha
-        // hoặc reload lại danh sách bài đăng
-      } else {
-        alert("Failed to delete post");
+    if (window.confirm("Are you sure you want to delete this post?")) {
+      try {
+        const response = await deletePost(postId);
+        if (response.success) {
+          alert("Post deleted successfully!");
+          // Có thể gọi callback từ props để xóa post khỏi danh sách cha
+          // hoặc reload lại danh sách bài đăng
+        } else {
+          alert("Failed to delete post");
+        }
+      } catch (error) {
+        alert("Error deleting post!");
+        console.error(error);
       }
-    } catch (error) {
-      alert("Error deleting post!");
-      console.error(error);
+      setIsMenuOpen(false);
     }
-    setIsMenuOpen(false);
-  }
-};
+  };
 
-  const handleLikePost = async () => { 
+  const handleLikePost = async () => {
     try {
-      const response = await likePost(postId);  
+      const response = await likePost(postId);
       if (response.success) {
         setIsLiked(true);
-        setLikeCount(likeCount + 1);  
+        setLikeCount(likeCount + 1);
       } else {
         alert("Failed to like post", response.message || response.error);
-      }   
+      }
     } catch (error) {
-      console.error("Error liking post:", error); 
-  }
-}
-
-const handleunlikePost = async () => {
-  try { 
-    const response = await unlikePost(postId);
-    if (response.success) {
-      setIsLiked(false);
-      setLikeCount(likeCount - 1);
-    } else {
-      alert("Failed to unlike post", response.message || response.error);
+      console.error("Error liking post:", error);
     }
-  } catch (error) {
-    console.error("Error unliking post:", error);
-  }
-}
+  };
+
+  const handleunlikePost = async () => {
+    try {
+      const response = await unlikePost(postId);
+      if (response.success) {
+        setIsLiked(false);
+        setLikeCount(likeCount - 1);
+        console.log("Post unliked successfully!");
+      } else {
+        alert("Failed to unlike post", response.message || response.error);
+      }
+    } catch (error) {
+      console.error("Error unliking post:", error);
+    }
+  };
 
   // const handleAddComment = (e) => {
   //   e.preventDefault()
@@ -167,20 +171,20 @@ const handleunlikePost = async () => {
       <header className="post-header">
         <div className="post-author">
           <img
-            src={avatar}
-            alt={name}
+            src={poster.avatar}
+            alt={poster.fullName}
             width="40"
             height="40"
             className="profile-image"
           />
           <div className="post-author-info">
-            <h3 className="post-author-name">{name}</h3>
+            <h3 className="post-author-name">{poster.fullName}</h3>
             <div className="post-meta">
               <span className="post-time">{datetime_created}</span>
             </div>
           </div>
         </div>
-        {id_poster === user_id && (
+        {poster._id === user_id && (
           <div className="post-menu">
             <button
               className="post-menu-button"
@@ -195,7 +199,8 @@ const handleunlikePost = async () => {
                   <span>Edit</span>
                 </button>
                 <button
-                  className="post-menu-item post-menu-item-delete" onClick={handleDelete}
+                  className="post-menu-item post-menu-item-delete"
+                  onClick={handleDelete}
                 >
                   <i className="fas fa-trash-alt"></i>
                   <span>Delete</span>
@@ -228,25 +233,31 @@ const handleunlikePost = async () => {
         )}
 
         {/* Hiển thị tất cả ảnh nếu có */}
-        {content && Array.isArray(content) && content.filter(item => item.type === "image").length > 0 && (
-          <div className="post-images">
-            {content.filter(item => item.type === "image").map((img, idx) => (
-              <img
-                key={idx}
-                src={img.data}
-                alt={`Project image ${idx + 1}`}
-                className="post-image"
-                onClick={() => window.open(img.data, "_blank")}
-              />
-            ))}
-          </div>
-        )}
+        {content &&
+          Array.isArray(content) &&
+          content.filter((item) => item.type === "image").length > 0 && (
+            <div className="post-images">
+              {content
+                .filter((item) => item.type === "image")
+                .map((img, idx) => (
+                  <img
+                    key={idx}
+                    src={img.data}
+                    alt={`Project image ${idx + 1}`}
+                    className="post-image"
+                    onClick={() => window.open(img.data, "_blank")}
+                  />
+                ))}
+            </div>
+          )}
 
         <div className="post-stats">
-          {reacts.length > 0 && (
+          {likeCount > 0 && (
             <>
               <span className={`like-icon ${isLiked ? "liked" : ""}`}>❤</span>
-              <span>{likeCount} {(likeCount > 1) ? `likes` : `like`}</span>
+              <span>
+                {likeCount} {likeCount > 1 ? `likes` : `like`}
+              </span>
             </>
           )}
           {comments.length > 0 && (
@@ -261,8 +272,10 @@ const handleunlikePost = async () => {
       </section>
 
       <footer className="post-footer">
-        <button className={`post-action-button ${isLiked ? "liked" : ""}`} 
-        onClick={isLiked ? handleunlikePost : handleLikePost}>
+        <button
+          className={`post-action-button ${isLiked ? "liked" : ""}`}
+          onClick={isLiked ? handleunlikePost : handleLikePost}
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="20"
@@ -304,7 +317,6 @@ const handleunlikePost = async () => {
           avatar={userInfo.avatar}
           name={userInfo.fullName}
           userId={user_id}
-          comments={comments}
           visibleComments={visibleComments}
           setVisibleComments={setVisibleComments}
           newComment={newComment}
