@@ -2,6 +2,30 @@
 @use 'sass:color';
 @use 'sass:math';
 
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 1000px;
+  color: #666;
+  font-size: 1.2rem;
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 5px solid #eee;
+  border-top: 5px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 12px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 /* Notifications Page Styles */
 .notifications-page {
   display: flex;
@@ -83,7 +107,7 @@
       &.active {
         display: block;
       }
-
+      
       .scrollable-content {
         max-height: 80svh;
         overflow-y: auto;
@@ -91,6 +115,22 @@
 
       h2 {
         display: none;
+      }
+    }
+
+    .notifications-section {
+      .item-info {
+        .item-action {
+          font-size: v.$font-size-medium;
+        }
+      }
+    }
+
+    .discover-section {
+      .item-info {
+        .item-name {
+          font-size: v.$font-size-medium;
+        }
       }
     }
   }
@@ -128,10 +168,22 @@
     border-radius: 50%;
     margin-right: v.$spacing-md;
     object-fit: cover;
+    aspect-ratio: 1/1; // Giữ tỉ lệ vuông, không bị elip
+    flex-shrink: 0;
   }
 
   .item-info {
     flex: 1;
+    min-width: 0;
+
+    .item-action,
+    .item-details {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+      display: block;
+    }
 
     .item-action {
       font-weight: v.$font-weight-bold;
@@ -199,6 +251,27 @@
     .mutual-friends {
       color: v.$text-muted-color;
       font-size: v.$font-size-small;
+    }
+  }
+
+  .message-btn {
+    margin-left: auto;
+    background: v.$primary-color;
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    cursor: pointer;
+    transition: background 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+
+    &:hover {
+      background: color.adjust(v.$primary-color, $lightness: -8%);
     }
   }
 }
