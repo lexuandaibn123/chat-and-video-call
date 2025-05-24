@@ -281,6 +281,19 @@
             font-size: 15px; // Match size with message-status-icon for consistency
             color: $primary-color; // Adjust color if needed
           }
+
+          .icon-container {
+            display: flex;
+            flex-direction: row; // Ensure icons are in a row
+            align-items: center;
+            gap: 4px; // Small gap between icons
+            margin-top: 0; // Ensure no extra margin
+
+            .call-icon {
+              font-size: 20px; /* Kích thước tương tự các icon khác */
+              color: $success-color; /* Sử dụng màu chính của thiết kế */
+            }
+          }
         }
       }
     }
@@ -389,6 +402,26 @@
                    cursor: not-allowed;
                }
           }
+      }
+
+      .call-indicator {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-left: 20px;
+        padding: 4px 12px;
+        background: #e6f7ef;
+        border-radius: 16px;
+        color: #28a745;
+        font-weight: 600;
+        font-size: 15px;
+        box-shadow: 0 1px 4px rgba(40, 167, 69, 0.08);
+
+        i.fas.fa-video {
+          color: #28a745;
+          font-size: 1.1em;
+          margin-right: 4px;
+        }
       }
   }
 

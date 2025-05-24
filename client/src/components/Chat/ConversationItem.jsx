@@ -14,7 +14,8 @@ const ConversationItem = ({
   onClick,
   isActive,
   onReadConversation,
-  lastMessageType
+  lastMessageType,
+  ongoingCallRoomId
 }) => {
   const defaultAvatar = type === 'group' ? defaultGroupAvatar : defaultUserAvatar;
 
@@ -22,6 +23,13 @@ const ConversationItem = ({
   let icon = null;
   if (unread === 0 && (lastMessageType === 'system' || lastMessageType === 'notification')) {
     icon = <i className="fas fa-info-circle system-icon" title="System notification"></i>;
+  }
+
+  // Thêm icon cho cuộc gọi đang diễn ra nếu isCallOngoing là true
+  let callIcon = null;
+  console.log('ongoingCallRoomId:', ongoingCallRoomId, 'id:', id);
+  if (ongoingCallRoomId === id) {
+    callIcon = <i className="fas fa-video call-icon" title="Đang có cuộc gọi"></i>;
   }
 
   return (
@@ -39,7 +47,10 @@ const ConversationItem = ({
       </div>
       <div className="conversation-meta">
         <span className="timestamp">{time || ''}</span>
-        <div className="icon-container">{icon}</div> {/* Remove fixed height */}
+        <div className="icon-container">
+          {callIcon}
+          {icon}
+        </div>
         {unread > 0 ? (
           <span className="unread-badge">{unread}</span>
         ) : status === 'sent-read' ? (

@@ -33,6 +33,7 @@ const ChatPage = () => {
   const [callInvite, setCallInvite] = useState(null);
   const [isVideoCallOpen, setIsVideoCallOpen] = useState(false);
   const [activeCallRoomId, setActiveCallRoomId] = useState(null);
+  const [ongoingCallRoomId, setOngoingCallRoomId] = useState(null);
   const currentUserIdRef = useRef(null);
   const optimisticMessagesRef = useRef({});
   const videoSocketRef = useRef(null);
@@ -221,6 +222,7 @@ const ChatPage = () => {
         userId: user.id,
       });
     }
+    setOngoingCallRoomId(null);
     setIsVideoCallOpen(false);
     setActiveCallRoomId(null);
     setCallInvite(null);
@@ -239,7 +241,7 @@ const ChatPage = () => {
     }
 
     const handleCallStarted = (data) => {
-      console.log('Received callStarted event:', data);
+      console.log('[DEBUG] Received callStarted event:', data);
       const now = Date.now();
       const lastCall = lastCallStartedRef.current[data.roomId] || 0;
       // Ignore duplicate events within 2 seconds
@@ -260,6 +262,7 @@ const ChatPage = () => {
         ? conversation.detailedMembers.some(member => member.id === user.id)
         : true;
       if (!isVideoCallOpen && !callInvite && isUserInGroup) {
+        setOngoingCallRoomId(data.roomId);
         setCallInvite(data);
         toast.info(`${data.username} đã bắt đầu một cuộc gọi video`, {
           position: 'top-right',
@@ -550,6 +553,12 @@ const ChatPage = () => {
     }
   }, [activeChat, user, fetchMessages]);
 
+  const isCallOngoing =
+    ongoingCallRoomId && activeChat?.id
+      ? String(ongoingCallRoomId) === String(activeChat.id)
+      : false;
+  console.log('[DEBUG] isCallOngoing:', isCallOngoing, 'ongoingCallRoomId:', ongoingCallRoomId, 'activeChat?.id:', activeChat?.id);
+
   return (
     <div className="chat-page-container">
       <ChatPageLayout
@@ -588,6 +597,8 @@ const ChatPage = () => {
         sendTyping={sendTyping}
         sendStopTyping={sendStopTyping}
         setConversations={setConversations}
+        isCallOngoing={isCallOngoing}
+        ongoingCallRoomId={ongoingCallRoomId}
       />
       {callInvite && (
         <div className="call-invite-popup">

@@ -32,6 +32,7 @@ const ChatWindow = ({
   socket,
   sendTyping,
   sendStopTyping,
+  isCallOngoing,
 }) => {
   const messageListEndRef = useRef(null);
   const messageInputRef = useRef(null);
@@ -344,6 +345,19 @@ const ChatWindow = ({
             </button>
           )}
         </div>
+
+        {(isCallOngoing || callInvite) && (
+          <div className="call-indicator">
+            <i className="fas fa-video" style={{ color: '#28a745', marginRight: 4 }}></i>
+            <span>
+              {isCallOngoing
+                ? 'Đang có cuộc gọi video'
+                : callInvite
+                ? `${callInvite.username} đang gọi video...`
+                : ''}
+            </span>
+          </div>
+        )}
       </header>
       <div className="message-list-container">
         {isLoadingMessages ? (

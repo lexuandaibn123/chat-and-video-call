@@ -15,7 +15,8 @@ const ConversationListPanel = ({
   onCreateConversation,
   addUserSearchResults,
   onAddUserSearch,
-  setConversations
+  setConversations,
+  ongoingCallRoomId,
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -205,7 +206,8 @@ const ConversationListPanel = ({
               onClick={onItemClick}
               isActive={activeChat?.id === conv.id}
               lastMessageType={conv.lastMessageType || ''}
-              onReadConversation={handleReadConversation} 
+              onReadConversation={handleReadConversation}
+              ongoingCallRoomId={ongoingCallRoomId}
             />
           ))}
         </ul>
