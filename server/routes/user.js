@@ -438,6 +438,80 @@ router.put(
 
 /**
  * @openapi
+ * /api/user/get-random:
+ *   get:
+ *     tags:
+ *       - Users
+ *     summary: Retrieve random users excluding the current user and their friends
+ *     description: Returns a paginated list of random users. Excludes the authenticated user and any user already connected via non-group conversations.
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number (starting from 1)
+ *       - in: query
+ *         name: limit
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of users per page
+ *     responses:
+ *       200:
+ *         description: Random users successfully retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Random users found
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                         example: "60d0fe4f5311236168a109ca"
+ *                       fullName:
+ *                         type: string
+ *                         example: "John Doe"
+ *                       email:
+ *                         type: string
+ *                         example: "john.doe@example.com"
+ *       400:
+ *         description: Bad request (e.g., invalid parameters or session)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Invalid request parameter
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Internal server error
+ */
+router.get("/get-random", UserService.getRandomUsers);
+
+/**
+ * @openapi
  * /api/user/{id}:
  *   get:
  *     tags:
@@ -501,4 +575,5 @@ router.get(
   validateMiddleware,
   UserService.findUserById
 );
+
 module.exports = router;
