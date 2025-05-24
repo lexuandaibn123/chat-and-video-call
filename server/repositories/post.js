@@ -11,6 +11,20 @@ class PostRepository {
         "poster",
         "-password -verificationToken -resetToken -resetTokenExpiry"
       )
+      .populate({
+        path: "comments.comment",
+        match: { isDeleted: false },
+        select: "_id",
+      })
+      .populate({
+        path: "reacts.react",
+        match: {
+          type: {
+            $ne: "unreacted",
+          },
+        },
+        select: "_id",
+      })
       .sort({ last_updated: -1 });
   }
 
@@ -30,17 +44,46 @@ class PostRepository {
         "poster",
         "-password -verificationToken -resetToken -resetTokenExpiry"
       )
+      .populate({
+        path: "comments.comment",
+        match: { isDeleted: false },
+        select: "_id",
+      })
+      .populate({
+        path: "reacts.react",
+        match: {
+          type: {
+            $ne: "unreacted",
+          },
+        },
+        select: "_id",
+      })
       .sort({ last_updated: -1 });
   }
 
   async findByUserIds(ids, page = 1, limit = 10, query = {}, select = "") {
     return await Post.find({ poster: { $in: ids }, ...query }, select)
       .skip((page - 1) * limit)
-      .limit(limit).populate(
+      .limit(limit)
+      .populate(
         "poster",
         "-password -verificationToken -resetToken -resetTokenExpiry"
       )
-      .sort({ last_updated: -1 });;
+      .populate({
+        path: "comments.comment",
+        match: { isDeleted: false },
+        select: "_id",
+      })
+      .populate({
+        path: "reacts.react",
+        match: {
+          type: {
+            $ne: "unreacted",
+          },
+        },
+        select: "_id",
+      })
+      .sort({ last_updated: -1 });
   }
 
   async findAll(page = 1, limit = 10, query = {}) {
@@ -54,6 +97,20 @@ class PostRepository {
         "poster",
         "-password -verificationToken -resetToken -resetTokenExpiry"
       )
+      .populate({
+        path: "comments.comment",
+        match: { isDeleted: false },
+        select: "_id",
+      })
+      .populate({
+        path: "reacts.react",
+        match: {
+          type: {
+            $ne: "unreacted",
+          },
+        },
+        select: "_id",
+      })
       .sort({ last_updated: -1 });
   }
 }
