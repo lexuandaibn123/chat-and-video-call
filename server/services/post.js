@@ -202,14 +202,23 @@ class PostService {
           ),
         ];
 
-        const posts = await PostRepository.findByUserIds(
-          memberIds,
-          page,
-          limit,
-          {
-            isDeleted: false,
-          }
+        const posts = await Promise.all(
+          (
+            await PostRepository.findByUserIds(memberIds, page, limit, {
+              isDeleted: false,
+            })
+          ).map(async (post) => {
+            const hasUserReacted = await ReactRepository.hasUserReacted(
+              post._id.toString(),
+              userInfo.id.toString()
+            );
+            return {
+              ...post.toObject(),
+              hasUserReacted,
+            };
+          })
         );
+
         return res.status(200).json({
           success: true,
           message: "Posts retrieved successfully",
@@ -232,10 +241,23 @@ class PostService {
       const userInfo = req.session.userInfo;
 
       try {
-        const posts = await PostRepository.findByUserId(
-          userInfo.id.toString(),
-          page,
-          limit
+        const posts = await Promise.all(
+          (
+            await PostRepository.findByUserId(
+              userInfo.id.toString(),
+              page,
+              limit
+            )
+          ).map(async (post) => {
+            const hasUserReacted = await ReactRepository.hasUserReacted(
+              post._id.toString(),
+              userInfo.id.toString()
+            );
+            return {
+              ...post.toObject(),
+              hasUserReacted,
+            };
+          })
         );
 
         return res.status(200).json({
@@ -263,10 +285,15 @@ class PostService {
         const comments = await CommentRepository.findByPostId(postId);
         const reacts = await ReactRepository.findByPostId(postId);
 
+        const hasUserReacted = await ReactRepository.hasUserReacted(
+          post._id.toString(),
+          req.session.userInfo.id.toString()
+        );
+
         return res.status(200).json({
           success: true,
           message: "Post retrieved successfully",
-          data: { post, comments, reacts },
+          data: { post, comments, reacts, hasUserReacted },
         });
       } catch (error) {
         console.error(error);
@@ -303,7 +330,7 @@ class PostService {
             type,
           });
           await PostRepository.updateById(postId, {
-            $push: { reacts: data._id },
+            $push: { reacts: { react: data._id } },
           });
         }
         return res.status(200).json({
@@ -396,7 +423,7 @@ class PostService {
         const comment = await CommentRepository.create(commentObj);
 
         await PostRepository.updateById(postId, {
-          $push: { comments: comment._id },
+          $push: { comments: { comment: comment._id } },
         });
 
         return res.status(200).json({

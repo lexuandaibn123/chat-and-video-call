@@ -85,11 +85,13 @@ const PostSchema = new mongoose.Schema(
     reacts: [
       {
         react: { type: mongoose.Types.ObjectId, ref: "React" },
+        _id: false,
       },
     ],
     comments: [
       {
         comment: { type: mongoose.Types.ObjectId, ref: "Comment" },
+        _id: false,
       },
     ],
   },

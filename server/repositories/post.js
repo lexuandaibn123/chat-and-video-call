@@ -36,11 +36,12 @@ class PostRepository {
   async findByUserIds(ids, page = 1, limit = 10, query = {}, select = "") {
     return await Post.find({ poster: { $in: ids }, ...query }, select)
       .skip((page - 1) * limit)
-      .limit(limit).populate(
+      .limit(limit)
+      .populate(
         "poster",
         "-password -verificationToken -resetToken -resetTokenExpiry"
       )
-      .sort({ last_updated: -1 });;
+      .sort({ last_updated: -1 });
   }
 
   async findAll(page = 1, limit = 10, query = {}) {
