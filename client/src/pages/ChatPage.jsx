@@ -222,7 +222,7 @@ const ChatPage = () => {
         userId: user.id,
       });
     }
-    setOngoingCallRoomId(null);
+    // setOngoingCallRoomId(null);
     setIsVideoCallOpen(false);
     setActiveCallRoomId(null);
     setCallInvite(null);
@@ -279,10 +279,24 @@ const ChatPage = () => {
       }
     };
 
+    const handleCallEnded = (data) => {
+      console.log('[DEBUG] Received callEnded event:', data);
+      // Kiểm tra xem roomId có khớp với ongoingCallRoomId không
+      if (data.roomId === ongoingCallRoomId) {
+        // Đặt lại các state tương ứng với callStarted
+        setOngoingCallRoomId(null);
+        setCallInvite(null);
+        setIsVideoCallOpen(false); // Đảm bảo đóng giao diện video call
+        setActiveCallRoomId(null); // Đặt lại activeCallRoomId để đồng bộ
+      }
+    };
+
     socket.on('callStarted', handleCallStarted);
+    socket.on('callEnded', handleCallEnded);
 
     return () => {
       socket.off('callStarted', handleCallStarted);
+      socket.off('callEnded', handleCallEnded);
     };
   }, [socket, user?.id, user?.email, isVideoCallOpen, callInvite, conversations]);
 

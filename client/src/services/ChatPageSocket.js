@@ -516,7 +516,7 @@ export const useSocket = ({
         });
       }
       setConversations((prevConvs) =>
-        updateConversationsListLatestMessage(prevConvs, msg.conversationId, msg, userId)
+        updateConversationsListLatestMessage(prevConvs, msg.conversationId, msg, userId, activeChatId)
       );
     });
 
@@ -538,7 +538,7 @@ export const useSocket = ({
         );
       }
       setConversations((prevConvs) =>
-        updateConversationsListLatestMessage(prevConvs, updatedMessage.conversationId, updatedMessage, userId)
+        updateConversationsListLatestMessage(prevConvs, updatedMessage.conversationId, updatedMessage, userId, activeChatId)
       );
     });
 
@@ -555,7 +555,7 @@ export const useSocket = ({
         );
       }
       setConversations((prevConvs) =>
-        updateConversationsListLatestMessage(prevConvs, deletedMessage.conversationId, deletedMessage, userId)
+        updateConversationsListLatestMessage(prevConvs, deletedMessage.conversationId, deletedMessage, userId, activeChatId)
       );
     });
 

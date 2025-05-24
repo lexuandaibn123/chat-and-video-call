@@ -384,17 +384,18 @@ export const buildFileMessagePayload = (conversationId, fileType, uploadedFileDe
 // Hàm cập nhật danh sách conversations sau khi có tin nhắn mới (đã gửi thành công hoặc nhận được qua socket)
 export const updateConversationsListLatestMessage = (
   prevConversations,
-  activeChatId,
+  messageRoomId,
   latestMessage,
-  currentUserId // <-- thêm tham số này
+  currentUserId,
+  activeChatId
 ) => {
-  if (!latestMessage || !activeChatId) {
+  if (!latestMessage || !messageRoomId) {
     console.warn("updateConversationsListLatestMessage: Missing latestMessage or activeChatId");
     return [...prevConversations];
   }
 
   const updatedConversations = prevConversations.map(conv => {
-    if (conv.id !== activeChatId) return conv;
+    if (conv.id !== messageRoomId) return conv;
 
     // Nếu là tin nhắn của chính mình, không tăng unread, không đổi lastMessageType
     if (latestMessage.senderId === currentUserId) {
@@ -424,7 +425,7 @@ export const updateConversationsListLatestMessage = (
       latestMessageTimestamp: latestMessage.datetime_created || conv.latestMessageTimestamp,
       latestMessage: latestMessage._id || conv.latestMessage,
       lastMessageType: latestMessage.type || 'text',
-      unread: (conv.unread || 0) + 1,
+      unread: messageRoomId === activeChatId ? conv.unread || 0 : (conv.unread || 0) + 1,
     };
   });
 

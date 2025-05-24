@@ -44,6 +44,7 @@ const ChatWindow = ({
   const [typingUsers, setTypingUsers] = useState([]);
 
   console.log('Active contact:', activeContact);
+  console.log('[DEBUG] ChatWindow props.isCallOngoing:', isCallOngoing);
 
   // Determine if user is in group
   const isUserInGroup = activeContact?.isGroup
@@ -306,9 +307,9 @@ const ChatWindow = ({
         </div>
         <div className="chat-actions">
           <button
-            className="icon-button"
-            title="Video Call"
-            disabled={isEditingMode || sendingMessage || isVideoCallOpen || !isUserInGroup}
+            className={`icon-button ${isCallOngoing || callInvite ? 'ongoing-call' : ''}`} // Thêm class để áp dụng hiệu ứng
+            title={isCallOngoing ? 'There is an ongoing video call' : callInvite ? 'Join the video call' : 'Video Call'} // Cập nhật title động
+            disabled={isEditingMode || sendingMessage || !isUserInGroup} // Điều chỉnh disabled
             onClick={() => {
               if (!isUserInGroup) {
                 toast.error('You are not a member of this group.', {
@@ -318,8 +319,14 @@ const ChatWindow = ({
                 });
                 return;
               }
-              console.log('Starting video call for room:', activeContact.id);
-              setIsVideoCallOpen(true);
+              if (isCallOngoing || callInvite) {
+                // Nếu đang có cuộc gọi hoặc có lời mời, tham gia cuộc gọi
+                handleJoinCall();
+              } else {
+                // Nếu không có cuộc gọi, bắt đầu cuộc gọi mới
+                console.log('Starting video call for room:', activeContact.id);
+                setIsVideoCallOpen(true);
+              }
             }}
           >
             <i className="fas fa-video"></i>
@@ -346,7 +353,7 @@ const ChatWindow = ({
           )}
         </div>
 
-        {(isCallOngoing || callInvite) && (
+        {/* {(isCallOngoing || callInvite) && (
           <div className="call-indicator">
             <i className="fas fa-video" style={{ color: '#28a745', marginRight: 4 }}></i>
             <span>
@@ -357,7 +364,7 @@ const ChatWindow = ({
                 : ''}
             </span>
           </div>
-        )}
+        )} */}
       </header>
       <div className="message-list-container">
         {isLoadingMessages ? (
