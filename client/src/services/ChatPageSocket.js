@@ -1,11 +1,13 @@
 import { useEffect, useRef, useCallback } from 'react';
 import io from 'socket.io-client';
+import {toast} from 'react-toastify';
 import { 
   formatReceivedMessage, 
   updateConversationsListLatestMessage, 
   processRawRooms,
 } from './chatService';
 import { getUserDetailsApi } from "../api/users";
+import { getConversationByIdApi } from "../api/conversations";
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL;
 
@@ -308,6 +310,20 @@ export const useSocket = ({
       auth: { userInfo },
     });
 
+    // Hàm đảm bảo conversation có trong danh sách
+    const ensureConversation = async (conversationId) => {
+      const exists = conversations.some((conv) => conv.id === conversationId);
+      if (!exists) {
+        try {
+          const conversation = await getConversationByIdApi(conversationId);
+          const formattedConversation = processRawRooms([conversation], userId)[0];
+          setConversations((prevConvs) => [formattedConversation, ...prevConvs]);
+        } catch (error) {
+          console.error('Failed to fetch conversation:', error);
+        }
+      }
+    };
+
     socketRef.current.on('connect', () => {
       console.log('Socket.IO connected:', socketRef.current.id);
       isConnectedRef.current = true;
@@ -413,7 +429,7 @@ export const useSocket = ({
           ]);
           setActiveChat((prev) => prev); // Restore activeChat if needed
         } else if (action.type === 'createConversation') {
-          alert('Conversation already exists between these two users');
+          toast.error("A conversation between these two users already exists.");
         }
         delete pendingActionsRef.current[actionId];
       });
@@ -480,6 +496,10 @@ export const useSocket = ({
     socketRef.current.on('receiveMessage', async (receivedMessage) => {
       console.log('receiveMessage:', receivedMessage);
       const msg = receivedMessage.message;
+      // Kiểm tra và lấy conversation nếu cần
+      await ensureConversation(msg.conversationId);
+      const conversation = await getConversationByIdApi(msg.conversationId); // Giữ nguyên logic của bạn
+      console.log(conversation);
       if (msg.conversationId && msg.conversationId === activeChatId) {
         let formattedMessage = formatReceivedMessage(msg, userId);
 
@@ -521,8 +541,10 @@ export const useSocket = ({
     });
 
     // Xử lý tin nhắn được chỉnh sửa (non-sender clients)
-    socketRef.current.on('editedMessage', (updatedMessage) => {
+    socketRef.current.on('editedMessage', async (updatedMessage) => {
       console.log('editedMessage:', updatedMessage);
+      // Kiểm tra và lấy conversation nếu cần
+      await ensureConversation(updatedMessage.conversationId);
       if (updatedMessage.conversationId && updatedMessage.conversationId === activeChatId) {
         setMessages((prevMessages) =>
           prevMessages.map((msg) =>
@@ -543,8 +565,10 @@ export const useSocket = ({
     });
 
     // Xử lý tin nhắn bị xóa (non-sender clients)
-    socketRef.current.on('deletedMessage', (deletedMessage) => {
+    socketRef.current.on('deletedMessage', async (deletedMessage) => {
       console.log('deletedMessage:', deletedMessage);
+      // Kiểm tra và lấy conversation nếu cần
+      await ensureConversation(deletedMessage.conversationId);
       if (deletedMessage.conversationId && deletedMessage.conversationId === activeChatId) {
         setMessages((prevMessages) =>
           prevMessages.map((msg) =>

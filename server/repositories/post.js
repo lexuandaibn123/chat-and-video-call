@@ -86,6 +86,36 @@ class PostRepository {
       .sort({ last_updated: -1 });
   }
 
+  async findRandomPosts(page = 1, limit = 10, query = {}) {
+    const pipeline = [
+      { $match: { isDeleted: false, ...query } },
+      { $sample: { size: Number(limit) } },
+      { $sort: { last_updated: -1 } },
+      { $skip: (page - 1) * limit },
+    ];
+
+    const rawPosts = await Post.aggregate(pipeline).exec();
+
+    const populatedPosts = await Post.populate(rawPosts, [
+      {
+        path: "poster",
+        select: "-password -verificationToken -resetToken -resetTokenExpiry",
+      },
+      {
+        path: "comments.comment",
+        match: { isDeleted: false },
+        select: "_id",
+      },
+      {
+        path: "reacts.react",
+        match: { "react.type": { $ne: "unreacted" } },
+        select: "_id",
+      },
+    ]);
+
+    return populatedPosts;
+  }
+
   async findAll(page = 1, limit = 10, query = {}) {
     return Post.find({
       isDeleted: false,

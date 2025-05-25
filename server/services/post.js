@@ -212,22 +212,49 @@ class PostService {
           ),
         ];
 
-        const posts = await Promise.all(
-          (
-            await PostRepository.findByUserIds(memberIds, page, limit, {
-              isDeleted: false,
+        let posts = [];
+
+        if (memberIds.length > 0) {
+          posts =
+            (await Promise.all(
+              (
+                await PostRepository.findByUserIds(memberIds, page, limit, {
+                  isDeleted: false,
+                })
+              ).map(async (post) => {
+                const hasUserReacted = await ReactRepository.hasUserReacted(
+                  post._id.toString(),
+                  userInfo.id.toString()
+                );
+                return {
+                  ...post.toObject(),
+                  hasUserReacted,
+                };
+              })
+            )) ?? [];
+        }
+
+        if (memberIds.length < 5) {
+          const randomPosts = await Promise.all(
+            (
+              await PostRepository.findRandomPosts(page, limit, {
+                isDeleted: false,
+              })
+            ).map(async (post) => {
+              const hasUserReacted = await ReactRepository.hasUserReacted(
+                post._id.toString(),
+                userInfo.id.toString()
+              );
+              return {
+                ...post,
+                hasUserReacted,
+              };
             })
-          ).map(async (post) => {
-            const hasUserReacted = await ReactRepository.hasUserReacted(
-              post._id.toString(),
-              userInfo.id.toString()
-            );
-            return {
-              ...post.toObject(),
-              hasUserReacted,
-            };
-          })
-        );
+          );
+
+          console.log(posts);
+          posts = [...posts, ...randomPosts];
+        }
 
         return res.status(200).json({
           success: true,

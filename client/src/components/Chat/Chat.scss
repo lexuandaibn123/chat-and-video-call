@@ -173,6 +173,45 @@
       margin-bottom: 0;
     }
 
+    .no-conversations {
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15); /* Bóng nhẹ */
+      text-align: center; /* Căn giữa văn bản */
+      color: color.adjust($warning-color, $lightness: -5%); /* Màu chữ nổi bật */
+      max-height: 85svh; /* Giới hạn chiều cao, đồng bộ với scrollable-content */
+      overflow-y: auto;
+      
+      &::-webkit-scrollbar {
+        display: none; 
+      }
+      p {
+        font-size: $font-size-large; /* Kích thước chữ lớn hơn */
+        font-weight: $font-weight-bold; /* Chữ đậm */
+        margin-bottom: $spacing-sm; /* Khoảng cách dưới */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: $spacing-sm; /* Khoảng cách giữa biểu tượng và chữ */
+        
+        &::before {
+          font-family: 'Font Awesome 5 Free';
+          font-weight: 900;
+          font-size: 1.5rem; /* Kích thước biểu tượng */
+          color: $primary-color; /* Màu biểu tượng */
+        }
+      }
+
+      h3 {
+        font-size: $font-size-large; /* Kích thước chữ cho tiêu đề */
+        font-weight: $font-weight-bold; /* Chữ đậm */
+        color: $text-color; /* Màu chữ chính để phân biệt với <p> */
+        margin: $spacing-md 0; /* Khoảng cách trên/dưới */
+      }
+
+      .notification-list-container {
+        margin-top: $spacing-md; /* Khoảng cách trên cho NotificationList */
+      }
+    }
+
     .section-title {
       font-size: $font-size-large;
       font-weight: $font-weight-bold;
@@ -900,6 +939,99 @@
                    display: none;
                }
            }
+
+           /* Overlay bao phủ toàn màn hình */
+          .image-popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+          }
+
+          /* Container chứa ảnh và các nút */
+          .image-popup-content {
+            position: relative;
+            max-width: 75svw;
+            max-height: 85svh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+          }
+
+          /* Ảnh trong popup */
+          .image-popup-img {
+            max-width: 100%;
+            max-height: 80svh;
+            object-fit: contain;
+            border-radius: 8px;
+          }
+
+          /* Nút đóng */
+          .image-popup-close {
+            position: absolute;
+            top: -40px;
+            right: -40px;
+            background: rgba(255, 255, 255, 0.8);
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            font-size: 18px;
+            color: #333;
+          }
+
+          .image-popup-close:hover {
+            background: rgba(255, 255, 255, 1);
+          }
+
+          /* Nút điều hướng */
+          .image-popup-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.8);
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            font-size: 20px;
+            color: #333;
+          }
+
+          .image-popup-nav.prev {
+            left: -60px;
+          }
+
+          .image-popup-nav.next {
+            right: -60px;
+          }
+
+          .image-popup-nav:hover {
+            background: rgba(255, 255, 255, 1);
+          }
+
+          /* Đảm bảo message-image có kích thước hợp lý */
+          .message-image {
+            max-width: 200px;
+            max-height: 200px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin: 4px;
+          }
       }
 
       .typing-bubble-list {
@@ -1193,7 +1325,7 @@
     border-radius: $border-radius-lg;
     width: 90%;
     max-width: 500px;
-    max-height: 90vh;
+    max-height: 90svh;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -1436,6 +1568,7 @@
           gap: $spacing-sm;
           margin-bottom: $spacing-md;
           flex-direction: row;
+          align-items: center;
 
           input {
             flex-grow: 1;
@@ -1631,7 +1764,16 @@
           &.warning {
             color: $error-color;
           }
+          &.clear {
+            color: $primary-color; /* Use primary color for text to differentiate */
+            border: 1px solid $primary-color; /* Match border to text color */
+            &:hover:not(:disabled) {
+              background-color: color.adjust($container-bg-color, $lightness: -5%);
+              border-color: color.adjust($primary-color, $lightness: -5%);
+            }
+          }
         }
+
         &.danger {
           background-color: $error-color;
           color: $secondary-color;

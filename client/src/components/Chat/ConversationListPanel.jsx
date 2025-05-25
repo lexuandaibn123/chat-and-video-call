@@ -1,9 +1,11 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import ConversationItem from './ConversationItem';
+import NotificationList from '../Notification/NotificationList';
 import defaultAvatarPlaceholder from '../../assets/images/avatar_male.jpg';
-import { getFriendsApi } from "../../api/users";
+import { getFriendsApi, getRandomUsersApi } from "../../api/users";
 import { getMyRoomsApi } from '../../api/conversations';
 import { processRawRooms } from '../../services/chatService';
+import { toast } from 'react-toastify';
 import "./Modal.scss";
 
 const ConversationListPanel = ({
@@ -27,10 +29,11 @@ const ConversationListPanel = ({
   const [hasSearched, setHasSearched] = useState(false);
   const [friendSuggestions, setFriendSuggestions] = useState([]);
   const [highlightIndex, setHighlightIndex] = useState(-1);
-  const [page, setPage] = useState(1); // State để theo dõi trang hiện tại
-  const [hasMore, setHasMore] = useState(true); // State để kiểm tra còn dữ liệu hay không
-  const [isLoadingConversations, setIsLoadingConversations] = useState(false); // State để quản lý trạng thái tải
-  const listRef = useRef(null); // Ref để tham chiếu đến danh sách
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingConversations, setIsLoadingConversations] = useState(false);
+  const [randomUsers, setRandomUsers] = useState([]);
+  const listRef = useRef(null);
 
   const allConversations = [
     ...groups.map(g => ({ ...g, type: 'group' })),
@@ -42,6 +45,27 @@ const ConversationListPanel = ({
     const bTs = typeof bTime === 'string' ? new Date(bTime).getTime() : bTime;
     return bTs - aTs;
   });
+
+  // Fetch dữ liệu gợi ý bạn bè từ getRandomUsersApi
+  useEffect(() => {
+    const fetchRandomUsers = async () => {
+      try {
+        const users = await getRandomUsersApi();
+        // Chuyển đổi dữ liệu để phù hợp với FriendSuggestionItem
+        const formattedUsers = users.map(user => ({
+          id: user._id,
+          name: user.fullName || user.email || user._id,
+          image: user.avatar || defaultAvatarPlaceholder,
+          mutualFriends: null,
+        }));
+        setRandomUsers(formattedUsers);
+      } catch (error) {
+        console.error("Failed to fetch random users:", error);
+        setRandomUsers([]);
+      }
+    };
+    fetchRandomUsers();
+  }, []);
 
   // Hàm fetch dữ liệu với hỗ trợ phân trang
   const fetchInitialData = useCallback(async (pageNum) => {
@@ -55,13 +79,13 @@ const ConversationListPanel = ({
     console.log('Fetching rooms for user:', currentUserId, 'page:', pageNum);
     setIsLoadingConversations(true);
     try {
-      const rooms = await getMyRoomsApi(pageNum); // Giả sử API chấp nhận tham số page
+      const rooms = await getMyRoomsApi(pageNum);
       if (rooms.length === 0) {
-        setHasMore(false); // Không còn dữ liệu để tải
+        setHasMore(false);
         return;
       }
       const conversationsData = processRawRooms(rooms, currentUserId);
-      setConversations(prev => [...prev, ...conversationsData]); // Thêm dữ liệu mới vào conversations
+      setConversations(prev => [...prev, ...conversationsData]);
       console.log('Processed conversations:', conversationsData);
     } catch (err) {
       console.error('Error fetching chat data:', err);
@@ -77,7 +101,7 @@ const ConversationListPanel = ({
   const handleScroll = () => {
     if (listRef.current && hasMore && !isLoadingConversations) {
       const { scrollTop, scrollHeight, clientHeight } = listRef.current;
-      if (scrollTop + clientHeight >= scrollHeight - 5) { // Cách đáy 5px
+      if (scrollTop + clientHeight >= scrollHeight - 5) {
         setPage(prevPage => prevPage + 1);
         fetchInitialData(page + 1);
       }
@@ -191,7 +215,7 @@ const ConversationListPanel = ({
 
   const handleCreateConversation = () => {
     if (!selectedUsers.length) {
-      alert('Please select at least one user to create a conversation.');
+      toast.warning("Please select at least one user to create a conversation.");
       return;
     }
 
@@ -216,7 +240,6 @@ const ConversationListPanel = ({
     <aside className="conversation-list-panel">
       <div className="search-bar-row">
         <div className="search-bar-container">
-          <i className="fas fa-search search-icon" />
           <input
             type="text"
             placeholder="Search"
@@ -230,26 +253,38 @@ const ConversationListPanel = ({
       </div>
 
       <section className="conversation-section">
-        <ul className="conversation-list" ref={listRef} onScroll={handleScroll}>
-          {allConversations.map(conv => (
-            <ConversationItem
-              key={conv.id}
-              id={conv.id}
-              type={conv.type}
-              avatar={conv.avatar}
-              name={conv.name}
-              lastMessage={conv.lastMessage}
-              time={conv.time}
-              unread={conv.unread || 0}
-              status={conv.status}
-              onClick={onItemClick}
-              isActive={activeChat?.id === conv.id}
-              lastMessageType={conv.lastMessageType || ''}
-              onReadConversation={handleReadConversation}
-              ongoingCallRoomId={ongoingCallRoomId}
+        {allConversations.length === 0 && !isLoadingConversations ? (
+          <div className="no-conversations">
+            <p>You haven't connected with anyone yet.</p>
+            <h3>People you may know</h3>
+            <NotificationList
+              type="discover"
+              items={randomUsers}
+              userInfo={userInfo}
             />
-          ))}
-        </ul>
+          </div>
+        ) : (
+          <ul className="conversation-list" ref={listRef} onScroll={handleScroll}>
+            {allConversations.map(conv => (
+              <ConversationItem
+                key={conv.id}
+                id={conv.id}
+                type={conv.type}
+                avatar={conv.avatar}
+                name={conv.name}
+                lastMessage={conv.lastMessage}
+                time={conv.time}
+                unread={conv.unread || 0}
+                status={conv.status}
+                onClick={onItemClick}
+                isActive={activeChat?.id === conv.id}
+                lastMessageType={conv.lastMessageType || ''}
+                onReadConversation={handleReadConversation}
+                ongoingCallRoomId={ongoingCallRoomId}
+              />
+            ))}
+          </ul>
+        )}
         {isLoadingConversations && (
           <div className="loading-spinner">
             <div className="spinner"></div>

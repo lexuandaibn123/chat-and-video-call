@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import defaultUserAvatar from '../../assets/images/avatar_male.jpg';
 import defaultGroupAvatar from '../../assets/images/group-chat.png';
 import { UploadButton } from '../../utils/uploadthing';
+import { toast } from 'react-toastify';
 import { getUserDetailsApi, getFriendsApi } from "../../api/users";
 
 const ChatSettingsOverlay = ({
@@ -128,8 +129,6 @@ const ChatSettingsOverlay = ({
     setAvatarUrl(group.avatar || defaultGroupAvatar);
   }, [group.name, group.id, group.avatar]);
 
-  console.log("group: ", group);
-
   const leaderIds = Array.isArray(group.leaders) ? group.leaders : [group.leaders];
   const isCurrentUserLeader = leaderIds.includes(currentUserId);
   const numberOfLeaders = processedMembers.filter(m => m.role === 'leader' && m.leftAt === null).length;
@@ -232,7 +231,7 @@ const ChatSettingsOverlay = ({
       if (!success) {
         throw new Error("Failed to update avatar via WebSocket.");
       }
-      alert("Cập nhật ảnh đại diện nhóm thành công!");
+      toast.success("Group avatar updated successfully!");
     } catch (err) {
       setError(`Có lỗi xảy ra: ${err.message}`);
       setAvatarUrl(group.avatar || defaultGroupAvatar);
@@ -465,6 +464,13 @@ const ChatSettingsOverlay = ({
           {/* {actionError && <div className="action-error">Error: {actionError}</div>} */}
 
           <div className="group-actions-footer">
+            <button
+              className="button secondary clear"
+              onClick={() => onDeleteConversationMember(group.id)}
+              disabled={isPerformingAction}
+            >
+              Clear Messages
+            </button>
             {processedMembers.some(m => m.id?._id === currentUserId && m.leftAt === null && processedMembers.filter(m => m.leftAt === null).length > 1) && (
               <button
                 className="button secondary warning"
@@ -474,19 +480,15 @@ const ChatSettingsOverlay = ({
                 Leave Group
               </button>
             )}
-            <button
-              className="button secondary danger"
-              onClick={() => {
-                if (isCurrentUserLeader) {
-                  onDeleteGroup(group.id);
-                } else {
-                  onDeleteConversationMember(group.id);
-                }
-              }}
-              disabled={isPerformingAction}
-            >
-              Delete Group
-            </button>
+            {isCurrentUserLeader && (
+              <button
+                className="button secondary danger"
+                onClick={() => onDeleteGroup(group.id)}
+                disabled={isPerformingAction}
+              >
+                Delete Group
+              </button>
+            )}
           </div>
         </div>
       </div>
