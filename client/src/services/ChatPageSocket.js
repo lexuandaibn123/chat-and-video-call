@@ -429,7 +429,7 @@ export const useSocket = ({
           ]);
           setActiveChat((prev) => prev); // Restore activeChat if needed
         } else if (action.type === 'createConversation') {
-          toast.info("A conversation between these two users already exists.");
+          toast.error("A conversation between these two users already exists.");
         }
         delete pendingActionsRef.current[actionId];
       });
