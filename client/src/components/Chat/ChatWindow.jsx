@@ -50,9 +50,6 @@ const ChatWindow = ({
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const prevMessagesRef = useRef(messages);
 
-  console.log('Active contact:', activeContact);
-  console.log('[DEBUG] ChatWindow props.isCallOngoing:', isCallOngoing);
-
   const isUserInGroup = activeContact?.isGroup
     ? activeContact.detailedMembers.some(member => member.id === userInfo.id)
     : true;
@@ -469,6 +466,8 @@ const ChatWindow = ({
               isDeleted={msg.isDeleted}
               senderId={msg.senderId}
               senderName={msg.senderName}
+              replyToMessageId={msg.replyToMessageId}
+              replyToMessageContent={msg.replyToMessageContent}
               senderAvatar={msg.senderAvatar}
               isGroupChat={isGroupChat}
               currentUserId={currentUserId}

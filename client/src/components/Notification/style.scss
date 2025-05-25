@@ -143,6 +143,30 @@
   margin: 0;
 }
 
+.notification-list-container {
+  .no-suggestions,
+  .no-notifications {
+    padding: v.$spacing-lg; /* Tăng padding để tạo không gian */
+    background-color: color.adjust(v.$container-bg-color, $lightness: 5%); /* Nền sáng hơn */
+    border: 2px solid v.$primary-color; /* Viền nổi bật */
+    border-radius: v.$border-radius-md;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15); /* Bóng nhẹ hơn nhưng rõ ràng */
+    color: v.$primary-color; /* Màu chữ nổi bật */
+    font-size: v.$font-size-large; /* Kích thước chữ lớn hơn */
+    font-weight: v.$font-weight-bold; /* Chữ đậm */
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: v.$spacing-sm; /* Khoảng cách giữa biểu tượng và chữ */
+
+    .fas.fa-exclamation-circle {
+      font-size: 1.5rem; /* Kích thước biểu tượng */
+      color: color.adjust(v.$warning-color, $lightness: -10%); /* Màu biểu tượng khớp với chữ */
+    }
+  }
+}
+
 .notification-item {
   display: flex;
   align-items: center;

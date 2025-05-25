@@ -13,20 +13,38 @@ const NotificationList = ({ type, items, userInfo }) => {
   };
 
   return (
-    <ul className="notification-list">
-      {type === 'discover'
-        ? suggestions.map(item => (
-            <FriendSuggestionItem
-              key={item.id}
-              item={item}
-              userInfo={userInfo}
-              onRemove={handleRemove}
-            />
-          ))
-        : (items || []).map(item => (
-            <NotificationItem key={item.id} item={item} />
-          ))}
-    </ul>
+    <div className="notification-list-container">
+      {type === 'discover' ? (
+        suggestions.length === 0 ? (
+          <div className="no-suggestions">
+            <i className="fas fa-exclamation-circle" aria-hidden="true"></i> No new friend suggestions
+          </div>
+        ) : (
+          <ul className="notification-list">
+            {suggestions.map(item => (
+              <FriendSuggestionItem
+                key={item.id}
+                item={item}
+                userInfo={userInfo}
+                onRemove={handleRemove}
+              />
+            ))}
+          </ul>
+        )
+      ) : (
+        (items || []).length === 0 ? (
+          <div className="no-notifications">
+            <i className="fas fa-exclamation-circle" aria-hidden="true"></i> No new notifications
+          </div>
+        ) : (
+          <ul className="notification-list">
+            {(items || []).map(item => (
+              <NotificationItem key={item.id} item={item} />
+            ))}
+          </ul>
+        )
+      )}
+    </div>
   );
 };
 

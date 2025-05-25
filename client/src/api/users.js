@@ -146,3 +146,21 @@ export const getPotentialFriendsApi = async (name = '') => {
         throw error;
     }
 };
+
+// Lấy danh sách người dùng ngẫu nhiên (trừ người dùng hiện tại và những người đã trò chuyện)
+export const getRandomUsersApi = async (page = 1, limit = 20) => {
+    const url = `${API_BASE_URL}/user/get-random?page=${page}&limit=${limit}`;
+    console.log("Calling getRandomUsersApi with URL:", url);
+    try {
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+        });
+        const result = await handleApiResponse(response);
+        return Array.isArray(result.data) ? result.data : [];
+    } catch (error) {
+        console.error(`Error fetching random users (page: ${page}, limit: ${limit}):`, error);
+        throw error;
+    }
+};

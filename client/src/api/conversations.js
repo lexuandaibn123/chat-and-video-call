@@ -109,6 +109,26 @@ export const getMyRoomsApi = async (page = 1, limit = 10) => {
   }
 };
 
+export const getConversationByIdApi = async (conversationId) => {
+  if (!conversationId) {
+    throw new Error("conversationId is required to fetch conversation details.");
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/conversation/get-conversation?conversationId=${conversationId}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }, 
+      credentials: 'include', 
+    });
+
+    const result = await handleApiResponse(response);
+    return result.data; 
+  } catch (error) {
+    console.error(`Error fetching conversation ${conversationId}:`, error);
+    throw error; 
+  }
+};
+
 // Tìm kiếm cuộc trò chuyện theo tên (cho group)
 // URL trong screenshot: GET /conversation/search-by-name
 export const searchConversationsByNameApi = async (name, page = 1, limit = 10) => {

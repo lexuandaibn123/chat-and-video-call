@@ -50,6 +50,12 @@ jobs:
           username: ${{ secrets.SERVER_USERNAME }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
+            set +e
+
+            docker image rm lexuandaibn123/chat-and-video-call:latest || true
+            docker image prune -f
+
+
             docker pull lexuandaibn123/chat-and-video-call:latest
 
             docker stop chat-and-video-call || true

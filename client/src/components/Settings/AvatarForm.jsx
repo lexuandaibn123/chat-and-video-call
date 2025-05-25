@@ -25,8 +25,11 @@ const AvatarForm = () => {
     setError("");
     try {
       await avtUpdate(uploadedUrl);
-      toast.success("Cập nhật ảnh đại diện thành công!");
-      alert("Cập nhật ảnh đại diện thành công!");
+      toast.success("Avatar updated successfully!", {
+        position: "top-right",
+        autoClose: 3000,
+        theme: "dark"
+      });
     } catch (err) {
       setError(`Có lỗi xảy ra: ${err.message}`);
       toast.error(`Có lỗi xảy ra: ${err.message}`);

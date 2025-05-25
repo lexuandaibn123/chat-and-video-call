@@ -225,6 +225,11 @@ export const processRawMessages = async (rawMessages, currentUserId) => {
       }
     }
 
+    let replyToMessageContent = null;
+    if (msg.replyToMessageId && messageContentMap[msg.replyToMessageId]) {
+      replyToMessageContent = messageContentMap[msg.replyToMessageId];
+    }
+
     return {
       id: msg._id || null,
       type: msg.type || 'text',
@@ -238,6 +243,7 @@ export const processRawMessages = async (rawMessages, currentUserId) => {
       senderName,
       senderAvatar,
       replyToMessageId: msg.replyToMessageId || null,
+      replyToMessageContent,
       conversationId: msg.conversationId || null,
       status: msg.status || 'sent',
     };

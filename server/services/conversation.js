@@ -251,6 +251,68 @@ class ConversationService {
     }
   }
 
+  async fetchConversationById(req, res) {
+    try {
+      const { conversationId } = req.query;
+      const userInfo = req.session.userInfo;
+      const userId = userInfo.id.toString();
+      try {
+        const conversation = await this._mustBeValidConversation(
+          conversationId,
+          false
+        );
+
+        this._mustBeMemberOfConversation(conversation, userId);
+
+        const conversationHandle = conversation.toObject();
+        const leftAt = this._isMemberOfConversation(
+          conversationHandle,
+          userId,
+          true
+        ).leftAt;
+
+        if (leftAt) {
+          conversationHandle.members = conversationHandle.members.filter(
+            (member) => {
+              return member.joinedAt <= leftAt && member.leftAt == null;
+            }
+          );
+
+          if (
+            conversationHandle.latestMessage &&
+            typeof conversationHandle.latestMessage === "object" &&
+            conversationHandle.latestMessage.datetime_created > leftAt
+          ) {
+            conversationHandle.latestMessage = {
+              _id: conversationHandle.latestMessage._id,
+              conversationId: conversationHandle.latestMessage.conversationId,
+              content: null,
+              datetime_created: null,
+              last_updated: null,
+              type: null,
+              replyToMessageId: null,
+              isEdited: null,
+              isDeleted: null,
+              senderId: null,
+            };
+          }
+        }
+
+        this._filterMembersLeft(conversationHandle);
+
+        return res.status(200).json({
+          success: true,
+          data: conversationHandle,
+        });
+      } catch (error) {
+        console.error(error);
+        return res.status(400).json({ error: error.message });
+      }
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
   async fetchConversations(req, res) {
     try {
       const { page = 1, limit = 10 } = req.query;
@@ -320,12 +382,12 @@ class ConversationService {
     }
   }
 
-  async fetchConversationsByWs({ userId, page = 1, limit = 10 }) {
+  async fetchConversationsByWs({ userId }) {
     try {
       const conversations = await ConversationRepository.findByUserId(
         userId,
-        page,
-        limit
+        1,
+        0
       );
 
       return conversations;

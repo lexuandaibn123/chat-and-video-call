@@ -27,7 +27,6 @@ const ConversationItem = ({
 
   // Thêm icon cho cuộc gọi đang diễn ra nếu isCallOngoing là true
   let callIcon = null;
-  console.log('ongoingCallRoomId:', ongoingCallRoomId, 'id:', id);
   if (ongoingCallRoomId === id) {
     callIcon = <i className="fas fa-video call-icon" title="Đang có cuộc gọi"></i>;
   }
