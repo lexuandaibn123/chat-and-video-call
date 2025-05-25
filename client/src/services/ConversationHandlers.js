@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { getUserByEmailApi, getUserDetailsApi } from '../api/users';
+import { toast } from 'react-toastify';
 import {
   updateConversationsAfterMemberRemoved,
   updateActiveChatAfterMemberRemoved,
@@ -174,7 +175,7 @@ export const useConversationHandlers = ({
           );
         }
       );
-      alert('Member removed successfully!');
+      toast.success("Member removed successfully!");
     },
     [
       activeChat,
@@ -224,7 +225,7 @@ export const useConversationHandlers = ({
           setEditingGroupName('');
         }
       );
-      alert('Group name changed successfully!');
+      toast.success('Group name changed successfully!');
     },
     [
       activeChat,
@@ -414,7 +415,7 @@ export const useConversationHandlers = ({
         const isEmailFormat = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedTerm);
         const isIdFormat = /^[a-fA-F0-9]{24}$/.test(trimmedTerm);
         if (!isEmailFormat && !isIdFormat) {
-          alert('Invalid search term: Must be a valid email or ObjectID.');
+          toast.error("Invalid search term: must be a valid email or ObjectID.");
           throw new Error('Invalid search term: Must be a valid email or ObjectID.');
         }
         if (isEmailFormat) {
@@ -559,7 +560,7 @@ export const useConversationHandlers = ({
           setAddUserSearchResults([]);
         }
       );
-      alert('Member added successfully!');
+      toast.success('Member added successfully!');
     },
     [
       activeChat,
@@ -622,7 +623,7 @@ export const useConversationHandlers = ({
           setIsMobileChatActive(false);
         }
       );
-      alert('You have left the group successfully!');
+      toast.success('You have left the group successfully!');
     },
     [
       activeChat,
@@ -671,7 +672,7 @@ export const useConversationHandlers = ({
           setIsMobileChatActive(false);
         }
       );
-      alert('Group deleted successfully!');
+      toast.success('Group deleted successfully!');
     },
     [
       activeChat,
@@ -713,7 +714,7 @@ export const useConversationHandlers = ({
             setIsMobileChatActive(false);
           }
         );
-        alert("Messages cleared successfully!");
+        toast.success("Messages cleared successfully!");
       } else {
         setActionError(null);
       }
@@ -780,7 +781,7 @@ export const useConversationHandlers = ({
           setEditingGroupName('');
         }
       );
-      alert('Group name changed successfully!');
+      toast.success('Group name changed successfully!');
     },
     [
       activeChat,

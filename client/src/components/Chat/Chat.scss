@@ -918,8 +918,8 @@
           /* Container chứa ảnh và các nút */
           .image-popup-content {
             position: relative;
-            max-width: 90vw;
-            max-height: 90vh;
+            max-width: 75svw;
+            max-height: 85svh;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -928,7 +928,7 @@
           /* Ảnh trong popup */
           .image-popup-img {
             max-width: 100%;
-            max-height: 80vh;
+            max-height: 80svh;
             object-fit: contain;
             border-radius: 8px;
           }
@@ -1286,7 +1286,7 @@
     border-radius: $border-radius-lg;
     width: 90%;
     max-width: 500px;
-    max-height: 90vh;
+    max-height: 90svh;
     display: flex;
     flex-direction: column;
     overflow: hidden;

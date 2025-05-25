@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import io from 'socket.io-client';
+import {toast} from 'react-toastify';
 import { 
   formatReceivedMessage, 
   updateConversationsListLatestMessage, 
@@ -413,7 +414,7 @@ export const useSocket = ({
           ]);
           setActiveChat((prev) => prev); // Restore activeChat if needed
         } else if (action.type === 'createConversation') {
-          alert('Conversation already exists between these two users');
+          toast.info("A conversation between these two users already exists.");
         }
         delete pendingActionsRef.current[actionId];
       });

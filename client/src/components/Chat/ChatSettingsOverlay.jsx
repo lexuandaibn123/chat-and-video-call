@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import defaultUserAvatar from '../../assets/images/avatar_male.jpg';
 import defaultGroupAvatar from '../../assets/images/group-chat.png';
 import { UploadButton } from '../../utils/uploadthing';
+import { toast } from 'react-toastify';
 import { getUserDetailsApi, getFriendsApi } from "../../api/users";
 
 const ChatSettingsOverlay = ({
@@ -230,7 +231,7 @@ const ChatSettingsOverlay = ({
       if (!success) {
         throw new Error("Failed to update avatar via WebSocket.");
       }
-      alert("Cập nhật ảnh đại diện nhóm thành công!");
+      toast.success("Group avatar updated successfully!");
     } catch (err) {
       setError(`Có lỗi xảy ra: ${err.message}`);
       setAvatarUrl(group.avatar || defaultGroupAvatar);

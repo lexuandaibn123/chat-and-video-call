@@ -1,4 +1,5 @@
 import io from "socket.io-client";
+import {toast} from "react-toastify";
 
 export default function SFUClient(url, userId, onStreamAdded, onStreamRemoved) {
   this.socket = io(url, { withCredentials: true });
@@ -54,9 +55,7 @@ SFUClient.prototype = {
       });
     } catch (error) {
       console.error("getUserMedia failed:", error);
-      alert(
-        "Không thể truy cập camera/microphone. Vui lòng kiểm tra quyền hoặc thiết bị."
-      );
+      toast.error("Unable to access camera/microphone. Please check permissions or device.");
       throw error;
     }
   },
@@ -310,7 +309,7 @@ SFUClient.prototype = {
     });
     this.socket.on("error", (error) => {
       console.error("Socket error:", error);
-      alert("Đã xảy ra lỗi kết nối. Vui lòng thử lại.");
+      toast.error("A connection error occurred. Please try again.");
     });
   },
 

@@ -48,8 +48,8 @@ function App() {
           {/* Optional: Route 404 (nên đặt cuối cùng) */}
           {/* <Route path="*" element={<NotFoundPage />} /> */}
         </Routes>
+        <ToastContainer theme="dark" position="top-right" autoClose={2500} />
       </BrowserRouter>
-      <ToastContainer />
     </div>
   );
 }

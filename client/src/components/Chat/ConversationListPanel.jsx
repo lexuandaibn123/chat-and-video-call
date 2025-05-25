@@ -4,6 +4,7 @@ import defaultAvatarPlaceholder from '../../assets/images/avatar_male.jpg';
 import { getFriendsApi } from "../../api/users";
 import { getMyRoomsApi } from '../../api/conversations';
 import { processRawRooms } from '../../services/chatService';
+import {toast} from 'react-toastify';
 import "./Modal.scss";
 
 const ConversationListPanel = ({
@@ -191,7 +192,7 @@ const ConversationListPanel = ({
 
   const handleCreateConversation = () => {
     if (!selectedUsers.length) {
-      alert('Please select at least one user to create a conversation.');
+      toast.warning("Please select at least one user to create a conversation.");
       return;
     }
 
