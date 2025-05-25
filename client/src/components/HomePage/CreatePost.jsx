@@ -337,6 +337,24 @@ const CreatePost = () => {
               </div>
             )}
           </section>
+
+          <footer className="post-preview-footer">
+            {uploading && (
+              <div style={{
+                width: '100%',
+                padding: '12px 0',
+                textAlign: 'center',
+                color: '#0056b3',
+                fontWeight: 600,
+                fontSize: '16px',
+                background: '#f5f7fa',
+                borderRadius: '8px',
+                marginTop: '12px',
+              }}>
+                Đang tải ảnh lên, vui lòng chờ...
+              </div>
+            )}
+          </footer>
         </article>
       )}
     </article>
