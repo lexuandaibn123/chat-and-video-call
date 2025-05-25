@@ -217,7 +217,7 @@ const ConversationListPanel = ({
     <aside className="conversation-list-panel">
       <div className="search-bar-row">
         <div className="search-bar-container">
-          <i className="fas fa-search search-icon" />
+          {/* <i className="fas fa-search search-icon" /> */}
           <input
             type="text"
             placeholder="Search"
