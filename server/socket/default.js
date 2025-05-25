@@ -23,14 +23,12 @@ const initDefaultNameSpace = (defaultNamespace) => {
 
     const userInfo = session.userInfo;
 
-    client.on("setup", async ({ page = 1, limit = 30 }) => {
+    client.on("setup", async () => {
       try {
         client.join(userInfo.id);
 
         const conversations = await ConversationService.fetchConversationsByWs({
           userId: userInfo.id,
-          page,
-          limit,
         });
         conversations.forEach((conversation) => {
           const userObj = conversation.members.find((member) => {

@@ -75,6 +75,67 @@ router.post(
 
 /**
  * @openapi
+ * /api/conversation/get-conversation:
+ *   get:
+ *     tags:
+ *       - Conversation
+ *     summary: Fetch a specific conversation by ID
+ *     description: Retrieves details of a specific conversation by its ID for the authenticated user. The user must be a member of the conversation.
+ *     parameters:
+ *       - in: query
+ *         name: conversationId
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: The ID of the conversation to fetch
+ *     responses:
+ *       200:
+ *         description: Conversation fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   description: Indicates if the request was successful
+ *                 data:
+ *                   $ref: '#/components/schemas/Conversation'
+ *       400:
+ *         description: Bad request, such as invalid conversation ID or user not a member of the conversation
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   description: Error message describing the issue
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   description: Error message for internal server error
+ */
+router.get(
+  "/get-conversation",
+  [
+    check("conversationId")
+      .exists()
+      .withMessage("conversationId is required")
+      .isString()
+      .withMessage("conversationId must be a string"),
+  ],
+  ConversationService.fetchConversationById.bind(ConversationService)
+);
+
+/**
+ * @openapi
  * /api/conversation/get-conversations:
  *   get:
  *     tags:
