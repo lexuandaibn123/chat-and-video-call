@@ -89,7 +89,7 @@ class PostRepository {
   async findRandomPosts(page = 1, limit = 10, query = {}) {
     const pipeline = [
       { $match: { isDeleted: false, ...query } },
-      { $sample: { size: limit } },
+      { $sample: { size: Number(limit) } },
       { $sort: { last_updated: -1 } },
       { $skip: (page - 1) * limit },
     ];
