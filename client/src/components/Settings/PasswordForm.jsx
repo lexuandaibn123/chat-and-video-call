@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { avtUpdate, passwordUpdate } from "../../api/setting";
 import { infoApi } from "../../api/auth";
+import { toast } from "react-toastify";
 
 const PasswordForm = () => {
   const [currentPassword, setCurrentPassword] = useState("");
@@ -35,7 +36,7 @@ const PasswordForm = () => {
         );
         if (result.success) {
           setPasswordError(result.message || "Cập nhật mật khẩu thất bại");
-          alert(result.error);
+          toast.error(result.error);
         }
       } else {
         setError("Không thể lấy thông tin người dùng");

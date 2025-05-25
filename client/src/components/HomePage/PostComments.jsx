@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { commentPost, getCommentsByPostId, editComment, deleteComment, replyComment } from "../../api/feeds";
+import { toast } from "react-toastify";
 
 const PostComments = ({
   postId,
@@ -55,8 +56,8 @@ const PostComments = ({
     // eslint-disable-next-line
   }, [postId]);
 
-  // Hiển thị N comment cuối cùng
-  const displayedComments = comments.slice(-visibleComments);
+  // Hiển thị N comment mới nhất (ở cuối mảng)
+  const displayedComments = comments.slice(Math.max(comments.length - visibleComments, 0));
   const hasMoreComments = comments.length > visibleComments;
 
   const handleShowMoreComments = () => setVisibleComments((prev) => prev + 3);
@@ -83,8 +84,19 @@ const PostComments = ({
 
   const handleEditComment = (id) => {
     setEditingCommentId(id);
-    const comment = comments.find(c => c._id === id);
-    setEditedCommentContent(comment?.comment?.content?.text?.data || "");
+    // Tìm trong comments (gốc)
+    let comment = comments.find(c => c._id === id);
+    // Nếu không thấy, tìm trong repliesMap
+    if (!comment) {
+      for (const replies of Object.values(repliesMap)) {
+        const reply = replies.find(r => r._id === id);
+        if (reply) {
+          comment = reply;
+          break;
+        }
+      }
+    }
+    setEditedCommentContent(comment?.content?.text?.data || "");
   };
 
   const handleCancelCommentEdit = () => {
@@ -119,10 +131,9 @@ const PostComments = ({
     try {
       const response = await deleteComment(id);
       if (response.success) {
-        alert(response.message);
+        toast.success(response.message);
         setEditingCommentId(null);
-        const response2 = await getCommentsByPostId(postId);
-        if (response2.success) setComments(response2.data);
+        await fetchComments(); // Luôn fetch lại comments sau khi xóa, kể cả reply
       } else {
         console.error("Failed to delete comment:", response.message || response.error);
       }
@@ -173,10 +184,10 @@ const PostComments = ({
         setReplyingToCommentId(null);
         await fetchComments(); // Gọi lại để cập nhật toàn bộ comments và replies
       } else {
-        alert("Failed to add reply: " + (response.message || "Unknown error"));
+        toast.error("Failed to add reply: " + (response.message || "Unknown error"));
       }
     } catch (error) {
-      alert("Error adding reply: " + error.message);
+      toast.error("Error adding reply: " + error.message);
     } finally {
       setIsSubmittingReply(false);
     }
@@ -189,15 +200,27 @@ const PostComments = ({
       <div key={reply._id} className="reply">
         <div className="reply-avatar">
           <img
-            src={reply.userId.avatar}
-            alt={reply.userId.fullName}
+            src={reply.userId?.avatar}
+            alt={reply.userId?.fullName}
             className="profile-image"
           />
         </div>
         <div className="reply-content">
-          <span className="reply-name">{reply.userId.fullName}</span>
-          <span className="reply-time">{reply.datetime_created}</span>
-          <p className="reply-text">{reply.content.text.data}</p>
+          <div className="reply-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span className="reply-name">{reply.userId?.fullName || name}</span>
+            <span className="reply-time">{new Date(reply.datetime_created).toLocaleString()}</span>
+            {reply.userId?._id === userId && (
+              <div className="reply-actions" style={{ display: 'inline-flex', gap: '4px' }}>
+                <button className="reply-action-button" onClick={() => handleEditComment(reply._id)} aria-label="Edit reply">
+                  <i className="fas fa-edit"></i>
+                </button>
+                <button className="reply-action-button reply-delete-button" onClick={() => handleDeleteComment(reply._id)} aria-label="Delete reply">
+                  <i className="fas fa-trash-alt"></i>
+                </button>
+              </div>
+            )}
+          </div>
+          <p className="reply-text">{reply.content?.text?.data || ''}</p>
         </div>
       </div>
     ));
@@ -219,7 +242,7 @@ const PostComments = ({
             <div className="comment-content">
               <div className="comment-header">
                 <span className="comment-name">{comment.userId.fullName}</span>
-                <span className="comment-time">{comment.datetime_created}</span>
+                <span className="comment-time">{new Date(comment.datetime_created).toLocaleString()}</span>
                 {comment.userId._id === userId && (
                   <div className="comment-actions">
                     <button
@@ -342,7 +365,7 @@ const PostComments = ({
       </button>
     )}
 
-    {visibleComments > 3 && (
+    {visibleComments > 3 && comments.length > 3 && (
       <button className="show-less-comments" onClick={handleShowLessComments}>
         <span>Show fewer comments</span>
       </button>
