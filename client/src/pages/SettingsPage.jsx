@@ -17,13 +17,13 @@ const SettingsPage = () => {
       <section className="content-area">
 
         <section className="settings-container">
-          <SettingsHeader />
-          <h2 className="settings-subheader">Interface Settings</h2>
+          {/* <SettingsHeader />
+          <h2 className="settings-subheader">Interface Settings</h2> */}
 
           <section className="settings-content">
-            <SettingsSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+            {/* <SettingsSidebar activeTab={activeTab} setActiveTab={setActiveTab} /> */}
 
-            {activeTab === "appearance" ? (
+            {/* {activeTab === "appearance" ? (
               <AppearanceSettings 
                 theme={theme}
                 setTheme={setTheme}
@@ -32,9 +32,9 @@ const SettingsPage = () => {
                 language={language}
                 setLanguage={setLanguage}
               />
-            ) : (
+            ) : ( */}
               <AccountSettings />
-            )}
+            {/* )} */}
           </section>
         </section>
       </section>

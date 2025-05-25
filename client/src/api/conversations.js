@@ -93,7 +93,7 @@ export const createConversationApi = async ({ members = [], name = "" }) => {
 
 // Lấy danh sách phòng/cuộc trò chuyện của người dùng
 // URL trong screenshot: GET /conversation/get-conversations
-export const getMyRoomsApi = async (page = 1, limit = 10) => {
+export const getMyRoomsApi = async (page = 1, limit = 25) => {
   try {
     const response = await fetch(`${API_BASE_URL}/conversation/get-conversations?page=${page}&limit=${limit}`, {
       method: 'GET',

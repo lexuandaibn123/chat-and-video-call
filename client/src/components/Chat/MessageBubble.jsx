@@ -12,6 +12,8 @@ const MessageBubble = ({
   isGroupChat,
   currentUserId,
   senderName,
+  replyToMessageId,
+  replyToMessageContent,
   senderAvatar,
   status,
   onDeleteMessage, // Nhận handler delete
