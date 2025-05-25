@@ -245,7 +245,7 @@ class PostService {
                 userInfo.id.toString()
               );
               return {
-                ...post.toObject(),
+                ...post,
                 hasUserReacted,
               };
             })
