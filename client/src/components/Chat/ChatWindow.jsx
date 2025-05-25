@@ -48,7 +48,7 @@ const ChatWindow = ({
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const prevMessagesRef = useRef(messages);
 
   console.log('Active contact:', activeContact);
   console.log('[DEBUG] ChatWindow props.isCallOngoing:', isCallOngoing);
@@ -56,6 +56,29 @@ const ChatWindow = ({
   const isUserInGroup = activeContact?.isGroup
     ? activeContact.detailedMembers.some(member => member.id === userInfo.id)
     : true;
+
+  // Cuộn xuống cuối khi mở ChatWindow hoặc click lại
+  useEffect(() => {
+    if (activeContact && !isLoadingMessages && messages.length > 0) {
+      console.log('useEffect: Initial scroll to bottom on activeContact change');
+      messageListEndRef.current?.scrollIntoView({ behavior: 'auto' });
+    }
+  }, [activeContact?.id, isLoadingMessages]);
+
+  // Phát hiện tin nhắn mới và cuộn xuống cuối
+  useEffect(() => {
+    if (messages.length > prevMessagesRef.current.length && !isLoadingMore) {
+      const newMessages = messages.slice(prevMessagesRef.current.length);
+      const isNewMessage = newMessages.some(
+        msg => !prevMessagesRef.current.some(prevMsg => prevMsg.id === msg.id)
+      );
+      if (isNewMessage) {
+        console.log('useEffect: Scroll to bottom for new message');
+        messageListEndRef.current?.scrollIntoView({ behavior: 'auto' });
+      }
+    }
+    prevMessagesRef.current = messages;
+  }, [messages, isLoadingMore]);
 
   useEffect(() => {
     if (!socket || !activeContact?.id || !userInfo?.id) return;
@@ -97,13 +120,6 @@ const ChatWindow = ({
   }, [socket, activeContact?.id, userInfo?.id, isUserInGroup, isVideoCallOpen, callInvite]);
 
   useEffect(() => {
-    if (activeContact && isInitialLoad && !isLoadingMessages && messages.length > 0) {
-      messageListEndRef.current?.scrollIntoView({ behavior: 'auto' });
-      setIsInitialLoad(false);
-    }
-  }, [activeContact, isInitialLoad, isLoadingMessages, messages]);
-
-  useEffect(() => {
     if (editingMessageId !== null) {
       messageInputRef.current?.focus();
       const input = messageInputRef.current;
@@ -141,17 +157,19 @@ const ChatWindow = ({
         setHasMore(false);
       }
 
-      setMessages(prev => [...formattedMessages, ...prev]);
-
-      if (firstMessageId) {
-        setTimeout(() => {
-          if (messageListRef.current) {
+      // Cập nhật messages và đặt lại scrollTop trong cùng chu kỳ
+      setMessages(prev => {
+        const newMessagesList = [...formattedMessages, ...prev];
+        if (firstMessageId && messageListRef.current) {
+          requestAnimationFrame(() => {
             const scrollHeightAfter = messageListRef.current.scrollHeight;
             const heightDiff = scrollHeightAfter - scrollHeightBefore;
             messageListRef.current.scrollTop = scrollTopBefore + heightDiff;
-          }
-        }, 0);
-      }
+            console.log('fetchMessages: Set scrollTop to', scrollTopBefore + heightDiff);
+          });
+        }
+        return newMessagesList;
+      });
     } catch (err) {
       console.error(`Error fetching messages for ${activeContact.id}:`, err);
       if (err.message.includes('HTTP error! status: 401')) {
@@ -199,6 +217,10 @@ const ChatWindow = ({
       else console.warn('Cannot save empty message.');
     } else if (messageText) {
       onSendTextMessage(messageText);
+      setTimeout(() => {
+        messageListEndRef.current?.scrollIntoView({ behavior: 'auto' });
+        console.log('handleFormSubmit: Scroll to bottom after sending message');
+      }, 0);
     }
     if (sendStopTyping) {
       sendStopTyping(activeContact.id);

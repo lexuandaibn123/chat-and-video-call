@@ -130,6 +130,7 @@ const ChatPageLayout = ({
       />
 
       <ChatWindow
+        key={activeChat?.id}
         activeContact={activeChat}
         messages={messages}
         setMessages={setMessages}
