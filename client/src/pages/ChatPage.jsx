@@ -534,7 +534,7 @@ const ChatPage = () => {
     try {
       const messages = await getMessagesByRoomIdApi({
         conversationId: activeChat.id,
-        limit: 100,
+        limit: 30,
         skip: 0,
       });
       const formattedMessages = await processRawMessages(messages, userId);
@@ -587,6 +587,7 @@ const ChatPage = () => {
         conversations={conversations}
         activeChat={activeChat}
         messages={messages}
+        setMessages={setMessages}
         searchTerm={searchTerm}
         isMobileChatActive={isMobileChatActive}
         isSettingsOpen={isSettingsOpen}

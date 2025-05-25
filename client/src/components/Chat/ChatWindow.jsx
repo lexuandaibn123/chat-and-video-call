@@ -1,15 +1,18 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { toast } from 'react-toastify';
 import Picker from 'emoji-picker-react';
 import MessageBubble from './MessageBubble';
 import defaultUserAvatar from '../../assets/images/avatar_male.jpg';
 import defaultGroupAvatar from '../../assets/images/group-chat.png';
 import { UploadButton } from '../../utils/uploadthing';
+import { getMessagesByRoomIdApi } from '../../api/conversations';
+import { processRawMessages } from '../../services/chatService';
 import VideoCall from '../VideoCall/VideoCall';
 
 const ChatWindow = ({
   activeContact,
   messages,
+  setMessages,
   onMobileBack,
   isMobile,
   messageInput,
@@ -37,19 +40,22 @@ const ChatWindow = ({
   const messageListEndRef = useRef(null);
   const messageInputRef = useRef(null);
   const typingTimeoutRef = useRef(null);
-  const prevTypingUsersLengthRef = useRef(0);
+  const messageListRef = useRef(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isVideoCallOpen, setIsVideoCallOpen] = useState(false);
   const [callInvite, setCallInvite] = useState(null);
   const [typingUsers, setTypingUsers] = useState([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   console.log('Active contact:', activeContact);
   console.log('[DEBUG] ChatWindow props.isCallOngoing:', isCallOngoing);
 
-  // Determine if user is in group
   const isUserInGroup = activeContact?.isGroup
     ? activeContact.detailedMembers.some(member => member.id === userInfo.id)
-    : true; // Always true for non-group chats
+    : true;
 
   useEffect(() => {
     if (!socket || !activeContact?.id || !userInfo?.id) return;
@@ -79,7 +85,6 @@ const ChatWindow = ({
       }
     };
 
-    // Lắng nghe với callback nhận 2 tham số (memberId, data)
     socket.on('typing', handleTyping);
     socket.on('stopTyping', handleStopTyping);
 
@@ -92,12 +97,11 @@ const ChatWindow = ({
   }, [socket, activeContact?.id, userInfo?.id, isUserInGroup, isVideoCallOpen, callInvite]);
 
   useEffect(() => {
-    if (!isLoadingMessages && editingMessageId === null) {
-      const behavior = prevTypingUsersLengthRef.current !== typingUsers.length ? 'smooth' : 'auto';
-      messageListEndRef.current?.scrollIntoView({ behavior });
+    if (activeContact && isInitialLoad && !isLoadingMessages && messages.length > 0) {
+      messageListEndRef.current?.scrollIntoView({ behavior: 'auto' });
+      setIsInitialLoad(false);
     }
-    prevTypingUsersLengthRef.current = typingUsers.length;
-  }, [messages, isLoadingMessages, editingMessageId, typingUsers]);
+  }, [activeContact, isInitialLoad, isLoadingMessages, messages]);
 
   useEffect(() => {
     if (editingMessageId !== null) {
@@ -109,6 +113,75 @@ const ChatWindow = ({
       }
     }
   }, [editingMessageId]);
+
+  const fetchMessages = useCallback(async (pageNum) => {
+    if (!activeContact?.id || !userInfo?.id || !messageListRef.current || !hasMore || isLoadingMore) {
+      console.warn('fetchMessages: Invalid conditions.', { activeContact, userId: userInfo?.id });
+      setIsLoadingMore(false);
+      return;
+    }
+    console.log('Fetching messages for room:', activeContact.id, 'for user:', userInfo.id, 'page:', pageNum);
+
+    const messageList = messageListRef.current;
+    const firstMessageId = messages.length > 0 ? messages[0].id : null;
+    const scrollHeightBefore = messageList.scrollHeight;
+    const scrollTopBefore = messageList.scrollTop;
+
+    setIsLoadingMore(true);
+    try {
+      const limit = 30;
+      const skip = (pageNum - 1) * limit;
+      const newMessages = await getMessagesByRoomIdApi({
+        conversationId: activeContact.id,
+        limit,
+        skip,
+      });
+      const formattedMessages = await processRawMessages(newMessages, userInfo.id);
+      if (newMessages.length < limit) {
+        setHasMore(false);
+      }
+
+      setMessages(prev => [...formattedMessages, ...prev]);
+
+      if (firstMessageId) {
+        setTimeout(() => {
+          if (messageListRef.current) {
+            const scrollHeightAfter = messageListRef.current.scrollHeight;
+            const heightDiff = scrollHeightAfter - scrollHeightBefore;
+            messageListRef.current.scrollTop = scrollTopBefore + heightDiff;
+          }
+        }, 0);
+      }
+    } catch (err) {
+      console.error(`Error fetching messages for ${activeContact.id}:`, err);
+      if (err.message.includes('HTTP error! status: 401')) {
+        toast.error('Session expired. Please login again.', {
+          position: 'top-right',
+          autoClose: 3000,
+          theme: 'dark',
+        });
+      } else {
+        toast.error(err.message || 'Failed to load messages.', {
+          position: 'top-right',
+          autoClose: 3000,
+          theme: 'dark',
+        });
+      }
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [activeContact, userInfo, setMessages, messages, hasMore, isLoadingMore]);
+
+  const handleScroll = () => {
+    if (messageListRef.current && hasMore && !isLoadingMore) {
+      const { scrollTop } = messageListRef.current;
+      if (scrollTop <= 5) {
+        const newPage = page + 1;
+        setPage(newPage);
+        fetchMessages(newPage);
+      }
+    }
+  };
 
   const handleFormSubmit = (event) => {
     event.preventDefault();
@@ -307,9 +380,9 @@ const ChatWindow = ({
         </div>
         <div className="chat-actions">
           <button
-            className={`icon-button ${isCallOngoing || callInvite ? 'ongoing-call' : ''}`} // Thêm class để áp dụng hiệu ứng
-            title={isCallOngoing ? 'There is an ongoing video call' : callInvite ? 'Join the video call' : 'Video Call'} // Cập nhật title động
-            disabled={isEditingMode || sendingMessage || !isUserInGroup} // Điều chỉnh disabled
+            className={`icon-button ${isCallOngoing || callInvite ? 'ongoing-call' : ''}`}
+            title={isCallOngoing ? 'There is an ongoing video call' : callInvite ? 'Join the video call' : 'Video Call'}
+            disabled={isEditingMode || sendingMessage || !isUserInGroup}
             onClick={() => {
               if (!isUserInGroup) {
                 toast.error('You are not a member of this group.', {
@@ -320,10 +393,8 @@ const ChatWindow = ({
                 return;
               }
               if (isCallOngoing || callInvite) {
-                // Nếu đang có cuộc gọi hoặc có lời mời, tham gia cuộc gọi
                 handleJoinCall();
               } else {
-                // Nếu không có cuộc gọi, bắt đầu cuộc gọi mới
                 console.log('Starting video call for room:', activeContact.id);
                 setIsVideoCallOpen(true);
               }
@@ -352,21 +423,14 @@ const ChatWindow = ({
             </button>
           )}
         </div>
-
-        {/* {(isCallOngoing || callInvite) && (
-          <div className="call-indicator">
-            <i className="fas fa-video" style={{ color: '#28a745', marginRight: 4 }}></i>
-            <span>
-              {isCallOngoing
-                ? 'Đang có cuộc gọi video'
-                : callInvite
-                ? `${callInvite.username} đang gọi video...`
-                : ''}
-            </span>
-          </div>
-        )} */}
       </header>
-      <div className="message-list-container">
+      <div className="message-list-container" ref={messageListRef} onScroll={handleScroll}>
+        {isLoadingMore && (
+          <div className="loading-spinner">
+            <div className="spinner"></div>
+            <span>Loading more messages...</span>
+          </div>
+        )}
         {isLoadingMessages ? (
           <div className="loading-messages">Loading messages...</div>
         ) : messages.length === 0 ? (
@@ -396,7 +460,6 @@ const ChatWindow = ({
         {typingUsers.length > 0 && (
           <div className="typing-bubble-list">
             {typingUsers.map((userId) => {
-              // Tìm member object trong activeContact.members
               const memberObj = activeContact.members?.find(
                 m => (typeof m.id === 'object' ? m.id._id : m.id) === userId
               );
