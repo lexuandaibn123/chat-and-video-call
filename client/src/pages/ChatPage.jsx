@@ -3,7 +3,7 @@ import { useSocket } from '../services/ChatPageSocket';
 import { useHandlers } from '../services/ChatHandlers';
 import { useConversationHandlers } from '../services/ConversationHandlers';
 import ChatPageLayout from '../components/Chat/ChatPageLayout';
-import { getMyRoomsApi, getMessagesByRoomIdApi } from '../api/conversations';
+import { getMyRoomsApi, getMessagesByRoomIdApi, getConversationByIdApi } from '../api/conversations';
 import { infoApi } from '../api/auth';
 import { processRawRooms, processRawMessages } from '../services/chatService';
 import { toast } from 'react-toastify';
@@ -240,8 +240,7 @@ const ChatPage = () => {
       return;
     }
 
-    const handleCallStarted = (data) => {
-      console.log('[DEBUG] Received callStarted event:', data);
+    const handleCallStarted = async (data) => {
       const now = Date.now();
       const lastCall = lastCallStartedRef.current[data.roomId] || 0;
       // Ignore duplicate events within 2 seconds
@@ -261,9 +260,23 @@ const ChatPage = () => {
       const isUserInGroup = conversation?.isGroup
         ? conversation.detailedMembers.some(member => member.id === user.id)
         : true;
+      let conversationName = 'this conversation';
       if (!isVideoCallOpen && !callInvite && isUserInGroup) {
+        try {
+          // Lấy tên cuộc trò chuyện từ API
+          const fetchedConversation = await getConversationByIdApi(data.roomId);
+          if (fetchedConversation && fetchedConversation.name) {
+            conversationName = fetchedConversation.name;
+          }
+        } catch (error) {
+          console.error("Failed to fetch conversation name for call invite:", error);
+          // Giữ tên mặc định nếu có lỗi khi fetch
+        }
         setOngoingCallRoomId(data.roomId);
-        setCallInvite(data);
+        setCallInvite({
+          ...data,
+          conversationName: conversationName, 
+        });
         toast.info(`${data.username} đã bắt đầu một cuộc gọi video`, {
           position: 'top-right',
           autoClose: 5000,
@@ -280,7 +293,6 @@ const ChatPage = () => {
     };
 
     const handleCallEnded = (data) => {
-      console.log('[DEBUG] Received callEnded event:', data);
       // Kiểm tra xem roomId có khớp với ongoingCallRoomId không
       if (data.roomId === ongoingCallRoomId) {
         // Đặt lại các state tương ứng với callStarted
@@ -572,7 +584,6 @@ const ChatPage = () => {
     ongoingCallRoomId && activeChat?.id
       ? String(ongoingCallRoomId) === String(activeChat.id)
       : false;
-  console.log('[DEBUG] isCallOngoing:', isCallOngoing, 'ongoingCallRoomId:', ongoingCallRoomId, 'activeChat?.id:', activeChat?.id);
 
   return (
     <div className="chat-page-container">
@@ -620,7 +631,7 @@ const ChatPage = () => {
         <div className="call-invite-popup">
           <div className="call-invite-content">
             <p>
-              {callInvite.username} has started a video call in room {callInvite.roomId}. Join or decline?
+              {callInvite.username} has started a video call in {callInvite.conversationName}. Join or decline?
             </p>
             <button onClick={() => handleJoinCall(callInvite.roomId)}>Join</button>
             <button onClick={() => handleDeclineCall(callInvite.roomId)}>Decline</button>
