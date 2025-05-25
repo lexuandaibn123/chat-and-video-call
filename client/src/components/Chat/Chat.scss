@@ -297,6 +297,35 @@
         }
       }
     }
+
+    .loading-spinner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: $spacing-sm;
+      padding: $spacing-md;
+      color: $text-muted-color;
+      font-size: $font-size-small;
+      font-weight: $font-weight-medium;
+
+      .spinner {
+        width: 20px;
+        height: 20px;
+        border: 3px solid $text-muted-color;
+        border-top: 3px solid $primary-color;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+    }
+
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+      100% {
+        transform: rotate(360deg);
+      }
+    }
   }
 }
 
@@ -447,6 +476,41 @@
       &::-webkit-scrollbar-track { background: transparent; }
       &::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
       &::-webkit-scrollbar-thumb:hover { background: #aaa; }
+
+      .loading-spinner {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 10px;
+        color: #888;
+        font-size: 14px;
+        font-weight: 500;
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: rgba(255, 255, 255, 0.8);
+        z-index: 1;
+
+        .spinner {
+          width: 20px;
+          height: 20px;
+          border: 3px solid #ccc;
+          border-top: 3px solid #007bff;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+        }
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
 
 
       // Message wrapper (contains options, bubble, timestamp, sender info)

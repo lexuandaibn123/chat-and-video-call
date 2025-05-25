@@ -16,6 +16,7 @@ const ChatPageLayout = ({
   conversations,
   activeChat,
   messages,
+  setMessages,
   searchTerm,
   isMobileChatActive,
   isSettingsOpen,
@@ -129,8 +130,10 @@ const ChatPageLayout = ({
       />
 
       <ChatWindow
+        key={activeChat?.id}
         activeContact={activeChat}
         messages={messages}
+        setMessages={setMessages}
         onMobileBack={handlers.handleMobileBack}
         isMobile={isMobileChatActive}
         messageInput={messageInput}

@@ -198,7 +198,7 @@ const MessageBubble = ({
 
     return (
         // Apply classes to the wrapper including 'editing' if it's the message being edited
-        <div className={`message-bubble-wrapper ${sender === 'self' ? 'sent' : 'received'} ${isDeleted ? 'deleted' : ''} ${nonConflictingStatusClass} ${isCurrentlyEditing ? 'editing-message' : ''}`} data-message-id={id} ref={menuRef}>
+        <div id={`message-${id}`} className={`message-bubble-wrapper ${sender === 'self' ? 'sent' : 'received'} ${isDeleted ? 'deleted' : ''} ${nonConflictingStatusClass} ${isCurrentlyEditing ? 'editing-message' : ''}`} data-message-id={id} ref={menuRef}>
 
              {/* SenderInfo for group chat (only for received messages) */}
               {isGroupChat && sender !== 'self' && !isDeleted && !isCurrentlyEditing && (
