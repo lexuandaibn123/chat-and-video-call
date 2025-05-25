@@ -173,6 +173,45 @@
       margin-bottom: 0;
     }
 
+    .no-conversations {
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15); /* Bóng nhẹ */
+      text-align: center; /* Căn giữa văn bản */
+      color: color.adjust($warning-color, $lightness: -5%); /* Màu chữ nổi bật */
+      max-height: 85svh; /* Giới hạn chiều cao, đồng bộ với scrollable-content */
+      overflow-y: auto;
+      
+      &::-webkit-scrollbar {
+        display: none; 
+      }
+      p {
+        font-size: $font-size-large; /* Kích thước chữ lớn hơn */
+        font-weight: $font-weight-bold; /* Chữ đậm */
+        margin-bottom: $spacing-sm; /* Khoảng cách dưới */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: $spacing-sm; /* Khoảng cách giữa biểu tượng và chữ */
+        
+        &::before {
+          font-family: 'Font Awesome 5 Free';
+          font-weight: 900;
+          font-size: 1.5rem; /* Kích thước biểu tượng */
+          color: $primary-color; /* Màu biểu tượng */
+        }
+      }
+
+      h3 {
+        font-size: $font-size-large; /* Kích thước chữ cho tiêu đề */
+        font-weight: $font-weight-bold; /* Chữ đậm */
+        color: $text-color; /* Màu chữ chính để phân biệt với <p> */
+        margin: $spacing-md 0; /* Khoảng cách trên/dưới */
+      }
+
+      .notification-list-container {
+        margin-top: $spacing-md; /* Khoảng cách trên cho NotificationList */
+      }
+    }
+
     .section-title {
       font-size: $font-size-large;
       font-weight: $font-weight-bold;

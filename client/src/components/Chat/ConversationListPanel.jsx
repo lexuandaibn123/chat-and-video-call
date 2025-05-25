@@ -56,7 +56,7 @@ const ConversationListPanel = ({
           id: user._id,
           name: user.fullName || user.email || user._id,
           image: user.avatar || defaultAvatarPlaceholder,
-          mutualFriends: Math.floor(Math.random() * 10), // Giả lập số mutual friends
+          mutualFriends: null,
         }));
         setRandomUsers(formattedUsers);
       } catch (error) {

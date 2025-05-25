@@ -22,7 +22,9 @@ const FriendSuggestionItem = ({ item, userInfo, onRemove }) => {
       <img src={item.image} alt={item.name} className="profile-image" />
       <div className="item-info">
         <p className="item-name">{item.name}</p>
-        <p className="mutual-friends">{item.mutualFriends} mutual friends</p>
+        {item.mutualFriends != null && (
+          <p className="mutual-friends">{item.mutualFriends} mutual friends</p>
+        )}
       </div>
       <button
         className="message-btn"
