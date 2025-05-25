@@ -1090,7 +1090,7 @@ body {
   justify-content: center;
   cursor: pointer;
   font-size: 0.75rem;
-  opacity: 0;
+  opacity: 1;
   transition: opacity 0.2s ease;
 }
 
@@ -1251,7 +1251,7 @@ body {
     background-color: #e5e7eb;
   }
 
-  .remove-file-btn {
+  .remove-file-btn-1 {
     background-color: #000000;
   }
 
