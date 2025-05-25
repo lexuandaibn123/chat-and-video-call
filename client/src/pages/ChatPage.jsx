@@ -340,6 +340,7 @@ const ChatPage = () => {
     editingGroupName,
     isConnected,
     setConversations,
+    setMessages,
     setActiveChat,
     setActionError,
     setIsSettingsOpen,

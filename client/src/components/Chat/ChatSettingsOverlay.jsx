@@ -128,8 +128,6 @@ const ChatSettingsOverlay = ({
     setAvatarUrl(group.avatar || defaultGroupAvatar);
   }, [group.name, group.id, group.avatar]);
 
-  console.log("group: ", group);
-
   const leaderIds = Array.isArray(group.leaders) ? group.leaders : [group.leaders];
   const isCurrentUserLeader = leaderIds.includes(currentUserId);
   const numberOfLeaders = processedMembers.filter(m => m.role === 'leader' && m.leftAt === null).length;
@@ -465,6 +463,13 @@ const ChatSettingsOverlay = ({
           {/* {actionError && <div className="action-error">Error: {actionError}</div>} */}
 
           <div className="group-actions-footer">
+            <button
+              className="button secondary clear"
+              onClick={() => onDeleteConversationMember(group.id)}
+              disabled={isPerformingAction}
+            >
+              Clear Messages
+            </button>
             {processedMembers.some(m => m.id?._id === currentUserId && m.leftAt === null && processedMembers.filter(m => m.leftAt === null).length > 1) && (
               <button
                 className="button secondary warning"
@@ -474,19 +479,15 @@ const ChatSettingsOverlay = ({
                 Leave Group
               </button>
             )}
-            <button
-              className="button secondary danger"
-              onClick={() => {
-                if (isCurrentUserLeader) {
-                  onDeleteGroup(group.id);
-                } else {
-                  onDeleteConversationMember(group.id);
-                }
-              }}
-              disabled={isPerformingAction}
-            >
-              Delete Group
-            </button>
+            {isCurrentUserLeader && (
+              <button
+                className="button secondary danger"
+                onClick={() => onDeleteGroup(group.id)}
+                disabled={isPerformingAction}
+              >
+                Delete Group
+              </button>
+            )}
           </div>
         </div>
       </div>

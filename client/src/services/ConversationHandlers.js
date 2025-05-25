@@ -25,6 +25,7 @@ export const useConversationHandlers = ({
   editingGroupName,
   isConnected,
   setConversations,
+  setMessages,
   setActiveChat,
   setActionError,
   setIsSettingsOpen,
@@ -239,7 +240,7 @@ export const useConversationHandlers = ({
   );
 
   const handleChangeLeader = useCallback(
-    (conversationId, newLeaderId) => {
+    async (conversationId, newLeaderId) => {
       const currentUserId = currentUserIdRef.current;
       if (
         !activeChat ||
@@ -252,18 +253,16 @@ export const useConversationHandlers = ({
         setActionError('Cannot perform action on this chat.');
         return;
       }
-      const newLeaderMember = activeChat.detailedMembers?.find(
-        (m) => m.id === newLeaderId && !m.leftAt
-      );
+      let newLeaderMember = null;
+      try {
+        newLeaderMember = await getUserDetailsApi(newLeaderId);
+      } catch (err) {
+        console.error('Failed to fetch new leader details:', err);
+        setActionError('Failed to fetch new leader details. Please try again.');
+        return;     
+      }
       if (!newLeaderMember) {
         setActionError('New leader must be a current member of the group.');
-        return;
-      }
-      const isCurrentUserLeader = activeChat.detailedMembers?.some(
-        (m) => m.id === currentUserId && m.role === 'leader' && !m.leftAt
-      );
-      if (!isCurrentUserLeader) {
-        setActionError('Only a leader can assign another leader.');
         return;
       }
       if (
@@ -692,21 +691,29 @@ export const useConversationHandlers = ({
     async (conversationId) => {
       if (
         window.confirm(
-          "Are you sure you want to delete this conversation? (This will only delete it for you)"
+          "Are you sure you want to clear all messages in this group? (This will only clear them for you)"
         )
       ) {
         performSettingsAction(
           () => deleteConversationMemberApi({ conversationId }),
           "Delete conversation",
           (response) => {
-            setConversations((prevConvs) => filterConversationFromList(prevConvs, conversationId)
+            // setConversations((prevConvs) => filterConversationFromList(prevConvs, conversationId)
+            // );
+            setMessages((prevMessages) =>
+              prevMessages.filter((msg) => msg.conversationId !== conversationId)
+            );
+            setActiveChat((prevActive) =>
+              prevActive && prevActive.id === conversationId
+                ? { ...prevActive, messages: [] }
+                : prevActive
             );
             setActiveChat(null);
             setIsSettingsOpen(false);
             setIsMobileChatActive(false);
           }
         );
-        alert("Conversation deleted successfully!");
+        alert("Messages cleared successfully!");
       } else {
         setActionError(null);
       }
@@ -716,6 +723,7 @@ export const useConversationHandlers = ({
       currentUserIdRef,
       performSettingsAction,
       setConversations,
+      setMessages,
       setActiveChat,
       setIsSettingsOpen,
       setIsMobileChatActive,
