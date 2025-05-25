@@ -42,19 +42,12 @@ const handleApiResponse = async (response) => {
 };
 // --- Kết thúc hàm xử lý response ---
 
-export const createPost = async (type, content) => {
+export const createPost = async (content) => {
     try {
         const response = await fetch(`${API_BASE_URL}/api/post/create-post`, {
             method: "POST",
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                "content": [
-                    {
-                        type,
-                        data: content
-                    }
-                ]
-            }),
+            body: JSON.stringify(content),
             credentials: 'include',
         })
         return handleApiResponse(response);
@@ -268,19 +261,20 @@ export const deleteComment = async (id) => {
     }
 }  
 
-export const replyComment = async (postId, content, replyCommentId) => {
+export const replyComment = async (post_id, content, reply_comment_id) => {
+    console.log(post_id, content, reply_comment_id);
     try {
         const response = await fetch(`${API_BASE_URL}/api/post/comment-to-post`, {
             method: "POST",
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                postId,
+                postId: post_id,
                 type: "text",
                 data: {
                     type: "text",
                     data: content,
                 },
-                replyCommentId: replyCommentId
+                replyCommentId: reply_comment_id,
             }),
             credentials: 'include',
         })
