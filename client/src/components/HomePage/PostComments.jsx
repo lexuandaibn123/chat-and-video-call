@@ -11,7 +11,6 @@ const PostComments = ({
   newComment = "",
   setNewComment,
 }) => {
-  const [replyComments, setReplyComments] = useState([]);
   const [comments, setComments] = useState([]);
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editedCommentContent, setEditedCommentContent] = useState("");
@@ -20,39 +19,40 @@ const PostComments = ({
   const [newReply, setNewReply] = useState("");
   const [isSubmittingReply, setIsSubmittingReply] = useState(false);
   const [repliesMap, setRepliesMap] = useState({}); // { [commentId]: [replyObj, ...] }
-  
-  // Lấy comments từ API khi postId thay đổi
-  useEffect(() => {
-    const fetchComments = async () => {
-      try {
-        const response = await getCommentsByPostId(postId);
-        if (response.success) {
-          // Phân loại comment gốc và reply
-          const rootComments = [];
-          const repliesMap = {};
-          for (const comment of response.data) {
-            if (!comment.replyToCommentId) {
-              rootComments.push(comment);
-            } else {
-              // Đưa reply vào repliesMap theo comment cha
-              const parentId = comment.replyToCommentId._id || comment.replyToCommentId;
-              if (!repliesMap[parentId]) {
-                repliesMap[parentId] = [];
-              }
-              repliesMap[parentId].push(comment);
+
+  // Đặt fetchComments ở đầu component, trước useEffect
+  const fetchComments = async () => {
+    try {
+      const response = await getCommentsByPostId(postId);
+      if (response.success) {
+        const rootComments = [];
+        const repliesMap = {};
+        for (const comment of response.data) {
+          if (!comment.replyToCommentId) {
+            rootComments.push(comment);
+          } else {
+            const parentId = comment.replyToCommentId._id || comment.replyToCommentId;
+            if (!repliesMap[parentId]) {
+              repliesMap[parentId] = [];
             }
+            repliesMap[parentId].push(comment);
           }
-          setComments(rootComments);
-          setRepliesMap(repliesMap);
-          setVisibleComments(3); // Reset visible comments when postId changes
-        } else {
-          console.error("Failed to fetch comments:", response.message);
         }
-      } catch (error) {
-        console.error("Error fetching comments:", error);
+        setComments(rootComments);
+        setRepliesMap(repliesMap);
+        setVisibleComments(3);
+      } else {
+        console.error("Failed to fetch comments:", response.message);
       }
-    };
+    } catch (error) {
+      console.error("Error fetching comments:", error);
+    }
+  };
+
+  // Sử dụng fetchComments trong useEffect
+  useEffect(() => {
     fetchComments();
+    // eslint-disable-next-line
   }, [postId]);
 
   // Hiển thị N comment cuối cùng
@@ -162,21 +162,16 @@ const PostComments = ({
   };
 
   const handleAddReply = async (commentId, e) => {
+    console.log(postId, newReply, commentId);
     e.preventDefault();
-    if (!newReply.trim()) {
-      alert("Reply content cannot be empty");
-      return;
-    }
-    
+    if (!newReply.trim()) return;
     setIsSubmittingReply(true);
     try {
       const response = await replyComment(postId, newReply, commentId);
       if (response.success) {
         setNewReply("");
         setReplyingToCommentId(null);
-        // Reload comments
-        const res = await getCommentsByPostId(postId);
-        if (res.success) setComments(res.data);
+        await fetchComments(); // Gọi lại để cập nhật toàn bộ comments và replies
       } else {
         alert("Failed to add reply: " + (response.message || "Unknown error"));
       }
@@ -209,9 +204,10 @@ const PostComments = ({
   };
 
   return (
-    <div className="post-comments">
-      {displayedComments.map((comment, index) => (
-        <div key={comment._id || index} className="comment">
+  <div className="post-comments">
+    {displayedComments.map((comment, index) => (
+      <div key={index} className="comment">
+        <div className="comment-main">
           <div className="comment-avatar">
             <img
               src={comment.userId.avatar}
@@ -270,7 +266,7 @@ const PostComments = ({
                   <span>Reply</span>
                 </button>
 
-                {comment.replies && Array.isArray(comment.replies) && (
+                {Array.isArray(comment.replies) && comment.replies.length > 0 && (
                   <button className="comment-view-replies" onClick={() => toggleReplies(comment._id, comment.replies)}>
                     {expandedReplies[comment._id] ? (
                       <>
@@ -288,91 +284,95 @@ const PostComments = ({
               </div>
             </div>
           </div>
+        </div>
 
-          {expandedReplies[comment._id] && repliesMap[comment._id] && (
-            <div className="comment-replies">
-              <RenderReplies parentId={comment._id} />
+        {/* Render replies nếu có */}
+        {expandedReplies[comment._id] && repliesMap[comment._id] && (
+          <div className="comment-replies">
+            <RenderReplies parentId={comment._id} />
+          </div>
+        )}
+
+        {/* Render form reply nếu đang trả lời comment này */}
+        {replyingToCommentId === comment._id && (
+          <form className="reply-form" onSubmit={(e) => handleAddReply(comment._id, e)}>
+            <div className="reply-avatar">
+              <img
+                src={avatar}
+                alt={name}
+                width={28}
+                height={28}
+                className="profile-image"
+              />
             </div>
-          )}
-
-          {replyingToCommentId === comment._id && (
-            <form className="reply-form" onSubmit={(e) => handleAddReply(comment._id, e)}>
-              <div className="reply-avatar">
-                <img
-                  src={avatar}
-                  alt={name}
-                  width={28}
-                  height={28}
-                  className="profile-image"
-                />
+            <div className="reply-input-container">
+              <input
+                type="text"
+                className="reply-input"
+                placeholder={`Reply to ${comment.userId.fullName}...`}
+                value={newReply}
+                onChange={(e) => setNewReply(e.target.value)}
+                autoFocus
+              />
+              <div className="reply-input-actions">
+                <button type="button" className="reply-cancel">
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="reply-submit"
+                  disabled={isSubmittingReply}
+                >
+                  {isSubmittingReply ? "Sending..." : "Reply"}
+                </button>
               </div>
-              <div className="reply-input-container">
-                <input
-                  type="text"
-                  className="reply-input"
-                  placeholder={`Reply to ${comment.userId.fullName}...`}
-                  value={newReply}
-                  onChange={(e) => setNewReply(e.target.value)}
-                  autoFocus
-                />
-                <div className="reply-input-actions">
-                  <button type="button" className="reply-cancel" onClick={() => setReplyingToCommentId(null)}>
-                    Cancel
-                  </button>
-                  <button 
-                    type="submit" 
-                    className="reply-submit"
-                    disabled={isSubmittingReply}
-                  >
-                    {isSubmittingReply ? "Sending..." : "Reply"}
-                  </button>
-                </div>
-              </div>
-            </form>
-          )}
-        </div>
-      ))}
+            </div>
+          </form>
+        )}
+      </div>
+    ))}
 
-      {hasMoreComments && (
-        <button className="show-more-comments" onClick={handleShowMoreComments}>
-          <i className="fas fa-chevron-down"></i>
-          <span>
-            Show more comments ({comments.length - visibleComments} more)
-          </span>
+    {/* Phần còn lại giữ nguyên */}
+    {hasMoreComments && (
+      <button className="show-more-comments" onClick={handleShowMoreComments}>
+        <i className="fas fa-chevron-down"></i>
+        <span>
+          Show more comments ({comments.length - visibleComments} more)
+        </span>
+      </button>
+    )}
+
+    {visibleComments > 3 && (
+      <button className="show-less-comments" onClick={handleShowLessComments}>
+        <span>Show fewer comments</span>
+      </button>
+    )}
+
+    <form className="comment-form" onSubmit={handleAddComment}>
+      <div className="comment-avatar">
+        <img
+          src={avatar}
+          alt={name}
+          width={32}
+          height={32}
+          className="profile-image"
+        />
+      </div>
+      <div className="comment-input-container">
+        <input
+          type="text"
+          className="comment-input"
+          placeholder="Write a comment..."
+          value={newComment}
+          onChange={(e) => setNewComment(e.target.value)}
+        />
+        <button type="submit" className="comment-submit">
+          <i className="fas fa-paper-plane"></i>
         </button>
-      )}
-
-      {visibleComments > 3 && (
-        <button className="show-less-comments" onClick={handleShowLessComments}>
-          <span>Show fewer comments</span>
-        </button>
-      )}
-
-      <form className="comment-form" onSubmit={handleAddComment}>
-        <div className="comment-avatar">
-          <img
-            src={avatar}
-            alt={name}
-            width={32}
-            height={32}
-            className="profile-image"
-          />
-        </div>
-        <div className="comment-input-container">
-          <input
-            type="text"
-            className="comment-input"
-            placeholder="Write a comment..."
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-          />
-          <button type="submit" className="comment-submit">
-            <i className="fas fa-paper-plane"></i>
-          </button>
-        </div>
-      </form>
-    </div>
-  );
+      </div>
+    </form>
+  </div>
+);
 };
 
 export default PostComments;
