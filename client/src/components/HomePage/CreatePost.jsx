@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { createPost } from "../../api/feeds";
 import { infoApi } from "../../api/auth";
 import { UploadButton } from "../../utils/uploadthing";
+import { toast } from "react-toastify";
 
 const CreatePost = () => {
   const [content, setContent] = useState("");
@@ -60,7 +61,7 @@ const CreatePost = () => {
         setUploadedUrl("");
         setImageUrl("");
         setShowPreview(false);
-        alert("Post successfully!");
+        toast.success("Post successfully!");
       } else {
         setError(response.message || "Failed to create post");
       }
@@ -232,55 +233,98 @@ const CreatePost = () => {
                     ? "two-files"
                     : "multiple-files"
                 }`}
+                style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}
               >
-                {selectedFiles.map((file, index) => (
-                  <div key={index} className="preview-file-item">
-                    {file.type.startsWith("image/") ? (
-                      <div className="preview-image-container">
-                        <img
-                          src={previewUrls[index] || "/placeholder.svg"}
-                          alt={`Preview ${index + 1}`}
-                          className="preview-image"
-                          style={{ border: '2px solid #ccc', borderRadius: '8px', maxWidth: '100%', maxHeight: '400px', objectFit: 'contain', display: 'block' }}
-                        />
-                        <button
-                          className="remove-file-btn"
-                          onClick={() => handleRemoveFile(index)}
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ) : file.type.startsWith("video/") ? (
-                      <div className="preview-video-container">
-                        <video
-                          src={previewUrls[index]}
-                          className="preview-video"
-                          controls
-                        />
-                        <button
-                          className="remove-file-btn"
-                          onClick={() => handleRemoveFile(index)}
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="preview-file-container">
-                        <div className="file-icon">📄</div>
-                        <span className="file-name">{file.name}</span>
-                        <button
-                          className="remove-file-btn"
-                          onClick={() => handleRemoveFile(index)}
-                        >
-                          ✕
-                        </button>
+                {selectedFiles.map((file, index, arr) => (
+                  <div
+                    key={index}
+                    style={{
+                      flex: 1,
+                      minWidth: arr.length > 1 ? '0' : '100%',
+                      maxWidth: arr.length > 1 ? 'calc(50% - 8px)' : '100%',
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <img
+                      src={previewUrls[index] || "/placeholder.svg"}
+                      alt={`Preview ${index + 1}`}
+                      className="preview-image"
+                      style={{
+                        border: '2px solid #ccc',
+                        borderRadius: '8px',
+                        width: '100%',
+                        maxWidth: '100%',
+                        maxHeight: '400px',
+                        aspectRatio: '1/1',
+                        objectFit: 'contain',
+                        display: 'block',
+                        marginBottom: '12px',
+                        background: '#fff',
+                        opacity: uploading && index === selectedFiles.length - 1 ? 0.5 : 1,
+                        filter: uploading && index === selectedFiles.length - 1 ? 'blur(2px)' : 'none',
+                        transition: 'opacity 0.3s, filter 0.3s',
+                      }}
+                    />
+                    {uploading && index === selectedFiles.length - 1 && (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          background: 'rgba(255,255,255,0.5)',
+                          borderRadius: '8px',
+                          zIndex: 2,
+                        }}
+                      >
+                        <div
+                          className="loader"
+                          style={{
+                            width: 32,
+                            height: 32,
+                            border: '4px solid #ccc',
+                            borderTop: '4px solid #0056b3',
+                            borderRadius: '50%',
+                            animation: 'spin 1s linear infinite',
+                          }}
+                        ></div>
                       </div>
                     )}
+                    <button
+                      className="remove-file-btn"
+                      onClick={() => handleRemoveFile(index)}
+                    >
+                      ✕
+                    </button>
                   </div>
                 ))}
               </div>
             )}
           </section>
+
+          <footer className="post-preview-footer">
+            {uploading && (
+              <div style={{
+                width: '100%',
+                padding: '12px 0',
+                textAlign: 'center',
+                color: '#0056b3',
+                fontWeight: 600,
+                fontSize: '16px',
+                background: '#f5f7fa',
+                borderRadius: '8px',
+                marginTop: '12px',
+              }}>
+                Đang tải ảnh lên, vui lòng chờ...
+              </div>
+            )}
+          </footer>
         </article>
       )}
     </article>

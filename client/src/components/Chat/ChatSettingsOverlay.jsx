@@ -3,6 +3,7 @@ import defaultUserAvatar from '../../assets/images/avatar_male.jpg';
 import defaultGroupAvatar from '../../assets/images/group-chat.png';
 import { updateConversationAvatar } from "../../api/conversations";
 import { UploadButton } from '../../utils/uploadthing';
+import { toast } from 'react-toastify';
 
 const ChatSettingsOverlay = ({
     group,
@@ -94,7 +95,7 @@ const ChatSettingsOverlay = ({
         try {
             await updateConversationAvatar(group.id, url);
             setAvatarUrl(url);
-            alert("Cập nhật ảnh đại diện nhóm thành công!");
+            toast.success("Cập nhật ảnh đại diện nhóm thành công!");
         } catch (err) {
             setError(`Có lỗi xảy ra: ${err.message}`);
         } finally {

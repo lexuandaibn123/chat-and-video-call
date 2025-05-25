@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { infoApi } from "../../api/auth";
 import { editPost, deletePost, likePost, unlikePost } from "../../api/feeds";
 import PostComments from "./PostComments";
+import { toast } from "react-toastify";
 
 const PostItem = ({
   postId,
@@ -76,16 +77,32 @@ const PostItem = ({
       return;
     }
     try {
-      const response = await editPost(postId, editedContent);
+      // Giữ lại các ảnh cũ khi chỉnh sửa text
+      const newContentArr = [
+        { type: "text", data: editedContent },
+      ];
+
+      for (const item of content) {
+        if (item.type === "image" && item.data) {
+          newContentArr.push({ type: "image", data: item.data });
+        }
+      }
+      // Đảm bảo chỉ gửi các object có đủ type và data
+      const validContentArr = newContentArr.filter(
+        (item) => item && item.type && item.data
+      );
+      const response = await editPost(
+        postId,
+        validContentArr,
+      );
       if (response.success) {
-        alert("Post updated successfully!");
+        toast.success(response.message || "Post updated successfully!");
         setEditedContent(editedContent);
-        isEdited = response.data.isEdited;
       } else {
-        alert("Failed to update post");
+        toast.error("Failed to update post");
       }
     } catch (error) {
-      console.error("Error updating post:", error);
+      toast.error("Error updating post:", error);
     }
     setIsEditing(false);
   };
@@ -100,14 +117,14 @@ const PostItem = ({
       try {
         const response = await deletePost(postId);
         if (response.success) {
-          alert("Post deleted successfully!");
+          toast.success("Post deleted successfully!");
           // Có thể gọi callback từ props để xóa post khỏi danh sách cha
           // hoặc reload lại danh sách bài đăng
         } else {
-          alert("Failed to delete post");
+          toast.error("Failed to delete post");
         }
       } catch (error) {
-        alert("Error deleting post!");
+        toast.error("Error deleting post!");
         console.error(error);
       }
       setIsMenuOpen(false);
@@ -121,7 +138,7 @@ const PostItem = ({
         setIsLiked(true);
         setLikeCount(likeCount + 1);
       } else {
-        alert("Failed to like post", response.message || response.error);
+        toast.error("Failed to like post", response.message || response.error);
       }
     } catch (error) {
       console.error("Error liking post:", error);
@@ -136,7 +153,7 @@ const PostItem = ({
         setLikeCount(likeCount - 1);
         console.log("Post unliked successfully!");
       } else {
-        alert("Failed to unlike post", response.message || response.error);
+        toast.error("Failed to unlike post", response.message || response.error);
       }
     } catch (error) {
       console.error("Error unliking post:", error);
@@ -180,7 +197,7 @@ const PostItem = ({
           <div className="post-author-info">
             <h3 className="post-author-name">{poster.fullName}</h3>
             <div className="post-meta">
-              <span className="post-time">{datetime_created}</span>
+              <span className="post-time">{new Date(datetime_created).toLocaleString()}</span>
             </div>
           </div>
         </div>
@@ -236,17 +253,43 @@ const PostItem = ({
         {content &&
           Array.isArray(content) &&
           content.filter((item) => item.type === "image").length > 0 && (
-            <div className="post-images">
+            <div
+              className="post-images"
+              style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}
+            >
               {content
                 .filter((item) => item.type === "image")
-                .map((img, idx) => (
-                  <img
+                .map((img, idx, arr) => (
+                  <div
                     key={idx}
-                    src={img.data}
-                    alt={`Project image ${idx + 1}`}
-                    className="post-image"
-                    onClick={() => window.open(img.data, "_blank")}
-                  />
+                    style={{
+                      flex: 1,
+                      minWidth: arr.length > 1 ? "0" : "100%",
+                      maxWidth: arr.length > 1 ? "calc(50% - 8px)" : "100%",
+                      display: "flex",
+                      justifyContent: "center",
+                      alignItems: "center",
+                    }}
+                  >
+                    <img
+                      src={img.data}
+                      alt={`Project image ${idx + 1}`}
+                      className="post-image"
+                      style={{
+                        border: "2px solid #ccc",
+                        borderRadius: "8px",
+                        width: "100%",
+                        maxWidth: "100%",
+                        maxHeight: "400px",
+                        aspectRatio: "1/1",
+                        objectFit: "contain",
+                        display: "block",
+                        marginBottom: "12px",
+                        background: "#fff",
+                      }}
+                      onClick={() => window.open(img.data, "_blank")}
+                    />
+                  </div>
                 ))}
             </div>
           )}

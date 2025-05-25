@@ -21,7 +21,7 @@ body {
 /* Layout */
 .app-container {
   display: flex;
-  height: 90vh;
+  height: 100vh;
   background-color: $container-bg-color;
   position: relative;
   overflow-y: auto; /* Move scrollbar to container level */
@@ -83,7 +83,7 @@ body {
 }
 
 .main-content {
-  padding-right: 0;
+  padding: 0;
 }
 
 /* Scrollbar styling for Webkit browsers (Chrome, Safari, Edge) */
@@ -673,6 +673,11 @@ body {
   padding: 0.625rem;
   border-radius: 0.375rem;
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  margin: 8px 0;
+  padding: 8px 12px;
+  background: #fafbfc;
 }
 
 .reply-header {
@@ -1147,6 +1152,10 @@ body {
   .post-preview-files.multiple-files .preview-image-container,
   .post-preview-files.multiple-files .preview-video-container {
     height: 180px;
+  }
+
+  .app-container {
+    height: 91vh;
   }
 }
 
