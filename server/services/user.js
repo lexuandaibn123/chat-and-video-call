@@ -352,6 +352,7 @@ class UserService {
       if (!updatedUser) {
         return res.status(404).json({ error: "User not found" });
       }
+      req.session.userInfo.fullName = fullName;
       return res.status(200).json({
         success: true,
         message: "User name updated successfully",
@@ -373,6 +374,7 @@ class UserService {
       if (!updatedUser) {
         return res.status(404).json({ error: "User not found" });
       }
+      req.session.userInfo.avatar = avatar;
       return res.status(200).json({
         success: true,
         message: "User avatar updated successfully",
