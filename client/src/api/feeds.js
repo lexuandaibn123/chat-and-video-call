@@ -88,12 +88,7 @@ export const editPost = async (id, content) => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 postId: id,
-                newContent: [
-                    {
-                        type: "text",
-                        data: content
-                    }
-                ]
+                newContent: content,
             }),
             credentials: 'include',
         })
@@ -274,7 +269,7 @@ export const replyComment = async (post_id, content, reply_comment_id) => {
                     type: "text",
                     data: content,
                 },
-                replyCommentId: reply_comment_id,
+                replyToCommentId: reply_comment_id,
             }),
             credentials: 'include',
         })
