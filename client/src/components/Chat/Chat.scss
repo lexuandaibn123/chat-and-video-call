@@ -297,6 +297,35 @@
         }
       }
     }
+
+    .loading-spinner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: $spacing-sm;
+      padding: $spacing-md;
+      color: $text-muted-color;
+      font-size: $font-size-small;
+      font-weight: $font-weight-medium;
+
+      .spinner {
+        width: 20px;
+        height: 20px;
+        border: 3px solid $text-muted-color;
+        border-top: 3px solid $primary-color;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+    }
+
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+      100% {
+        transform: rotate(360deg);
+      }
+    }
   }
 }
 

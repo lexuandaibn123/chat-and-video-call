@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import ConversationItem from './ConversationItem';
 import defaultAvatarPlaceholder from '../../assets/images/avatar_male.jpg';
 import { getFriendsApi } from "../../api/users";
+import { getMyRoomsApi } from '../../api/conversations';
+import { processRawRooms } from '../../services/chatService';
 import "./Modal.scss";
 
 const ConversationListPanel = ({
@@ -25,23 +27,64 @@ const ConversationListPanel = ({
   const [hasSearched, setHasSearched] = useState(false);
   const [friendSuggestions, setFriendSuggestions] = useState([]);
   const [highlightIndex, setHighlightIndex] = useState(-1);
+  const [page, setPage] = useState(1); // State để theo dõi trang hiện tại
+  const [hasMore, setHasMore] = useState(true); // State để kiểm tra còn dữ liệu hay không
+  const [isLoadingConversations, setIsLoadingConversations] = useState(false); // State để quản lý trạng thái tải
+  const listRef = useRef(null); // Ref để tham chiếu đến danh sách
 
   const allConversations = [
     ...groups.map(g => ({ ...g, type: 'group' })),
     ...friends.map(f => ({ ...f, type: 'friend' }))
   ].sort((a, b) => {
-    // Ưu tiên trường latestMessageTimestamp, fallback sang time nếu không có
     const aTime = a.latestMessageTimestamp || a.time || 0;
     const bTime = b.latestMessageTimestamp || b.time || 0;
-    // Nếu là string ISO, chuyển sang số
     const aTs = typeof aTime === 'string' ? new Date(aTime).getTime() : aTime;
     const bTs = typeof bTime === 'string' ? new Date(bTime).getTime() : bTime;
     return bTs - aTs;
   });
 
-  console.log("All conversations:", allConversations);
+  // Hàm fetch dữ liệu với hỗ trợ phân trang
+  const fetchInitialData = useCallback(async (pageNum) => {
+    const currentUserId = userInfo?._id;
+    if (!currentUserId) {
+      console.warn('fetchInitialData: User ID is not set.');
+      setIsLoadingConversations(false);
+      setConversations([]);
+      return;
+    }
+    console.log('Fetching rooms for user:', currentUserId, 'page:', pageNum);
+    setIsLoadingConversations(true);
+    try {
+      const rooms = await getMyRoomsApi(pageNum); // Giả sử API chấp nhận tham số page
+      if (rooms.length === 0) {
+        setHasMore(false); // Không còn dữ liệu để tải
+        return;
+      }
+      const conversationsData = processRawRooms(rooms, currentUserId);
+      setConversations(prev => [...prev, ...conversationsData]); // Thêm dữ liệu mới vào conversations
+      console.log('Processed conversations:', conversationsData);
+    } catch (err) {
+      console.error('Error fetching chat data:', err);
+      if (err.message.includes('HTTP error! status: 401') || err.message.includes('not authenticated')) {
+        setConversations([]);
+      }
+    } finally {
+      setIsLoadingConversations(false);
+    }
+  }, [userInfo, setConversations]);
 
-  // Hàm xử lý khi click vào conversation
+  // Xử lý sự kiện cuộn
+  const handleScroll = () => {
+    if (listRef.current && hasMore && !isLoadingConversations) {
+      const { scrollTop, scrollHeight, clientHeight } = listRef.current;
+      if (scrollTop + clientHeight >= scrollHeight - 5) { // Cách đáy 5px
+        setPage(prevPage => prevPage + 1);
+        fetchInitialData(page + 1);
+      }
+    }
+  };
+
+  // Các hàm khác giữ nguyên
   const handleReadConversation = (id) => {
     setConversations((prev) =>
       prev.map((conv) =>
@@ -154,16 +197,12 @@ const ConversationListPanel = ({
 
     let name = conversationName;
     if (!name) {
-      // Lấy tên người tạo nhóm
       const creatorName = userInfo.fullName || userInfo.email || userInfo._id;
       if (selectedUsers.length === 1) {
-        // Nếu chỉ có 1 người được chọn, tên nhóm là "creator, user"
         name = `${creatorName}, ${selectedUsers[0].fullName || selectedUsers[0].email || selectedUsers[0]._id}`;
       } else if (selectedUsers.length === 2) {
-        // Nếu có 2 người, tên nhóm là "creator, user1, user2"
         name = `${creatorName}, ${selectedUsers.map(u => u.fullName || u.email || u._id).join(', ')}`;
       } else {
-        // Nếu nhiều hơn 2 người, tên nhóm là "creator, user1, user2, ... (+n)"
         const firstTwo = selectedUsers.slice(0, 2).map(u => u.fullName || u.email || u._id);
         name = `${creatorName}, ${firstTwo.join(', ')}, ... (+${selectedUsers.length - 2})`;
       }
@@ -191,7 +230,7 @@ const ConversationListPanel = ({
       </div>
 
       <section className="conversation-section">
-        <ul className="conversation-list">
+        <ul className="conversation-list" ref={listRef} onScroll={handleScroll}>
           {allConversations.map(conv => (
             <ConversationItem
               key={conv.id}
@@ -211,6 +250,12 @@ const ConversationListPanel = ({
             />
           ))}
         </ul>
+        {isLoadingConversations && (
+          <div className="loading-spinner">
+            <div className="spinner"></div>
+            <span>Loading more...</span>
+          </div>
+        )}
       </section>
 
       {isModalOpen && (
