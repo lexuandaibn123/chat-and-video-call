@@ -467,7 +467,6 @@ const ChatPage = () => {
     try {
       const rooms = await getMyRoomsApi();
       setRawConversations(rooms);
-      console.log('rooms: ', rooms);
       const conversationsData = processRawRooms(rooms, currentUserId);
       setConversations(conversationsData);
       console.log('Processed conversations:', conversationsData);

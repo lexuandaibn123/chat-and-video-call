@@ -286,26 +286,10 @@ export const useConversationHandlers = ({
         'Add leader',
         () => {
           setConversations((prevConvs) =>
-            prevConvs.map(conv =>
-              conv.id === conversationId
-                ? {
-                    ...conv,
-                    detailedMembers: conv.detailedMembers.map(m =>
-                      m.id === newLeaderId ? { ...m, role: 'leader' } : m
-                    ),
-                  }
-                : conv
-            )
+            updateConversationsAfterLeaderChanged(prevConvs, conversationId, newLeaderId)
           );
           setActiveChat((prevActive) =>
-            prevActive && prevActive.id === conversationId
-              ? {
-                  ...prevActive,
-                  detailedMembers: prevActive.detailedMembers.map(m =>
-                    m.id === newLeaderId ? { ...m, role: 'leader' } : m
-                  ),
-                }
-              : prevActive
+            updateActiveChatAfterLeaderChanged(prevActive, conversationId, newLeaderId)
           );
         }
       );
