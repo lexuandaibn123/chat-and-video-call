@@ -18,6 +18,10 @@
   display: none;
 }
 
+.tab-container {
+  display: none;
+}
+
 // Style cho form đơn giản hơn (forgot/reset/verify)
 .auth-form-simple {
   background: $secondary-color;
@@ -193,7 +197,6 @@
       .form-container {
         width: 100%;
         position: static;
-        padding: $spacing-xl;
 
         &.hide {
           display: none; // Ensure only one form is shown at a time

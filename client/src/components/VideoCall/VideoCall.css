@@ -4,6 +4,8 @@
   left: 0;
   width: 100vw; /* Use viewport width */
   height: 100vh; /* Use viewport height */
+  width: 100vw; /* Use viewport width */
+  height: 100vh; /* Use viewport height */
   display: flex;
   flex-direction: column;
   background: #000;
@@ -11,10 +13,13 @@
   font-family: 'Segoe UI', sans-serif;
   box-sizing: border-box;
   overflow: hidden;
+  overflow: hidden;
   z-index: 1000;
 }
 
 .video-call-header {
+  position: relative;
+  padding: 10px;
   position: relative;
   padding: 10px;
   display: flex;
@@ -30,8 +35,8 @@
 }
 
 .video-layout {
-  width: 100vw;
-  height: 100vh; /* Occupy full viewport height */
+  width: 100svw;
+  height: 100svh; /* Occupy full viewport height */
   display: flex;
   justify-content: center;
   align-items: center;
@@ -47,14 +52,23 @@
   padding: 10px;
   box-sizing: border-box;
   overflow: hidden;
+  gap: 5px;
+  padding: 10px;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .video-wrapper {
   width: 100%;
   height: 100%;
+  width: 100%;
+  height: 100%;
   background-color: #333;
   border-radius: 8px;
   overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -106,10 +120,53 @@
 }
 
 /* Local video remains unchanged but repositioned for clarity */
+/* Grid layouts based on participant count */
+.video-layout.participant-count-2 .remote-streams-grid {
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+}
+
+.video-layout.participant-count-3 .remote-streams-grid {
+  grid-template-columns: 1fr 1fr; /* 2 columns on desktop */
+  grid-template-rows: 1fr;
+}
+
+.video-layout.participant-count-4 .remote-streams-grid {
+  @media (min-width: 769px) { /* Desktop */
+    grid-template-columns: 1fr 1fr; /* 2 columns */
+    grid-template-rows: 1fr 1fr; /* 2 rows */
+    grid-template-areas:
+      "video1 video2"
+      "video3 video3"; /* 2 on top, 1 in middle bottom */
+    .video-wrapper:nth-child(1) {
+      grid-area: video1;
+    }
+    .video-wrapper:nth-child(2) {
+      grid-area: video2;
+    }
+    .video-wrapper:nth-child(3) {
+      grid-area: video3;
+    }
+  }
+  @media (max-width: 768px) { /* Mobile */
+    grid-template-columns: 1fr; /* 1 column */
+    grid-template-rows: 1fr 1fr 1fr; /* 3 rows */
+  }
+}
+
+.video-layout.participant-count-5 .remote-streams-grid {
+  grid-template-columns: 1fr 1fr; /* 2 columns */
+  grid-template-rows: 1fr 1fr; /* 2 rows */
+}
+
+/* Local video remains unchanged but repositioned for clarity */
 .local-video-wrapper {
   position: absolute;
   bottom: 20px;
+  bottom: 20px;
   right: 20px;
+  width: 200px;
+  height: 150px;
   width: 200px;
   height: 150px;
   background-color: #333;
@@ -212,8 +269,10 @@
 }
 
 /* Media queries for mobile adjustments */
+/* Media queries for mobile adjustments */
 @media (max-width: 768px) {
   .video-call-header {
+    padding: 5px;
     padding: 5px;
   }
 
@@ -236,9 +295,24 @@
     grid-template-rows: 1fr 1fr;
   }
 
+  .video-layout.participant-count-3 .remote-streams-grid {
+    grid-template-columns: 1fr; /* 1 column */
+    grid-template-rows: 1fr 1fr; /* 2 rows */
+  }
+
+  .video-layout.participant-count-4 .remote-streams-grid {
+    grid-template-columns: 1fr; /* 1 column */
+    grid-template-rows: 1fr 1fr 1fr; /* 3 rows */
+  }
+
+  .video-layout.participant-count-5 .remote-streams-grid {
+    grid-template-columns: 1fr 1fr; /* 2x2 layout */
+    grid-template-rows: 1fr 1fr;
+  }
+
   .local-video-wrapper {
-    width: 100px;
-    height: 75px;
+    width: 110px;
+    height: 150px;
     bottom: 10px;
     right: 10px;
   }

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { logoutApi } from '../../api/auth';
 import './Navigation.scss';
-import avatarPlaceholder from '../../assets/images/avatar_placeholder.jpg';
+import avatarPlaceholder from '../../assets/images/avatar_male.jpg';
 
 const Navigation = (userInfo) => {
   const navigate = useNavigate();
@@ -11,9 +11,7 @@ const Navigation = (userInfo) => {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const currentUser = {
     avatar: userInfo.userInfo.avatar || avatarPlaceholder
-  };
-
-  console.log("userInfo: ", userInfo);
+  };  
 
   const handleLogout = async () => {
     const confirmLogout = window.confirm("Do you really want to log out?");

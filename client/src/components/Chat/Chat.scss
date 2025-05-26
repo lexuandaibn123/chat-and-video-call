@@ -36,6 +36,63 @@
   }
 }
 
+.call-invite-popup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+
+  .call-invite-content {
+    width: 90%;
+    max-width: 400px;
+    padding: 24px;
+    background-color: #fff;
+    border-radius: 12px;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+    text-align: center;
+
+    p {
+      font-size: 1.1rem;
+      margin-bottom: 20px;
+      color: #333;
+    }
+
+    button {
+      margin: 0 10px;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+
+      &:first-of-type {
+        background-color: #4CAF50;
+        color: white;
+
+        &:hover {
+          background-color: #45a049;
+        }
+      }
+
+      &:last-of-type {
+        background-color: #f44336;
+        color: white;
+
+        &:hover {
+          background-color: #e53935;
+        }
+      }
+    }
+  }
+}
+
 // ===== CỘT BÊN TRÁI: DANH SÁCH CUỘC TRÒ CHUYỆN =====
 .conversation-list-panel {
   display: flex;
@@ -116,6 +173,45 @@
       margin-bottom: 0;
     }
 
+    .no-conversations {
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15); /* Bóng nhẹ */
+      text-align: center; /* Căn giữa văn bản */
+      color: color.adjust($warning-color, $lightness: -5%); /* Màu chữ nổi bật */
+      max-height: 85svh; /* Giới hạn chiều cao, đồng bộ với scrollable-content */
+      overflow-y: auto;
+      
+      &::-webkit-scrollbar {
+        display: none; 
+      }
+      p {
+        font-size: $font-size-large; /* Kích thước chữ lớn hơn */
+        font-weight: $font-weight-bold; /* Chữ đậm */
+        margin-bottom: $spacing-sm; /* Khoảng cách dưới */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: $spacing-sm; /* Khoảng cách giữa biểu tượng và chữ */
+        
+        &::before {
+          font-family: 'Font Awesome 5 Free';
+          font-weight: 900;
+          font-size: 1.5rem; /* Kích thước biểu tượng */
+          color: $primary-color; /* Màu biểu tượng */
+        }
+      }
+
+      h3 {
+        font-size: $font-size-large; /* Kích thước chữ cho tiêu đề */
+        font-weight: $font-weight-bold; /* Chữ đậm */
+        color: $text-color; /* Màu chữ chính để phân biệt với <p> */
+        margin: $spacing-md 0; /* Khoảng cách trên/dưới */
+      }
+
+      .notification-list-container {
+        margin-top: $spacing-md; /* Khoảng cách trên cho NotificationList */
+      }
+    }
+
     .section-title {
       font-size: $font-size-large;
       font-weight: $font-weight-bold;
@@ -191,13 +287,16 @@
           font-size: $font-size-small;
           color: $text-muted-color;
           flex-shrink: 0;
+          gap: 4px; // Add a small gap between elements for compact grouping
 
           .timestamp {
-            margin-bottom: 3px;
+            margin-bottom: 0; // Fix: Use 0 instead of "none"
             white-space: nowrap;
+            line-height: 1.2; // Ensure consistent line height for better alignment
           }
 
           .unread-badge {
+            margin-top: 0; // Fix: Use 0 instead of "none"
             background-color: $error-color;
             color: $secondary-color;
             border-radius: 50%;
@@ -213,8 +312,57 @@
           .message-status-icon {
             font-size: 12px;
             color: $primary-color;
+            margin-top: 0; // Ensure no extra margin
+          }
+
+          // Style for the icon container to avoid unnecessary spacing
+          .system-icon {
+            font-size: 15px; // Match size with message-status-icon for consistency
+            color: $primary-color; // Adjust color if needed
+          }
+
+          .icon-container {
+            display: flex;
+            flex-direction: row; // Ensure icons are in a row
+            align-items: center;
+            gap: 4px; // Small gap between icons
+            margin-top: 0; // Ensure no extra margin
+
+            .call-icon {
+              font-size: 20px; /* Kích thước tương tự các icon khác */
+              color: $success-color; /* Sử dụng màu chính của thiết kế */
+            }
           }
         }
+      }
+    }
+
+    .loading-spinner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: $spacing-sm;
+      padding: $spacing-md;
+      color: $text-muted-color;
+      font-size: $font-size-small;
+      font-weight: $font-weight-medium;
+
+      .spinner {
+        width: 20px;
+        height: 20px;
+        border: 3px solid $text-muted-color;
+        border-top: 3px solid $primary-color;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+    }
+
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+      100% {
+        transform: rotate(360deg);
       }
     }
   }
@@ -266,6 +414,10 @@
       border-bottom: 1px solid $input-border-color;
       flex-shrink: 0; // Prevent header from shrinking
 
+      .back-button {
+        display: none;
+      }
+
       .contact-info {
           display: flex;
           align-items: center;
@@ -296,28 +448,57 @@
       }
 
       .chat-actions {
-          display: flex;
-          gap: $spacing-sm;
+        display: flex;
+        gap: $spacing-sm;
 
-          .icon-button {
-              background: none;
-              border: none;
-              color: $text-muted-color;
-              font-size: 18px;
-              cursor: pointer;
-              padding: $spacing-xs;
-              border-radius: 50%;
-              transition: background-color $transition-fast ease-out, color $transition-fast ease-out;
+        .icon-button {
+          background: none;
+          border: none;
+          color: $text-muted-color;
+          font-size: 18px;
+          cursor: pointer;
+          padding: $spacing-xs;
+          border-radius: 50%;
+          transition: background-color $transition-fast ease-out, color $transition-fast ease-out;
 
-              &:hover {
-                  color: $primary-color;
-                  background-color: $container-bg-color;
-              }
-               &:disabled {
-                   opacity: 0.6;
-                   cursor: not-allowed;
-               }
+          &:hover {
+              color: $primary-color;
+              background-color: $container-bg-color;
           }
+          &:disabled {
+              opacity: 0.6;
+              cursor: not-allowed;
+          }
+
+          &.ongoing-call {
+            color: #28a745; // Màu xanh lá để nổi bật (giống màu của call-indicator trước đây)
+
+            i.fas.fa-video {
+              // Hiệu ứng nhấp nháy (pulse)
+              animation: pulse 1.5s infinite ease-in-out;
+            }
+          }
+        }
+      }
+
+      .call-indicator {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-left: 20px;
+        padding: 4px 12px;
+        background: #e6f7ef;
+        border-radius: 16px;
+        color: #28a745;
+        font-weight: 600;
+        font-size: 15px;
+        box-shadow: 0 1px 4px rgba(40, 167, 69, 0.08);
+
+        i.fas.fa-video {
+          color: #28a745;
+          font-size: 1.1em;
+          margin-right: 4px;
+        }
       }
   }
 
@@ -330,10 +511,45 @@
       flex-direction: column; // Stack message wrappers vertically
 
       // --- Custom scrollbar (optional) ---
-      &::-webkit-scrollbar { width: 8px; }
+      &::-webkit-scrollbar { width: 0px; }
       &::-webkit-scrollbar-track { background: transparent; }
       &::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
       &::-webkit-scrollbar-thumb:hover { background: #aaa; }
+
+      .loading-spinner {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 10px;
+        color: #888;
+        font-size: 14px;
+        font-weight: 500;
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: rgba(255, 255, 255, 0.8);
+        z-index: 1;
+
+        .spinner {
+          width: 20px;
+          height: 20px;
+          border: 3px solid #ccc;
+          border-top: 3px solid #007bff;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+        }
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
 
 
       // Message wrapper (contains options, bubble, timestamp, sender info)
@@ -558,7 +774,7 @@
                   align-items: flex-end; // Align bubble and timestamp right within the column
               }
               .message-bubble {
-                  background-color: $primary-color; // Your primary color
+                  background-color: color.adjust($primary-color, $lightness: -10%); // Your primary color
                   color: $secondary-color; // Often white/light color for text
                   border-radius: $border-radius-md $border-radius-md $border-radius-sm $border-radius-md; // Tail bottom-right
               }
@@ -566,7 +782,28 @@
                 text-align: right; // Center the timestamp below the deleted bubble
                 // No absolute positioning needed here; flows normally within message-content-area
               }
-               // align-self isn't strictly necessary on timestamp here if parent has align-items
+              // align-self isn't strictly necessary on timestamp here if parent has align-items
+
+              .message-file-link .fa-file-pdf {
+                color: #e74c3c;
+              }
+              /* Đổi màu icon file Word thành xanh */
+              .message-file-link .fa-file-word {
+                color: #2980d9;
+              }
+              /* Đổi màu icon mặc định */
+              .message-file-link .fa-file {
+                color: #888;
+              }
+
+              .message-file-link .file-name {
+                color: $secondary-color;
+                font-weight: $font-weight-medium;
+              }
+
+              .message-file-link .file-size {
+                color: $secondary-color;
+              }
           }
 
           // Styles for received bubble/content/timestamp
@@ -585,6 +822,21 @@
                 // No absolute positioning needed here; flows normally within message-content-area
               }
                // align-self isn't strictly necessary on timestamp here if parent has align-items
+              .message-file-link .fa-file-pdf {
+                color: #e74c3c;
+              }
+              /* Đổi màu icon file Word thành xanh */
+              .message-file-link .fa-file-word {
+                color: #2980d9;
+              }
+              /* Đổi màu icon mặc định */
+              .message-file-link .fa-file {
+                color: #888;
+              }
+
+              .message-file-link .file-name {
+                font-weight: $font-weight-medium;
+              }
           }
 
 
@@ -687,39 +939,151 @@
                    display: none;
                }
            }
+
+           /* Overlay bao phủ toàn màn hình */
+          .image-popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+          }
+
+          /* Container chứa ảnh và các nút */
+          .image-popup-content {
+            position: relative;
+            max-width: 75svw;
+            max-height: 85svh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+          }
+
+          /* Ảnh trong popup */
+          .image-popup-img {
+            max-width: 100%;
+            max-height: 80svh;
+            object-fit: contain;
+            border-radius: 8px;
+          }
+
+          /* Nút đóng */
+          .image-popup-close {
+            position: absolute;
+            top: -40px;
+            right: -40px;
+            background: rgba(255, 255, 255, 0.8);
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            font-size: 18px;
+            color: #333;
+          }
+
+          .image-popup-close:hover {
+            background: rgba(255, 255, 255, 1);
+          }
+
+          /* Nút điều hướng */
+          .image-popup-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.8);
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            font-size: 20px;
+            color: #333;
+          }
+
+          .image-popup-nav.prev {
+            left: -60px;
+          }
+
+          .image-popup-nav.next {
+            right: -60px;
+          }
+
+          .image-popup-nav:hover {
+            background: rgba(255, 255, 255, 1);
+          }
+
+          /* Đảm bảo message-image có kích thước hợp lý */
+          .message-image {
+            max-width: 200px;
+            max-height: 200px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin: 4px;
+          }
+      }
+
+      .typing-bubble-list {
+        display: flex;
+        gap: 12px;
+        align-items: flex-end;
+        margin: 8px 0;
       }
 
       .typing-bubble {
-        width: 60px;
         display: flex;
         align-items: center;
-        padding: 15px $spacing-md;
-        margin: 4px 8px;
         background: #f0f2f5;
-        border-radius: $border-radius-md;
-        max-width: 100px;
-        font-size: 14px;
-        color: #333;
+        border-radius: 20px;
+        padding: 6px 14px 6px 6px;
+        min-width: 60px;
+        max-width: 120px;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+        position: relative;
+        margin-right: 0;
+
+        .typing-avatar {
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          object-fit: cover;
+          margin-right: 8px;
+          border: 1px solid #e0e0e0;
+          background: #fff;
+          flex-shrink: 0;
+        }
+
+        .dots {
+          display: flex;
+          align-items: center;
+          height: 100%;
+        }
+        .dot {
+          width: 7px;
+          height: 7px;
+          background: #666;
+          border-radius: 50%;
+          margin: 0 2px;
+          animation: typing 1s infinite;
+        }
+        .dot:nth-child(2) { animation-delay: 0.2s; }
+        .dot:nth-child(3) { animation-delay: 0.4s; }
       }
-      .typing-bubble .dots {
-        display: flex;
-        align-items: center;
-        // margin-left: 8px;
-      }
-      .typing-bubble .dot {
-        width: 8px;
-        height: 8px;
-        background: #666;
-        border-radius: 50%;
-        margin: 0 2px;
-        animation: typing 1s infinite;
-      }
-      .typing-bubble .dot:nth-child(2) { animation-delay: 0.2s; }
-      .typing-bubble .dot:nth-child(3) { animation-delay: 0.4s; }
       @keyframes typing {
         0%, 100% { transform: translateY(0); }
         50% { transform: translateY(-4px); }
-    }
+      }
 
     .group-access-denied-message {
       position: relative;
@@ -936,63 +1300,6 @@
     justify-content: center;
     z-index: 1000;
   }
-
-  .call-invite-popup {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.6);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 2000;
-
-    .call-invite-content {
-      width: 90%;
-      max-width: 400px;
-      padding: 24px;
-      background-color: #fff;
-      border-radius: 12px;
-      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
-      text-align: center;
-
-      p {
-        font-size: 1.1rem;
-        margin-bottom: 20px;
-        color: #333;
-      }
-
-      button {
-        margin: 0 10px;
-        padding: 10px 20px;
-        border: none;
-        border-radius: 8px;
-        font-size: 1rem;
-        cursor: pointer;
-        transition: background-color 0.2s ease;
-
-        &:first-of-type {
-          background-color: #4CAF50;
-          color: white;
-
-          &:hover {
-            background-color: #45a049;
-          }
-        }
-
-        &:last-of-type {
-          background-color: #f44336;
-          color: white;
-
-          &:hover {
-            background-color: #e53935;
-          }
-        }
-      }
-    }
-  }
 }
 
 // Keyframes for spinner animation
@@ -1002,26 +1309,26 @@
 }
 
 .chat-settings-overlay {
-  position: fixed; // Cố định trên màn hình
+  position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba($text-color, 0.6); // Nền tối mờ
+  background-color: rgba($text-color, 0.6);
   display: flex;
-  align-items: center; // Căn giữa dọc
-  justify-content: center; // Căn giữa ngang
-  z-index: 1000; // Đảm bảo hiển thị trên tất cả các phần tử khác
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
 
   .settings-content {
-    background-color: $secondary-color; // Nền trắng
+    background-color: $secondary-color;
     border-radius: $border-radius-lg;
-    width: 90%; // Chiếm 90% chiều rộng màn hình
-    max-width: 500px; // Giới hạn chiều rộng tối đa
-    max-height: 90vh; // Giới hạn chiều cao tối đa
+    width: 90%;
+    max-width: 500px;
+    max-height: 90svh;
     display: flex;
     flex-direction: column;
-    overflow: hidden; // Ngăn nội dung tràn ra khi cuộn
+    overflow: hidden;
 
     .settings-header {
       display: flex;
@@ -1037,7 +1344,7 @@
         color: $text-color;
       }
 
-      .icon-button { // Nút đóng
+      .icon-button {
         background: none;
         border: none;
         color: $text-muted-color;
@@ -1046,60 +1353,75 @@
         padding: $spacing-xs;
         border-radius: 50%;
         transition: color $transition-fast ease-out;
-        &:hover:not(:disabled) { // Add not(:disabled)
-          color: $error-color; // Màu đỏ khi hover nút đóng
+        &:hover:not(:disabled) {
+          color: $error-color;
           background-color: $container-bg-color;
         }
-         &:disabled { opacity: 0.5; cursor: not-allowed; } // Add disabled style
+        &:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
       }
 
       .name-edit-wrap {
         display: flex;
         flex-direction: row;
+        align-items: center;
+        flex-grow: 1;
 
-        .group-name-edit { // Style for the name edit mode in header
+        .group-name-edit {
           display: flex;
           align-items: center;
           flex-grow: 1;
-          margin-right: $spacing-md;
-          justify-content: space-between;
 
           input[type="text"] {
-              flex-grow: 1;
-              padding: $spacing-xs $spacing-sm;
-              border: 1px solid $input-border-color;
-              border-radius: $border-radius-sm;
-              font-size: $font-size-base; // Smaller font for edit mode
-              margin-right: $spacing-sm;
+            flex-grow: 1;
+            padding: $spacing-xs $spacing-sm;
+            border: 1px solid $input-border-color;
+            border-radius: $border-radius-sm;
+            font-size: $font-size-base;
+            margin-right: $spacing-sm;
           }
           .icon-button {
-              font-size: $font-size-large; // Smaller icon buttons
-              padding: $spacing-xs;
+            font-size: $font-size-large;
+            padding: $spacing-xs;
           }
         }
       }
 
-      .edit-name-button { // Style for the edit icon button
+      .edit-name-button {
         font-size: $font-size-large;
         padding: $spacing-xs;
         margin-left: $spacing-sm;
         color: $text-muted-color;
-        &:hover:not(:disabled) { color: $primary-color; } // Add not(:disabled)
-         &:disabled { opacity: 0.5; cursor: not-allowed; } // Add disabled style
+        &:hover:not(:disabled) {
+          color: $primary-color;
+        }
+        &:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
       }
     }
 
     .settings-body {
-      flex-grow: 1; // Chiếm hết không gian còn lại cho nội dung cuộn
-      overflow-y: auto; // Cho phép cuộn nội dung
+      flex-grow: 1;
+      overflow-y: auto;
       padding: $spacing-lg;
 
-      // --- Custom scrollbar (optional) ---
-      &::-webkit-scrollbar { width: 8px; }
-      &::-webkit-scrollbar-track { background: transparent; }
-      &::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
-      &::-webkit-scrollbar-thumb:hover { background: #aaa; }
-
+      &::-webkit-scrollbar {
+        width: 8px;
+      }
+      &::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      &::-webkit-scrollbar-thumb {
+        background: #ccc;
+        border-radius: 4px;
+      }
+      &::-webkit-scrollbar-thumb:hover {
+        background: #aaa;
+      }
 
       .group-info {
         display: flex;
@@ -1108,11 +1430,13 @@
         margin-bottom: $spacing-lg;
         padding-bottom: $spacing-lg;
         border-bottom: 1px solid $input-border-color;
+        position: relative;
 
         .avatar-wrapper {
           position: relative;
-          width: 80px; // Match avatar size
+          width: 80px;
           height: 80px;
+          margin-bottom: $spacing-xs;
 
           .avatar.large {
             width: 100%;
@@ -1127,17 +1451,17 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.5); // Semi-transparent black overlay
+            background: rgba(0, 0, 0, 0.5);
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 50%; // Match the avatar's circular shape
-            z-index: 1; // Ensure overlay is above the avatar
+            border-radius: 50%;
+            z-index: 1;
 
             .fa-spinner {
               font-size: 24px;
               color: #fff;
-              animation: spin 1s linear infinite; // Ensure the spinner rotates
+              animation: spin 1s linear infinite;
             }
           }
 
@@ -1170,13 +1494,13 @@
             display: flex;
             align-items: center;
             padding: $spacing-sm 0;
-            border-bottom: 1px solid $container-bg-color; // Đường kẻ nhẹ giữa các thành viên
-            &:last-child { border-bottom: none; } // Bỏ đường kẻ cuối cùng
-             // Add hover effect
-             &:hover {
-                background-color: $container-bg-color;
-             }
-
+            border-bottom: 1px solid $container-bg-color;
+            &:last-child {
+              border-bottom: none;
+            }
+            &:hover {
+              background-color: $container-bg-color;
+            }
 
             .avatar.small {
               width: 30px;
@@ -1190,28 +1514,35 @@
             .member-name {
               flex-grow: 1;
               color: $text-color;
-              font-size: $font-size-base; // Increase font size for better readability
-              font-weight: $font-weight-medium; // Adjust font weight
-              // Add space for roles/you/left indicators
-              span { font-weight: $font-weight-normal; font-size: $font-size-small; color: $text-muted-color; margin-left: $spacing-xs; }
+              font-size: $font-size-base;
+              font-weight: $font-weight-medium;
             }
 
             .member-actions {
               display: flex;
               gap: $spacing-xs;
 
-              .icon-button.small { // Style for small action buttons
-                font-size: 14px; // Smaller icon size
+              .icon-button.small {
+                font-size: 14px;
                 padding: $spacing-xs;
                 border-radius: 50%;
                 transition: background-color $transition-fast ease-out;
                 &:hover:not(:disabled) {
-                    background-color: $container-bg-color;
+                  background-color: $container-bg-color;
                 }
-                 &.warning:hover:not(:disabled) { color: $error-color; }
-                 &.primary:hover:not(:disabled) { color: $primary-color; }
-                 &.secondary:hover:not(:disabled) { color: $text-color; }
-                 &:disabled { opacity: 0.5; cursor: not-allowed; }
+                &.warning:hover:not(:disabled) {
+                  color: $error-color;
+                }
+                &.primary:hover:not(:disabled) {
+                  color: $primary-color;
+                }
+                &.secondary:hover:not(:disabled) {
+                  color: $text-color;
+                }
+                &:disabled {
+                  opacity: 0.5;
+                  cursor: not-allowed;
+                }
               }
             }
           }
@@ -1219,173 +1550,239 @@
       }
 
       .add-user-section {
-          margin-bottom: $spacing-lg;
-          padding-bottom: $spacing-lg;
-          border-bottom: 1px solid $input-border-color;
+        margin-bottom: $spacing-lg;
+        padding-bottom: $spacing-lg;
+        // border-bottom: 1px solid $input-border-color;
+        position: relative;
 
-           h4 {
-              font-size: $font-size-large;
-              color: $text-color;
-              margin-top: 0;
-              margin-bottom: $spacing-md;
-            }
-
-          .add-user-search-form {
-              display: flex;
-              gap: $spacing-sm;
-              margin-bottom: $spacing-md;
-              flex-direction: row;
-
-              input {
-                  flex-grow: 1;
-                  padding: $spacing-sm $spacing-md;
-                  border: 1px solid $input-border-color;
-                  border-radius: $border-radius-md;
-                  font-size: $font-size-base;
-                  &:disabled { opacity: 0.8; cursor: not-allowed; }
-              }
-              button {
-                  background-color: $primary-color;
-                  color: $secondary-color;
-                  border: none;
-                  border-radius: $border-radius-md;
-                  cursor: pointer;
-                  transition: background-color $transition-fast ease-out;
-                  display: flex; // Use flex to center icon/spinner
-                  align-items: center;
-                  justify-content: center;
-                  width: 35px; // Fixed width for button
-                  height: 35px; // Fixed height for button
-                  padding: 0; // Remove padding
-                  &:hover:not(:disabled) {
-                      background-color: color.adjust($primary-color, $lightness: -5%);
-                  }
-                  &:disabled {
-                      opacity: 0.5;
-                      cursor: not-allowed;
-                  }
-              }
-          }
-
-           .search-results-list {
-               border: 1px solid $input-border-color;
-               border-radius: $border-radius-md;
-               max-height: 150px; // Giới hạn chiều cao kết quả
-               overflow-y: auto; // Cho phép cuộn kết quả
-               margin-bottom: $spacing-md;
-
-               .search-result-item {
-                  display: flex;
-                  align-items: center;
-                  padding: $spacing-sm $spacing-md;
-                  cursor: pointer;
-                  border-bottom: 1px solid $container-bg-color;
-                  transition: background-color $transition-fast ease-out;
-
-                  &:last-child { border-bottom: none; }
-
-                  &:hover {
-                      background-color: $container-bg-color;
-                  }
-                  &.selected {
-                      background-color: color.adjust($primary-color, $alpha: -0.9); // Nền xanh nhạt khi chọn
-                  }
-
-                  .avatar.tiny {
-                    width: 20px; // Even smaller avatar in search results
-                    height: 20px;
-                    margin-right: $spacing-sm; // Space between avatar and name
-                  }
-                  span { font-size: $font-size-base; } // Match member name font size
-                  }
-           }
-
-           .add-user-confirm-button {
-                display: block; // Chiếm toàn bộ chiều rộng
-                width: 100%;
-                padding: $spacing-sm;
-                background-color: $success-color; // Màu xanh cho nút thêm
-                color: $secondary-color;
-                border: none;
-                border-radius: $border-radius-md;
-                cursor: pointer;
-                font-size: $font-size-base;
-                transition: background-color $transition-fast ease-out;
-                 &:hover:not(:disabled) {
-                      background-color: color.adjust($success-color, $lightness: -5%);
-                  }
-                   &:disabled {
-                       opacity: 0.5;
-                       cursor: not-allowed;
-                   }
-           }
-      }
-
-        .info-message {
-             font-size: $font-size-small;
-             color: $text-muted-color;
-             text-align: center;
-             margin-top: $spacing-md;
+        h4 {
+          font-size: $font-size-large;
+          color: $text-color;
+          margin-top: 0;
+          margin-bottom: $spacing-md;
         }
 
+        .add-user-search-form {
+          position: relative;
+          display: flex;
+          gap: $spacing-sm;
+          margin-bottom: $spacing-md;
+          flex-direction: row;
+          align-items: center;
+
+          input {
+            flex-grow: 1;
+            padding: $spacing-sm $spacing-md;
+            border: 1px solid $input-border-color;
+            border-radius: $border-radius-md;
+            font-size: $font-size-base;
+            &:disabled {
+              opacity: 0.8;
+              cursor: not-allowed;
+            }
+          }
+          button {
+            background-color: $primary-color;
+            color: $secondary-color;
+            border: none;
+            border-radius: $border-radius-md;
+            cursor: pointer;
+            transition: background-color $transition-fast ease-out;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 35px;
+            height: 35px;
+            padding: 0;
+            &:hover:not(:disabled) {
+              background-color: color.adjust($primary-color, $lightness: -5%);
+            }
+            &:disabled {
+              opacity: 0.5;
+              cursor: not-allowed;
+            }
+          }
+        }
+
+        .suggestions-dropdown {
+          position: absolute;
+          top: 100%;
+          left: 0;
+          right: 0;
+          background: $secondary-color;
+          border: 1px solid $input-border-color;
+          border-radius: $border-radius-md;
+          box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+          max-height: 150px;
+          overflow-y: auto;
+          z-index: $zindex-popup + 1;
+
+          .suggestion-item {
+            padding: 4px 8px;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            transition: background-color $transition-fast ease-out;
+
+            &:hover,
+            &.highlighted {
+              background-color: $hover-bg-color;
+            }
+
+            .name-avatar {
+              display: flex;
+              align-items: center;
+              gap: $spacing-xs;
+
+              .avatar.tiny {
+                width: 20px !important;
+                height: 20px !important;
+                max-width: 20px !important;
+                max-height: 20px !important;
+                border-radius: 50%;
+                object-fit: cover;
+                margin-right: $spacing-xs;
+                border: 1px solid $input-border-color;
+              }
+
+              span {
+                font-size: 0.85rem;
+                color: $text-color;
+              }
+            }
+          }
+        }
+
+        .search-results-list {
+          border: 1px solid $input-border-color;
+          border-radius: $border-radius-md;
+          max-height: 150px;
+          overflow-y: auto;
+          margin-bottom: $spacing-md;
+
+          .search-result-item {
+            display: flex;
+            align-items: center;
+            padding: $spacing-sm $spacing-md;
+            cursor: pointer;
+            border-bottom: 1px solid $container-bg-color;
+            transition: background-color $transition-fast ease-out;
+
+            &:last-child {
+              border-bottom: none;
+            }
+
+            &:hover {
+              background-color: $container-bg-color;
+            }
+            &.selected {
+              background-color: color.adjust($primary-color, $alpha: -0.9);
+            }
+
+            .avatar.tiny {
+              width: 20px;
+              height: 20px;
+              margin-right: $spacing-sm;
+            }
+            span {
+              font-size: $font-size-large;
+            }
+          }
+        }
+
+        .add-user-confirm-button {
+          display: block;
+          width: 100%;
+          padding: $spacing-sm;
+          background-color: $success-color;
+          color: $secondary-color;
+          border: none;
+          border-radius: $border-radius-md;
+          cursor: pointer;
+          font-size: $font-size-base;
+          transition: background-color $transition-fast ease-out;
+          &:hover:not(:disabled) {
+            background-color: color.adjust($success-color, $lightness: -5%);
+          }
+          &:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+          }
+        }
+      }
+
+      .info-message {
+        font-size: $font-size-small;
+        color: $text-muted-color;
+        text-align: center;
+        margin-top: $spacing-md;
+      }
+
       .action-status {
-         color: $primary-color;
-         text-align: center;
-         margin-top: $spacing-md;
-         .fas.fa-spinner { margin-left: $spacing-xs; } // Khoảng cách icon spinner
+        color: $primary-color;
+        text-align: center;
+        margin-top: $spacing-md;
+        .fas.fa-spinner {
+          margin-left: $spacing-xs;
+        }
       }
 
       .action-error {
-         color: $error-color;
-         text-align: center;
-         margin-top: $spacing-md;
+        color: $error-color;
+        text-align: center;
+        margin-top: $spacing-md;
       }
 
-      .group-actions-footer { // Container for leave/delete buttons
+      .group-actions-footer {
         display: flex;
-        gap: $spacing-md; // Space between buttons
-        justify-content: center; // Center the buttons
+        gap: $spacing-md;
+        justify-content: center;
         margin-top: $spacing-lg;
         padding-top: $spacing-lg;
-        border-top: 1px solid $input-border-color; // Separator
+        border-top: 1px solid $input-border-color;
       }
 
       .button {
-        // ... (Existing button styles) ...
         padding: $spacing-sm $spacing-md;
         border-radius: $border-radius-md;
         cursor: pointer;
         font-size: $font-size-base;
         font-weight: $font-weight-medium;
         transition: background-color $transition-fast ease-out, color $transition-fast ease-out, border-color $transition-fast ease-out;
-        &:disabled { opacity: 0.5; cursor: not-allowed; }
+        &:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
 
         &.secondary {
-             background-color: $container-bg-color;
-             color: $text-color;
-             border: 1px solid $input-border-color;
-             &:hover:not(:disabled) {
-                  background-color: color.adjust($container-bg-color, $lightness: -5%);
-             }
-             &.warning { color: $error-color; } // Text color red for warning secondary
+          background-color: $container-bg-color;
+          color: $text-color;
+          border: 1px solid $input-border-color;
+          &:hover:not(:disabled) {
+            background-color: color.adjust($container-bg-color, $lightness: -5%);
+          }
+          &.warning {
+            color: $error-color;
+          }
+          &.clear {
+            color: $primary-color; /* Use primary color for text to differentiate */
+            border: 1px solid $primary-color; /* Match border to text color */
+            &:hover:not(:disabled) {
+              background-color: color.adjust($container-bg-color, $lightness: -5%);
+              border-color: color.adjust($primary-color, $lightness: -5%);
+            }
+          }
         }
+
         &.danger {
-             background-color: $error-color;
-             color: $secondary-color;
-             border: none;
-             &:hover:not(:disabled) {
-                  background-color: color.adjust($error-color, $lightness: -5%);
-             }
+          background-color: $error-color;
+          color: $secondary-color;
+          border: none;
+          &:hover:not(:disabled) {
+            background-color: color.adjust($error-color, $lightness: -5%);
+          }
         }
       }
-
-      // Remove the redundant .leave-group-section, .delete-group-section rules if using .group-actions-footer
-      // .leave-group-section, .delete-group-section {
-      //      margin-top: $spacing-lg;
-      //      text-align: center;
-      //      .button { ... }
-      // }
-
     }
   }
 }

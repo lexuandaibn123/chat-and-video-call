@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { avtUpdate, passwordUpdate } from "../../api/setting";
+import { passwordUpdate } from "../../api/setting";
 import { infoApi } from "../../api/auth";
 
 const PasswordForm = () => {
@@ -12,6 +12,7 @@ const PasswordForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (newPassword !== confirmPassword) {
       setPasswordError("Mật khẩu xác nhận không khớp");
       return;
@@ -26,16 +27,12 @@ const PasswordForm = () => {
       setIsSubmitting(true);
       const response = await infoApi();
       if (response.success && response.userInfo) {
-        console.log("Email la: ", response.userInfo.email);
         const email = response.userInfo.email;
 
-        const result = await passwordUpdate(
-          email,
-          currentPassword,
-          newPassword
-        );
+        const result = await passwordUpdate(email, currentPassword, newPassword);
         if (result.success) {
-          alert("Đã cập nhật mật khẩu thành công!");
+          alert(result.message || "Cập nhật mật khẩu thành công");
+          // Reset form
           setCurrentPassword("");
           setNewPassword("");
           setConfirmPassword("");
@@ -48,9 +45,10 @@ const PasswordForm = () => {
       }
     } catch (err) {
       setError(err.message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
-
 
   const handleCurrentPasswordChange = (e) => {
     setCurrentPassword(e.target.value);
@@ -62,6 +60,10 @@ const PasswordForm = () => {
     setPasswordError("");
   };
 
+  const handleConfirmPasswordChange = (e) => {
+    setConfirmPassword(e.target.value);
+    setPasswordError("");
+  };
 
   return (
     <div className="account-details">
@@ -75,7 +77,6 @@ const PasswordForm = () => {
             className="form-input"
             value={currentPassword}
             onChange={handleCurrentPasswordChange}
-
             required
           />
         </div>
@@ -87,7 +88,6 @@ const PasswordForm = () => {
             className="form-input"
             value={newPassword}
             onChange={handleNewPasswordChange}
-
             required
           />
         </div>
@@ -98,16 +98,16 @@ const PasswordForm = () => {
             type="password"
             className="form-input"
             value={confirmPassword}
-            onChange={handleNewPasswordChange}
-
+            onChange={handleConfirmPasswordChange}
             required
           />
         </div>
 
         {passwordError && <div className="error-message">{passwordError}</div>}
+        {error && <div className="error-message">{error}</div>}
 
-        <button type="submit" className="save-button">
-          Cập nhật mật khẩu
+        <button type="submit" className="save-button" disabled={isSubmitting}>
+          {isSubmitting ? "Đang cập nhật..." : "Cập nhật mật khẩu"}
         </button>
       </form>
     </div>

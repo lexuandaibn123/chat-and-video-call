@@ -74,7 +74,6 @@ export const avtUpdate = async (avatarUrl) => {
 };
 
 export const passwordUpdate = async (email, oldPassword, newPassword) => {
-  console.log(email, oldPassword, newPassword);
   try {
     const response = await fetch(`${API_BASE_URL}/auth/change-password`, {
       method: 'PUT',
@@ -98,3 +97,26 @@ export const passwordUpdate = async (email, oldPassword, newPassword) => {
     };
   }
 }
+
+export const updateFullName = async (fullName) => {
+  try {
+    const token = localStorage.getItem('authToken');
+
+    const response = await fetch(`${API_BASE_URL}/user/update-name`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'Origin': window.location.origin
+      },
+      body: JSON.stringify({ fullName }),
+      credentials: 'include',
+      mode: 'cors'
+    });
+
+    return handleApiResponse(response);
+  } catch (error) {
+    console.error("Error updating full name:", error.message);
+    throw error;
+  }
+};

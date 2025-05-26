@@ -1,34 +1,60 @@
 import React from 'react';
-// Đảm bảo đường dẫn placeholder chính xác
 import defaultUserAvatar from '../../assets/images/avatar_male.jpg';
 import defaultGroupAvatar from '../../assets/images/group-chat.png';
 
-const ConversationItem = ({ type, id, avatar, name, lastMessage, time, unread, status, onClick, isActive }) => {
-  // Chọn avatar mặc định dựa trên type
+const ConversationItem = ({
+  type,
+  id,
+  avatar,
+  name,
+  lastMessage,
+  time,
+  unread,
+  status,
+  onClick,
+  isActive,
+  onReadConversation,
+  lastMessageType,
+  ongoingCallRoomId
+}) => {
   const defaultAvatar = type === 'group' ? defaultGroupAvatar : defaultUserAvatar;
 
+  // Xác định icon dựa trên lastMessageType và unread
+  let icon = null;
+  if (unread === 0 && (lastMessageType === 'system' || lastMessageType === 'notification')) {
+    icon = <i className="fas fa-info-circle system-icon" title="System notification"></i>;
+  }
+
+  // Thêm icon cho cuộc gọi đang diễn ra nếu isCallOngoing là true
+  let callIcon = null;
+  if (ongoingCallRoomId === id) {
+    callIcon = <i className="fas fa-video call-icon" title="Đang có cuộc gọi"></i>;
+  }
+
   return (
-    // Thêm class 'active' nếu đây là item đang được chọn
     <li
       className={`conversation-list-item ${isActive ? 'active' : ''}`}
-      onClick={() => onClick(type, id)} // Gọi hàm onClick với type và id
+      onClick={() => {
+        onReadConversation(id);
+        onClick(type, id);
+      }}
     >
-      {/* Sử dụng avatar từ prop, fallback về default */}
       <img src={avatar || defaultAvatar} alt={name} className="avatar" />
       <div className="conversation-details">
-        {/* Sử dụng name và lastMessage từ prop */}
         <span className="conversation-name">{name || 'Unknown'}</span>
         <span className="last-message">{lastMessage || 'No messages yet.'}</span>
       </div>
       <div className="conversation-meta">
-        {/* Sử dụng time và unread từ prop */}
-        <span className="timestamp">{time || ''}</span> {/* Hiển thị thời gian nếu có */}
-        {/* Hiển thị badge unread hoặc status icon */}
+        <span className="timestamp">{time || ''}</span>
+        <div className="icon-container">
+          {callIcon}
+          {icon}
+        </div>
         {unread > 0 ? (
           <span className="unread-badge">{unread}</span>
-        ) : status === 'sent-read' ? ( // Cần logic để xác định status này
+        ) : status === 'sent-read' ? (
           <i className="fas fa-check-double message-status-icon"></i>
-        ) : null }
+        ) : null}
       </div>
     </li>
   );

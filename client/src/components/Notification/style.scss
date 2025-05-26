@@ -1,0 +1,301 @@
+@use '../../styles/_variables' as v;
+@use 'sass:color';
+@use 'sass:math';
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 1000px;
+  color: #666;
+  font-size: 1.2rem;
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 5px solid #eee;
+  border-top: 5px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 12px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Notifications Page Styles */
+.notifications-page {
+  display: flex;
+  gap: v.$spacing-lg;
+  font-family: v.$font-family-base;
+
+  .discover-section,
+  .notifications-section {
+    flex: 1;
+    background-color: v.$container-bg-color;
+    border-radius: v.$border-radius-md;
+    padding: v.$spacing-md;
+
+    h2 {
+      font-size: v.$font-size-h2;
+      font-weight: v.$font-weight-bold;
+      margin-bottom: v.$spacing-md;
+      color: v.$primary-color;
+      padding: v.$spacing-sm 0;
+    }
+
+    .scrollable-content {
+      max-height: 85svh;
+      overflow-y: auto;
+      scrollbar-color: v.$primary-color v.$secondary-color;
+
+      &::-webkit-scrollbar {
+        width: none;
+      }
+      &::-webkit-scrollbar-track {
+        background: v.$secondary-color;
+        border-radius: v.$border-radius-md;
+      }
+      &::-webkit-scrollbar-thumb {
+        background: v.$primary-color;
+        border-radius: v.$border-radius-md;
+      }
+    }
+  }
+
+  .tabs-mobile {
+    display: none;
+  }
+}
+
+@media (max-width: v.$breakpoint-medium) {
+  .notifications-page {
+    display: block;
+
+    .tabs-mobile {
+      display: flex;
+      justify-content: space-around;
+      margin-bottom: v.$spacing-lg;
+      background-color: v.$secondary-color;
+      border-radius: v.$border-radius-md;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+
+      button {
+        flex: 1;
+        padding: v.$spacing-md;
+        background-color: transparent;
+        border: none;
+        color: v.$text-color;
+        font-weight: v.$font-weight-medium;
+        transition: background-color v.$transition-default;
+
+        &.active {
+          background-color: v.$primary-color;
+          color: v.$secondary-color;
+        }
+      }
+    }
+
+    .discover-section,
+    .notifications-section {
+      display: none;
+      padding: v.$spacing-sm;
+
+      &.active {
+        display: block;
+      }
+      
+      .scrollable-content {
+        max-height: 80svh;
+        overflow-y: auto;
+      }
+
+      h2 {
+        display: none;
+      }
+    }
+
+    .notifications-section {
+      .item-info {
+        .item-action {
+          font-size: v.$font-size-medium;
+        }
+      }
+    }
+
+    .discover-section {
+      .item-info {
+        .item-name {
+          font-size: v.$font-size-medium;
+        }
+      }
+    }
+  }
+}
+
+/* Notification List Styles */
+.notification-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.notification-list-container {
+  .no-suggestions,
+  .no-notifications {
+    padding: v.$spacing-lg; /* Tăng padding để tạo không gian */
+    background-color: color.adjust(v.$container-bg-color, $lightness: 5%); /* Nền sáng hơn */
+    border: 2px solid v.$primary-color; /* Viền nổi bật */
+    border-radius: v.$border-radius-md;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15); /* Bóng nhẹ hơn nhưng rõ ràng */
+    color: v.$primary-color; /* Màu chữ nổi bật */
+    font-size: v.$font-size-large; /* Kích thước chữ lớn hơn */
+    font-weight: v.$font-weight-bold; /* Chữ đậm */
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: v.$spacing-sm; /* Khoảng cách giữa biểu tượng và chữ */
+
+    .fas.fa-exclamation-circle {
+      font-size: 1.5rem; /* Kích thước biểu tượng */
+      color: color.adjust(v.$warning-color, $lightness: -10%); /* Màu biểu tượng khớp với chữ */
+    }
+  }
+}
+
+.notification-item {
+  display: flex;
+  align-items: center;
+  padding: v.$spacing-md;
+  margin-bottom: v.$spacing-sm;
+  background-color: color.adjust(v.$container-bg-color, $lightness: 2%);
+  border-radius: v.$border-radius-md;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: transform v.$transition-default;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  }
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  .profile-image {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    margin-right: v.$spacing-md;
+    object-fit: cover;
+    aspect-ratio: 1/1; // Giữ tỉ lệ vuông, không bị elip
+    flex-shrink: 0;
+  }
+
+  .item-info {
+    flex: 1;
+    min-width: 0;
+
+    .item-action,
+    .item-details {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+      display: block;
+    }
+
+    .item-action {
+      font-weight: v.$font-weight-bold;
+      color: v.$text-color;
+      font-size: v.$font-size-large;
+      margin: 0;
+
+      span {
+        margin-right: v.$spacing-xs;
+      }
+    }
+
+    .item-details {
+      color: v.$text-muted-color;
+      margin: v.$spacing-xs 0;
+      font-size: v.$font-size-small;
+      max-width: 80%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .item-time {
+      color: v.$text-muted-color;
+      font-size: v.$font-size-tiny;
+    }
+  }
+}
+
+/* Friend Suggestion Item Styles */
+.friend-suggestion-item {
+  display: flex;
+  align-items: center;
+  padding: v.$spacing-md;
+  margin-bottom: v.$spacing-sm;
+  background-color: color.adjust(v.$container-bg-color, $lightness: 2%);
+  border-radius: v.$border-radius-md;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: transform v.$transition-default;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  }
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  .profile-image {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    margin-right: v.$spacing-md;
+    object-fit: cover;
+  }
+
+  .item-info {
+    .item-name {
+      font-weight: v.$font-weight-bold;
+      color: v.$text-color;
+      font-size: v.$font-size-large;
+    }
+
+    .mutual-friends {
+      color: v.$text-muted-color;
+      font-size: v.$font-size-small;
+    }
+  }
+
+  .message-btn {
+    margin-left: auto;
+    background: v.$primary-color;
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    cursor: pointer;
+    transition: background 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+
+    &:hover {
+      background: color.adjust(v.$primary-color, $lightness: -8%);
+    }
+  }
+}

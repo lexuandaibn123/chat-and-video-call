@@ -1,19 +1,130 @@
-import React, { useState } from 'react';
-import GroupList from './GroupList';
-import FriendList from './FriendList';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import ConversationItem from './ConversationItem';
+import NotificationList from '../Notification/NotificationList';
+import defaultAvatarPlaceholder from '../../assets/images/avatar_male.jpg';
+import { getFriendsApi, getRandomUsersApi } from "../../api/users";
+import { getMyRoomsApi } from '../../api/conversations';
+import { processRawRooms } from '../../services/chatService';
+import { toast } from 'react-toastify';
 import "./Modal.scss";
 
-const ConversationListPanel = ({ userInfo, groups, friends, onSearchChange, onItemClick, activeChat, onAddClick, onCreateConversation, addUserSearchResults, onAddUserSearch }) => {
+const ConversationListPanel = ({
+  userInfo,
+  groups,
+  friends,
+  onSearchChange,
+  onItemClick,
+  activeChat,
+  onAddClick,
+  onCreateConversation,
+  addUserSearchResults,
+  onAddUserSearch,
+  setConversations,
+  ongoingCallRoomId,
+}) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [conversationName, setConversationName] = useState('');
+  const [hasSearched, setHasSearched] = useState(false);
+  const [friendSuggestions, setFriendSuggestions] = useState([]);
+  const [highlightIndex, setHighlightIndex] = useState(-1);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingConversations, setIsLoadingConversations] = useState(false);
+  const [randomUsers, setRandomUsers] = useState([]);
+  const listRef = useRef(null);
+
+  const allConversations = [
+    ...groups.map(g => ({ ...g, type: 'group' })),
+    ...friends.map(f => ({ ...f, type: 'friend' }))
+  ].sort((a, b) => {
+    const aTime = a.latestMessageTimestamp || a.time || 0;
+    const bTime = b.latestMessageTimestamp || b.time || 0;
+    const aTs = typeof aTime === 'string' ? new Date(aTime).getTime() : aTime;
+    const bTs = typeof bTime === 'string' ? new Date(bTime).getTime() : bTime;
+    return bTs - aTs;
+  });
+
+  // Fetch dữ liệu gợi ý bạn bè từ getRandomUsersApi
+  useEffect(() => {
+    const fetchRandomUsers = async () => {
+      try {
+        const users = await getRandomUsersApi();
+        // Chuyển đổi dữ liệu để phù hợp với FriendSuggestionItem
+        const formattedUsers = users.map(user => ({
+          id: user._id,
+          name: user.fullName || user.email || user._id,
+          image: user.avatar || defaultAvatarPlaceholder,
+          mutualFriends: null,
+        }));
+        setRandomUsers(formattedUsers);
+      } catch (error) {
+        console.error("Failed to fetch random users:", error);
+        setRandomUsers([]);
+      }
+    };
+    fetchRandomUsers();
+  }, []);
+
+  // Hàm fetch dữ liệu với hỗ trợ phân trang
+  const fetchInitialData = useCallback(async (pageNum) => {
+    const currentUserId = userInfo?._id;
+    if (!currentUserId) {
+      console.warn('fetchInitialData: User ID is not set.');
+      setIsLoadingConversations(false);
+      setConversations([]);
+      return;
+    }
+    console.log('Fetching rooms for user:', currentUserId, 'page:', pageNum);
+    setIsLoadingConversations(true);
+    try {
+      const rooms = await getMyRoomsApi(pageNum);
+      if (rooms.length === 0) {
+        setHasMore(false);
+        return;
+      }
+      const conversationsData = processRawRooms(rooms, currentUserId);
+      setConversations(prev => [...prev, ...conversationsData]);
+      console.log('Processed conversations:', conversationsData);
+    } catch (err) {
+      console.error('Error fetching chat data:', err);
+      if (err.message.includes('HTTP error! status: 401') || err.message.includes('not authenticated')) {
+        setConversations([]);
+      }
+    } finally {
+      setIsLoadingConversations(false);
+    }
+  }, [userInfo, setConversations]);
+
+  // Xử lý sự kiện cuộn
+  const handleScroll = () => {
+    if (listRef.current && hasMore && !isLoadingConversations) {
+      const { scrollTop, scrollHeight, clientHeight } = listRef.current;
+      if (scrollTop + clientHeight >= scrollHeight - 5) {
+        setPage(prevPage => prevPage + 1);
+        fetchInitialData(page + 1);
+      }
+    }
+  };
+
+  // Các hàm khác giữ nguyên
+  const handleReadConversation = (id) => {
+    setConversations((prev) =>
+      prev.map((conv) =>
+        conv.id === id ? { ...conv, unread: 0, lastMessageType: '' } : conv
+      )
+    );
+  };
 
   const handleOpenModal = () => {
     setIsModalOpen(true);
     setSearchTerm('');
     setSelectedUsers([]);
     setConversationName('');
+    setHasSearched(false);
+    setFriendSuggestions([]);
+    setHighlightIndex(-1);
     onAddClick();
   };
 
@@ -22,53 +133,106 @@ const ConversationListPanel = ({ userInfo, groups, friends, onSearchChange, onIt
     setSearchTerm('');
     setSelectedUsers([]);
     setConversationName('');
+    setHasSearched(false);
+    setFriendSuggestions([]);
+    setHighlightIndex(-1);
   };
 
-  const handleSearchChange = (e) => {
+  const handleSearchChange = async (e) => {
     const term = e.target.value;
     setSearchTerm(term);
+    setHasSearched(false);
+    setHighlightIndex(-1);
+
+    if (term.trim()) {
+      try {
+        const friends = await getFriendsApi(term);
+        setFriendSuggestions(friends);
+      } catch (error) {
+        console.error("Failed to fetch friend suggestions:", error);
+        setFriendSuggestions([]);
+      }
+    } else {
+      setFriendSuggestions([]);
+    }
   };
 
   const handleSearch = () => {
     if (searchTerm.trim()) {
       onAddUserSearch(searchTerm);
+      setHasSearched(true);
+      setFriendSuggestions([]);
+      setHighlightIndex(-1);
+    } else {
+      setHasSearched(false);
+      setFriendSuggestions([]);
+      setHighlightIndex(-1);
     }
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      handleSearch();
+    if (friendSuggestions.length === 0) {
+      if (e.key === 'Enter') handleSearch();
+      return;
+    }
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setHighlightIndex(idx => idx < friendSuggestions.length - 1 ? idx + 1 : idx);
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setHighlightIndex(idx => idx > 0 ? idx - 1 : idx);
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (highlightIndex >= 0) {
+          handleSelectSuggestion(friendSuggestions[highlightIndex]);
+        } else {
+          handleSearch();
+        }
+        break;
+      default:
+        break;
     }
   };
 
   const handleSelectUser = (user) => {
-    setSelectedUsers((prev) =>
-      prev.some((u) => u._id === user._id)
-        ? prev.filter((u) => u._id !== user._id)
+    setSelectedUsers(prev =>
+      prev.some(u => u._id === user._id)
+        ? prev.filter(u => u._id !== user._id)
         : [...prev, user]
     );
   };
 
+  const handleSelectSuggestion = (user) => {
+    handleSelectUser(user);
+    setSearchTerm('');
+    setFriendSuggestions([]);
+    setHighlightIndex(-1);
+  };
+
   const handleCreateConversation = () => {
-    if (selectedUsers.length === 0) {
-      alert('Please select at least one user to create a conversation.');
+    if (!selectedUsers.length) {
+      toast.warning("Please select at least one user to create a conversation.");
       return;
     }
 
-    let processedConversationName = conversationName || '';
-    if (!processedConversationName && selectedUsers.length > 0) {
-      if (selectedUsers.length <= 2) {
-        processedConversationName = selectedUsers.map(user => user.fullName || user._id || 'Unknown').join(', ');
+    let name = conversationName;
+    if (!name) {
+      const creatorName = userInfo.fullName || userInfo.email || userInfo._id;
+      if (selectedUsers.length === 1) {
+        name = `${creatorName}, ${selectedUsers[0].fullName || selectedUsers[0].email || selectedUsers[0]._id}`;
+      } else if (selectedUsers.length === 2) {
+        name = `${creatorName}, ${selectedUsers.map(u => u.fullName || u.email || u._id).join(', ')}`;
       } else {
-        const firstTwoUsers = selectedUsers.slice(0, 2).map(user => user.fullName || user._id || 'Unknown');
-        const remainingCount = selectedUsers.length > 2 ? filteredUsers.length - 2 : 0 ;
-        console.log(userInfo);
-        processedConversationName = `${userInfo.fullName}, ` + firstTwoUsers.join(', ') + `, ... (+${remainingCount})`;
+        const firstTwo = selectedUsers.slice(0, 2).map(u => u.fullName || u.email || u._id);
+        name = `${creatorName}, ${firstTwo.join(', ')}, ... (+${selectedUsers.length - 2})`;
       }
     }
 
-    const members = selectedUsers.map((user) => user._id);
-    onCreateConversation(members, processedConversationName || undefined);
+    onCreateConversation(selectedUsers.map(u => u._id), name);
     handleCloseModal();
   };
 
@@ -76,7 +240,6 @@ const ConversationListPanel = ({ userInfo, groups, friends, onSearchChange, onIt
     <aside className="conversation-list-panel">
       <div className="search-bar-row">
         <div className="search-bar-container">
-          <i className="fas fa-search search-icon"></i>
           <input
             type="text"
             placeholder="Search"
@@ -85,48 +248,84 @@ const ConversationListPanel = ({ userInfo, groups, friends, onSearchChange, onIt
           />
         </div>
         <button className="add-button" onClick={handleOpenModal} title="Add friend or group">
-          <i className="fas fa-plus"></i>
+          <i className="fas fa-plus" />
         </button>
       </div>
-      <FriendList friends={friends} onItemClick={onItemClick} activeChat={activeChat} />
-      <GroupList groups={groups} onItemClick={onItemClick} activeChat={activeChat} />
 
-      {/* Modal for creating a new conversation */}
+      <section className="conversation-section">
+        {allConversations.length === 0 && !isLoadingConversations ? (
+          <div className="no-conversations">
+            <p>You haven't connected with anyone yet.</p>
+            <h3>People you may know</h3>
+            <NotificationList
+              type="discover"
+              items={randomUsers}
+              userInfo={userInfo}
+            />
+          </div>
+        ) : (
+          <ul className="conversation-list" ref={listRef} onScroll={handleScroll}>
+            {allConversations.map(conv => (
+              <ConversationItem
+                key={conv.id}
+                id={conv.id}
+                type={conv.type}
+                avatar={conv.avatar}
+                name={conv.name}
+                lastMessage={conv.lastMessage}
+                time={conv.time}
+                unread={conv.unread || 0}
+                status={conv.status}
+                onClick={onItemClick}
+                isActive={activeChat?.id === conv.id}
+                lastMessageType={conv.lastMessageType || ''}
+                onReadConversation={handleReadConversation}
+                ongoingCallRoomId={ongoingCallRoomId}
+              />
+            ))}
+          </ul>
+        )}
+        {isLoadingConversations && (
+          <div className="loading-spinner">
+            <div className="spinner"></div>
+            <span>Loading more...</span>
+          </div>
+        )}
+      </section>
+
       {isModalOpen && (
         <div className="modal-overlay">
           <div className="modal-content">
             <h2>New Conversation</h2>
-            <button className="modal-close-button" onClick={handleCloseModal} title="Exit">
-              <i className="fas fa-times"></i>
+            <button className="modal-close-button" onClick={handleCloseModal} title="Close">
+              <i className="fas fa-times" />
             </button>
 
-            <hr></hr>
+            <hr />
 
-            {/* Input for group name (optional) */}
             <div className="modal-input-group">
               <label>Group Name (optional):</label>
               <input
                 type="text"
                 placeholder="Enter group name"
                 value={conversationName}
-                onChange={(e) => setConversationName(e.target.value)}
+                onChange={e => setConversationName(e.target.value)}
               />
             </div>
 
-            {/* Display selected users */}
             {selectedUsers.length > 0 && (
               <div className="modal-input-group">
                 <label>Selected Users:</label>
                 <ul className="selected-users-list">
-                  {selectedUsers.map((user) => (
-                    <li key={user._id} className="selected-user-item">
-                      <span>{user.fullName || user.email || user._id}</span>
+                  {selectedUsers.map(u => (
+                    <li key={u._id} className="selected-user-item">
+                      <span>{u.fullName || u.email || u._id}</span>
                       <button
                         className="remove-user-button"
-                        onClick={() => handleSelectUser(user)}
-                        title="Remove user"
+                        onClick={() => handleSelectUser(u)}
+                        title="Remove"
                       >
-                        <i className="fas fa-trash"></i>
+                        <i className="fas fa-trash" />
                       </button>
                     </li>
                   ))}
@@ -134,7 +333,6 @@ const ConversationListPanel = ({ userInfo, groups, friends, onSearchChange, onIt
               </div>
             )}
 
-            {/* Search users */}
             <div className="modal-input-group">
               <label>Search Users:</label>
               <div className="search-container">
@@ -146,37 +344,63 @@ const ConversationListPanel = ({ userInfo, groups, friends, onSearchChange, onIt
                   onKeyDown={handleKeyDown}
                 />
                 <button className="search-button" onClick={handleSearch}>
-                  <i className="fas fa-search"></i>
+                  <i className="fas fa-search" />
                 </button>
+
+                {friendSuggestions.length > 0 && (
+                  <div className="suggestions-dropdown">
+                    {friendSuggestions.map((f, idx) => (
+                      <div
+                        key={f._id}
+                        className={`suggestion-item${idx === highlightIndex ? ' highlighted' : ''}`}
+                        onClick={() => handleSelectSuggestion(f)}
+                      >
+                        <div className="name-avatar">
+                          <img
+                            src={f.avatar || defaultAvatarPlaceholder}
+                            alt={f.fullName || f.email || f._id}
+                            className="avatar tiny"
+                          />
+                          <span>{f.fullName || f.email || f._id}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Search results */}
-            {addUserSearchResults.length > 0 ? (
-              <ul className="search-results">
-                {addUserSearchResults.map((user) => (
-                  <li
-                    key={user._id}
-                    className={`search-result-item ${
-                      selectedUsers.some((u) => u._id === user._id) ? 'selected' : ''
-                    }`}
-                    onClick={() => handleSelectUser(user)}
-                  >
-                    <span>{user.fullName || user.email || user._id}</span>
-                    {selectedUsers.some((u) => u._id === user._id) && (
-                      <span className="selected-icon">✔</span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            ) : (
+            {hasSearched && !addUserSearchResults.length && (
               <div className="no-results">User not found</div>
             )}
+            {addUserSearchResults.length > 0 && (
+              <div className="search-results">
+                {addUserSearchResults.map(u => (
+                  <div
+                    key={u._id}
+                    className={`search-result-item ${selectedUsers.some(s => s._id === u._id) ? 'selected' : ''}`}
+                    onClick={() => handleSelectUser(u)}
+                  >
+                    <div className="name-avatar">
+                      <img
+                        src={u.avatar || defaultAvatarPlaceholder}
+                        alt={u.fullName || u.email || u._id}
+                        className="avatar tiny"
+                      />
+                      <span>{u.fullName || u.email || u._id}</span>
+                    </div>
+                    {selectedUsers.some(s => s._id === u._id) && <span className="selected-icon">✔</span>}
+                  </div>
+                ))}
+              </div>
+            )}
 
-            {/* Action buttons */}
             <div className="modal-actions">
               <button onClick={handleCloseModal}>Cancel</button>
-              <button onClick={handleCreateConversation} disabled={selectedUsers.length === 0}>
+              <button
+                onClick={handleCreateConversation}
+                disabled={!selectedUsers.length}
+              >
                 Create
               </button>
             </div>

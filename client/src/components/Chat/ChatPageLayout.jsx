@@ -16,6 +16,7 @@ const ChatPageLayout = ({
   conversations,
   activeChat,
   messages,
+  setMessages,
   searchTerm,
   isMobileChatActive,
   isSettingsOpen,
@@ -25,6 +26,8 @@ const ChatPageLayout = ({
   editingMessageId,
   isEditingName,
   editingGroupName,
+  updateConversationAvatar, 
+  updateMemberRole,
   currentUserId,
   handlers,
   setMessageInput, // Added to fix ChatWindow prop
@@ -36,7 +39,10 @@ const ChatPageLayout = ({
   userInfo,
   socket,
   sendTyping,
-  sendStopTyping
+  sendStopTyping,
+  setConversations,
+  isCallOngoing,
+  ongoingCallRoomId
 }) => {
   // Filter conversations for groups and friends
   const filteredConversations = conversations.filter((conv) => {
@@ -119,11 +125,15 @@ const ChatPageLayout = ({
         onCreateConversation={handlers.handleCreateConversation} // Thêm prop
         addUserSearchResults={addUserSearchResults}
         searchTerm={searchTerm}
+        setConversations={setConversations}
+        ongoingCallRoomId={ongoingCallRoomId}
       />
 
       <ChatWindow
+        key={activeChat?.id}
         activeContact={activeChat}
         messages={messages}
+        setMessages={setMessages}
         onMobileBack={handlers.handleMobileBack}
         isMobile={isMobileChatActive}
         messageInput={messageInput}
@@ -149,6 +159,7 @@ const ChatPageLayout = ({
         socket={socket}
         sendTyping={sendTyping} 
         sendStopTyping={sendStopTyping}
+        isCallOngoing={isCallOngoing}
       />
 
       {isSettingsOpen && activeChat?.isGroup && activeChat.detailedMembers && (
@@ -174,6 +185,8 @@ const ChatPageLayout = ({
           onCancelEditGroupName={handlers.handleCancelEditGroupName}
           onSaveEditGroupName={handlers.handleSaveEditGroupName}
           onAddClick={() => setAddUserSearchResults([])}
+          updateConversationAvatar={updateConversationAvatar}
+          onUpdateMemberRole={handlers.handleUpdateMemberRole}
         />
       )}
     </div>
