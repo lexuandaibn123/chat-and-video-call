@@ -536,40 +536,65 @@ export const updateActiveChatAfterGroupNameChanged = (prevActiveChat, conversati
 
 // Cập nhật danh sách conversations sau khi thay đổi leader thành công
 export const updateConversationsAfterLeaderChanged = (prevConvs, conversationId, newLeaderId, oldLeaderId) => {
-     return prevConvs.map(conv => {
-         if (conv.id === conversationId) {
-             // Cập nhật role trong detailedMembers
-             const updatedDetailedMembers = conv.detailedMembers.map(member => {
-                  if (member.id === newLeaderId) return { ...member, role: 'leader' }; // Leader mới
-                   if (member.id === oldLeaderId) return { ...member, role: 'member' }; // Leader cũ trở thành member
-                   return member; // Các thành viên khác giữ nguyên
-              });
+  return prevConvs.map(conv => {
+    if (conv.id === conversationId) {
+      // Update role in detailedMembers
+      const updatedDetailedMembers = conv.detailedMembers.map(member =>
+        member.id === newLeaderId
+          ? { ...member, role: 'leader' } // New leader
+          : member.id === oldLeaderId
+          ? { ...member, role: 'member' } // Old leader becomes member
+          : member // Other members unchanged
+      );
 
-             return {
-                 ...conv,
-                 leader: newLeaderId, // Cập nhật ID leader
-                 detailedMembers: updatedDetailedMembers, // Sử dụng danh sách chi tiết đã cập nhật role
-             };
-         }
-         return conv;
-     });
+      // Update role in members (where ID is at member.id._id)
+      const updatedMembers = conv.members.map(member =>
+        member.id._id === newLeaderId
+          ? { ...member, role: 'leader' } // New leader
+          : member.id._id === oldLeaderId
+          ? { ...member, role: 'member' } // Old leader becomes member
+          : member // Other members unchanged
+      );
+
+      return {
+        ...conv,
+        leader: newLeaderId, // Update leader ID
+        detailedMembers: updatedDetailedMembers, // Updated detailedMembers
+        members: updatedMembers, // Updated members
+      };
+    }
+    return conv; // Other conversations unchanged
+  });
 };
 
 // Cập nhật activeChat sau khi thay đổi leader thành công
-export const updateActiveChatAfterLeaderChanged = (prevActiveChat, conversationId, newLeaderId, oldLeaderId) => {
-     if (!prevActiveChat || prevActiveChat.id !== conversationId) return prevActiveChat;
+export const updateActiveChatAfterLeaderChanged = (prevActiveChat, conversationId, newLeaderId, oldLeaderId = null) => {
+  if (!prevActiveChat || prevActiveChat.id !== conversationId) return prevActiveChat;
 
-     const updatedDetailedMembers = prevActiveChat.detailedMembers.map(member => {
-          if (member.id === newLeaderId) return { ...member, role: 'leader' };
-           if (member.id === oldLeaderId) return { ...member, role: 'member' };
-           return member;
-      });
+  // Update role in detailedMembers
+  const updatedDetailedMembers = prevActiveChat.detailedMembers.map(member =>
+    member.id === newLeaderId
+      ? { ...member, role: 'leader' } // New leader
+      : member.id === oldLeaderId
+      ? { ...member, role: 'member' } // Old leader becomes member
+      : member // Other members unchanged
+  );
 
-     return {
-         ...prevActiveChat,
-         leader: newLeaderId,
-         detailedMembers: updatedDetailedMembers,
-     };
+  // Update role in members (where ID is at member.id._id)
+  const updatedMembers = prevActiveChat.members.map(member =>
+    member.id._id === newLeaderId
+      ? { ...member, role: 'leader' } // New leader
+      : member.id._id === oldLeaderId
+      ? { ...member, role: 'member' } // Old leader becomes member
+      : member // Other members unchanged
+  );
+
+  return {
+    ...prevActiveChat,
+    leader: newLeaderId, // Update leader ID
+    detailedMembers: updatedDetailedMembers, // Updated detailedMembers
+    members: updatedMembers, // Updated members
+  };
 };
 
 
