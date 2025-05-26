@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { commentPost, getCommentsByPostId, editComment, deleteComment, replyComment } from "../../api/feeds";
+import DefaultAvatar from "../../assets/images/avatar_male.jpg"
 import { toast } from "react-toastify";
 
 const PostComments = ({
@@ -200,7 +201,7 @@ const PostComments = ({
       <div key={reply._id} className="reply">
         <div className="reply-avatar">
           <img
-            src={reply.userId?.avatar}
+            src={reply.userId?.avata ?? DefaultAvatar}
             alt={reply.userId?.fullName}
             className="profile-image"
           />
@@ -233,7 +234,7 @@ const PostComments = ({
         <div className="comment-main">
           <div className="comment-avatar">
             <img
-              src={comment.userId.avatar}
+              src={comment.userId.avatar ?? DefaultAvatar}
               alt={comment.userId.fullName}
               className="profile-image"
             />
@@ -321,7 +322,7 @@ const PostComments = ({
           <form className="reply-form" onSubmit={(e) => handleAddReply(comment._id, e)}>
             <div className="reply-avatar">
               <img
-                src={avatar}
+                src={avatar ?? DefaultAvatar}
                 alt={name}
                 width={28}
                 height={28}
@@ -374,7 +375,7 @@ const PostComments = ({
     <form className="comment-form" onSubmit={handleAddComment}>
       <div className="comment-avatar">
         <img
-          src={avatar}
+          src={avatar ?? DefaultAvatar}
           alt={name}
           width={32}
           height={32}

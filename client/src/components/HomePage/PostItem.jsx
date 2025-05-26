@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { infoApi } from "../../api/auth";
 import { editPost, deletePost, likePost, unlikePost } from "../../api/feeds";
 import PostComments from "./PostComments";
+import DefaultAvatar from "../../assets/images/avatar_male.jpg"
 import { toast } from "react-toastify";
 
 const PostItem = ({
@@ -188,7 +189,7 @@ const PostItem = ({
       <header className="post-header">
         <div className="post-author">
           <img
-            src={poster.avatar}
+            src={poster.avatar ?? DefaultAvatar}
             alt={poster.fullName}
             width="40"
             height="40"
@@ -357,7 +358,7 @@ const PostItem = ({
       {showComments && (
         <PostComments
           postId={postId}
-          avatar={userInfo.avatar}
+          avatar={userInfo.avatar ?? DefaultAvatar}
           name={userInfo.fullName}
           userId={user_id}
           visibleComments={visibleComments}

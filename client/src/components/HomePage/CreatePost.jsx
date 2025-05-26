@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { createPost } from "../../api/feeds";
 import { infoApi } from "../../api/auth";
 import { UploadButton } from "../../utils/uploadthing";
+import DefaultAvatar from "../../assets/images/avatar_male.jpg"
 import { toast } from "react-toastify";
 
 const CreatePost = () => {
@@ -89,7 +90,7 @@ const CreatePost = () => {
   return (
     <article className="create-post">
       <header className="create-post-header">
-        <img src={avt} alt="Profile" className="profile-image" />
+        <img src={avt ?? DefaultAvatar} alt="Profile" className="profile-image" />
         <input
           type="text"
           placeholder="Share what's on your mind..."

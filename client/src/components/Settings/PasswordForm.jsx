@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { passwordUpdate } from "../../api/setting";
 import { infoApi } from "../../api/auth";
+import { toast } from "react-toastify";
 
 const PasswordForm = () => {
   const [currentPassword, setCurrentPassword] = useState("");

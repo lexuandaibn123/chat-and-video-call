@@ -1,5 +1,6 @@
 import React from 'react';
 import { createConversationApi } from '../../api/conversations';
+import {toast} from 'react-toastify';
 
 const FriendSuggestionItem = ({ item, userInfo, onRemove }) => {
   const handleMessage = async () => {
