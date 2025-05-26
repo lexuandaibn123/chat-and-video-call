@@ -10,10 +10,10 @@ const FriendSuggestionItem = ({ item, userInfo, onRemove }) => {
         members: [userInfo.id, item.id],
         name: ""
       });
-      alert('Conversation created successfully!');
+      toast.success("Conversation created successfully!");
       if (onRemove) onRemove(item.id);
     } catch (error) {
-      alert('Failed to create conversation: ' + (error.message || 'Unknown error'));
+      toast.error(`Failed to create conversation: ${error.message || 'Unknown error'}`);
     }
   };
 

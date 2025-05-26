@@ -107,7 +107,7 @@ const PostComments = ({
   const handleSaveCommentEdit = async () => {
     // Sửa lại: kiểm tra editedCommentContent thay vì newComment
     if (editedCommentContent.trim() === "") {
-      alert("Comment content cannot be empty.");
+      toast.warning("Comment content cannot be empty.");
       return;
     }
     try {

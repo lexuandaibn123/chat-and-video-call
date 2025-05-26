@@ -230,10 +230,10 @@ export default function VideoCall({ userId, roomId, onClose }) {
         audioTrack.enabled = !audioTrack.enabled;
         setMicEnabled(audioTrack.enabled);
         sfuClientRef.current.notifyStatusUpdate({ audioEnabled: audioTrack.enabled });
-        toast(audioTrack.enabled ? "Micro đã bật" : "Micro đã tắt", {
-          type: audioTrack.enabled ? "success" : "warning",
-          autoClose: 2000,
-        });
+        // toast(audioTrack.enabled ? "Micro đã bật" : "Micro đã tắt", {
+        //   type: audioTrack.enabled ? "success" : "warning",
+        //   autoClose: 2000,
+        // });
       } else {
         console.warn("No audio track found to toggle.");
       }
@@ -247,10 +247,10 @@ export default function VideoCall({ userId, roomId, onClose }) {
         videoTrack.enabled = !videoTrack.enabled;
         setCameraEnabled(videoTrack.enabled);
         sfuClientRef.current.notifyStatusUpdate({ videoEnabled: videoTrack.enabled });
-        toast(videoTrack.enabled ? "Camera đã bật" : "Camera đã tắt", {
-          type: videoTrack.enabled ? "success" : "warning",
-          autoClose: 2000,
-        });
+        // toast(videoTrack.enabled ? "Camera đã bật" : "Camera đã tắt", {
+        //   type: videoTrack.enabled ? "success" : "warning",
+        //   autoClose: 2000,
+        // });
       } else {
         console.warn("No video track found to toggle.");
       }
@@ -282,11 +282,7 @@ export default function VideoCall({ userId, roomId, onClose }) {
       });
     }
     setLocalStream(null);
-    toast.info("Bạn đã rời cuộc gọi", {
-      position: "top-right",
-      autoClose: 3000,
-      theme: "dark",
-    });
+    toast.info("You have left the call.");
     onClose();
   };
 
