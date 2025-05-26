@@ -241,7 +241,6 @@ const ChatPage = () => {
     }
 
     const handleCallStarted = (data) => {
-      console.log('[DEBUG] Received callStarted event:', data);
       const now = Date.now();
       const lastCall = lastCallStartedRef.current[data.roomId] || 0;
       // Ignore duplicate events within 2 seconds
@@ -280,7 +279,6 @@ const ChatPage = () => {
     };
 
     const handleCallEnded = (data) => {
-      console.log('[DEBUG] Received callEnded event:', data);
       // Kiểm tra xem roomId có khớp với ongoingCallRoomId không
       if (data.roomId === ongoingCallRoomId) {
         // Đặt lại các state tương ứng với callStarted
@@ -423,7 +421,6 @@ const ChatPage = () => {
             isLoading: false,
           });
           currentUserIdRef.current = userId;
-          console.log('Mock Auth check: User authenticated.', authenticatedUser);
         } else {
           setMockAuth({ user: null, isAuthenticated: false, isLoading: false });
           currentUserIdRef.current = null;
@@ -454,7 +451,6 @@ const ChatPage = () => {
     try {
       const rooms = await getMyRoomsApi();
       setRawConversations(rooms);
-      console.log('rooms: ', rooms);
       const conversationsData = processRawRooms(rooms, currentUserId);
       setConversations(conversationsData);
       console.log('Processed conversations:', conversationsData);
@@ -571,7 +567,6 @@ const ChatPage = () => {
     ongoingCallRoomId && activeChat?.id
       ? String(ongoingCallRoomId) === String(activeChat.id)
       : false;
-  console.log('[DEBUG] isCallOngoing:', isCallOngoing, 'ongoingCallRoomId:', ongoingCallRoomId, 'activeChat?.id:', activeChat?.id);
 
   return (
     <div className="chat-page-container">

@@ -50,9 +50,6 @@ const ChatWindow = ({
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const prevMessagesRef = useRef(messages);
 
-  console.log('Active contact:', activeContact);
-  console.log('[DEBUG] ChatWindow props.isCallOngoing:', isCallOngoing);
-
   const isUserInGroup = activeContact?.isGroup
     ? activeContact.detailedMembers.some(member => member.id === userInfo.id)
     : true;
@@ -98,6 +95,8 @@ const ChatWindow = ({
           }
           return prev;
         });
+
+        messageListEndRef.current?.scrollIntoView({ behavior: 'auto' });
       }
     };
 
