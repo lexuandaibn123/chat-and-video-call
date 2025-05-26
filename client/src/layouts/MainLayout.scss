@@ -4,12 +4,12 @@
 .main-layout-container {
   display: flex;
   min-height: 100svh; // Đảm bảo container ít nhất cao bằng màn hình
-  background-color: $container-bg-color; 
+  background-color: $container-bg-color;
 }
 
 .main-content {
   flex-grow: 1;
-  height: 100svh; // <<< Quan trọng: Chiếm đúng 100% chiều cao viewport
+  height: calc(100svh - #{$navbar-height-mobile}); // <<< Quan trọng: Chiếm đúng 100% chiều cao viewport
   overflow: hidden; // <<< QUAN TRỌNG: Ngăn .main-content cuộn
   transition: margin-left $transition-default, padding-bottom $transition-default;
 
@@ -28,5 +28,6 @@
     padding-bottom: $spacing-lg;
     padding-top: $spacing-lg;
     padding-right: $spacing-lg;
+    height: 100svh; // Đảm bảo không vượt quá chiều
   }
 }

@@ -95,6 +95,8 @@ const ChatWindow = ({
           }
           return prev;
         });
+
+        messageListEndRef.current?.scrollIntoView({ behavior: 'auto' });
       }
     };
 

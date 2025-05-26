@@ -66,13 +66,13 @@ const PostItem = ({
 
   const handleSaveEdit = async () => {
     if (editedContent.trim() === "") {
-      alert("Post content cannot be empty");
+      toast.warning("Post content cannot be empty.");
       setEditedContent(content[0].data);
       setIsEditing(false);
       return;
     }
     if (editedContent === content[0].data) {
-      alert("No changes made to the post");
+      toast.info("No changes were made to the post.");
       setIsEditing(false);
       return;
     }

@@ -31,7 +31,7 @@ const PasswordForm = () => {
 
         const result = await passwordUpdate(email, currentPassword, newPassword);
         if (result.success) {
-          alert(result.message || "Cập nhật mật khẩu thành công");
+          toast.success(result.message || "Password updated successfully!");
           // Reset form
           setCurrentPassword("");
           setNewPassword("");

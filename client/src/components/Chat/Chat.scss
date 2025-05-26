@@ -5,13 +5,15 @@
 
 .chat-page-container {
   display: flex;
-  height: 100%;
+  height: 98%;
   width: 100%;
   gap: $spacing-lg;
   padding: 0;
   box-sizing: border-box;
   background-color: transparent;
   position: relative; // Cần cho overlay loading
+  margin-top: $spacing-sm; // Khoảng cách từ trên xuống
+  margin-right: $spacing-sm;
 
   // Styles cho overlay loading
   .loading-overlay, .error-message {
@@ -1792,6 +1794,9 @@
 @media (max-width: $breakpoint-medium) {
   .chat-page-container {
     flex-direction: column; padding: 0; gap: 0; background-color: $secondary-color;
+    margin-top: 0px; // Khoảng cách từ trên xuống
+    margin-right: 0px;
+    height: 100%;
     // Đảm bảo container chiếm hết chiều cao nếu cần (thường MainLayout đã xử lý)
     // height: 100%;
 
